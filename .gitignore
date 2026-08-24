@@ -1,0 +1,17 @@
+# macOS / Windows metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Playwright / Node.js are installed locally by school/sync-official-data.js.
+# They are reproducible and should not be committed.
+school/node_modules/
+school/package.json
+school/package-lock.json
+school/npm-debug.log*
+school/.playwright/
+school/playwright-report/
+school/test-results/
+
+# Atomic temporary files written while official data is being regenerated.
+school/*.tmp
