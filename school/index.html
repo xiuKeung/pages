@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#155eef">
   <title>南山、福田学区查询</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
 </head>
 <body>
   <main class="page">
@@ -24,6 +26,7 @@
         <input id="community" type="search" autocomplete="off" placeholder="如：厚德品园、诺德国际" enterkeyhint="search">
         <button id="search" type="button">查询</button>
       </div>
+      <div id="suggestions" class="suggestions" aria-live="polite"></div>
       <p id="query-hint" class="hint">支持模糊搜索；命中多个官方小区名称时，会合并展示其对应学校。</p>
     </section>
 
@@ -47,7 +50,14 @@
 
     <section class="notice">
       <h2>重要说明</h2>
-      <p>结果仅供参考。<br>数据快照仅来自南山、福田教育局四张官方学区图，更新时间：2026 年 8 月 24 日。<br>最终入学资格、共享学区、多校选择与学位锁定，请以当年教育局招生政策及官方学区图为准。</p>
+      <p>结果仅供参考。<br>最终入学资格、共享学区、多校选择与学位锁定，请以当年教育局招生政策及官方学区图为准。</p>
+    </section>
+
+    <section class="official-links data-version">
+      <h2>数据版本</h2>
+      <p id="data-summary">正在读取官方数据快照…</p>
+      <p id="snapshot-time">更新时间加载中</p>
+      <p>数据来源见下方四张官方学区图。</p>
     </section>
 
     <section class="official-links">

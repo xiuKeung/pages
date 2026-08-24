@@ -6,6 +6,9 @@ globalThis.SchoolDistrictDataReady.then(() => {
   const schoolModeButton = document.querySelector('#mode-school');
   const queryLabel = document.querySelector('#query-label');
   const queryHint = document.querySelector('#query-hint');
+  const suggestions = document.querySelector('#suggestions');
+  const snapshotTime = document.querySelector('#snapshot-time');
+  const dataSummary = document.querySelector('#data-summary');
   const savedRecentButton = document.querySelector('#saved-recent');
   const savedFavoriteButton = document.querySelector('#saved-favorite');
   const clearSavedButton = document.querySelector('#clear-saved');
@@ -103,10 +106,43 @@ globalThis.SchoolDistrictDataReady.then(() => {
 
   function resultHeader(label, query) {
     const favorite = isFavorite(query);
-    return `<div class="result-title-row"><p class="community-name">${escape(label)}</p><button class="favorite-toggle ${favorite ? 'is-favorite' : ''}" type="button">${favorite ? '★ 已收藏' : '☆ 收藏'}</button></div>`;
+    return `<div class="result-title-row"><p class="community-name">${escape(label)}</p><button class="share-toggle" type="button">分享</button><button class="favorite-toggle ${favorite ? 'is-favorite' : ''}" type="button">${favorite ? '★ 已收藏' : '☆ 收藏'}</button></div>`;
+  }
+
+  function showToast(message) {
+    document.querySelector('.page-toast')?.remove();
+    const toast = document.createElement('div');
+    toast.className = 'page-toast';
+    toast.textContent = message;
+    document.body.append(toast);
+    setTimeout(() => toast.remove(), 3000);
   }
 
   function bindResultControls(query) {
+    result.querySelector('.share-toggle')?.addEventListener('click', async event => {
+      const url = new URL(location.href);
+      url.search = new URLSearchParams({ mode: query.mode, q: query.value }).toString();
+      let copied = false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(url.href);
+          copied = true;
+        }
+      } catch { /* 回退到传统复制方式 */ }
+      if (!copied) {
+        const textarea = document.createElement('textarea');
+        textarea.value = url.href;
+        textarea.setAttribute('readonly', '');
+        textarea.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+        document.body.append(textarea);
+        textarea.select();
+        copied = document.execCommand('copy');
+        textarea.remove();
+      }
+      event.currentTarget.textContent = copied ? '链接已复制' : '复制失败';
+      showToast(copied ? '链接已复制' : '复制失败，请长按地址栏复制当前链接');
+      setTimeout(() => { event.currentTarget.textContent = '分享'; }, 1500);
+    });
     result.querySelector('.favorite-toggle')?.addEventListener('click', event => {
       const favorite = toggleFavorite(query);
       event.currentTarget.classList.toggle('is-favorite', favorite);
@@ -124,6 +160,11 @@ globalThis.SchoolDistrictDataReady.then(() => {
       setMode('community', false);
       input.value = home;
       renderResult(candidates(home), home, { mode: 'community', value: home });
+    }));
+    result.querySelectorAll('[data-expand-homes]').forEach(button => button.addEventListener('click', () => {
+      const section = button.closest('.school-group');
+      section.querySelectorAll('[hidden]').forEach(item => { item.hidden = false; });
+      button.remove();
     }));
   }
 
@@ -144,8 +185,7 @@ globalThis.SchoolDistrictDataReady.then(() => {
     if (key.length < 2) return [];
     // 即使存在完全相同的小区名，也保留同一输入命中的其他官方名称；
     // 例如“简称 / 全称（别名）”可能分别承载不同学段的官方关联。
-    return allHomes
-      .filter(home => normalize(home).includes(key))
+    return expandRelatedHomes(allHomes.filter(home => normalize(home).includes(key)))
       .sort((a, b) => {
         const aExact = normalize(a) === key ? 0 : 1;
         const bExact = normalize(b) === key ? 0 : 1;
@@ -153,9 +193,10 @@ globalThis.SchoolDistrictDataReady.then(() => {
       });
   }
 
-  // 结果过多需先选定一个小区时，仍要合并与它通过“全称/别名”连通的官方名称。
-  function relatedHomes(seed) {
-    const related = new Set([seed]);
+  // 递归合并官方名称：A 包含 B、B 又包含 C 时，A/B/C 视为同一名称族。
+  // 这避免“简称 → 括号别名 → 全称”链条中漏掉某个学段。
+  function expandRelatedHomes(initialHomes) {
+    const related = new Set(initialHomes);
     let changed = true;
     while (changed) {
       changed = false;
@@ -172,6 +213,11 @@ globalThis.SchoolDistrictDataReady.then(() => {
       }
     }
     return [...related];
+  }
+
+  // 结果过多需先选定一个小区时，同样合并与它通过“全称/别名”连通的官方名称。
+  function relatedHomes(seed) {
+    return expandRelatedHomes([seed]);
   }
 
   function grouped(matches) {
@@ -212,11 +258,44 @@ globalThis.SchoolDistrictDataReady.then(() => {
       });
   }
 
+  function hideSuggestions() {
+    suggestions.classList.remove('is-visible');
+    suggestions.innerHTML = '';
+  }
+
+  function renderSuggestions() {
+    const query = input.value.trim();
+    const key = normalize(query);
+    if (key.length < 2) { hideSuggestions(); return; }
+    const rows = mode === 'community' ? candidates(query) : schoolCandidates(query);
+    if (!rows.length) { hideSuggestions(); return; }
+    const label = mode === 'community' ? '🏘 小区' : '🏫 学校';
+    const shown = rows.slice(0, 8);
+    const items = shown.map((row, index) => {
+      const text = mode === 'community' ? row : `${row.district} · ${row.level} · ${row.name}`;
+      return `<button class="suggestion-item" type="button" data-suggestion="${index}"><strong>${label}</strong>${escape(text)}</button>`;
+    }).join('');
+    const note = rows.length > 8 ? `<p class="suggestion-note">共匹配 ${rows.length} 项，请继续输入 1–2 个字缩小范围。</p>` : '';
+    suggestions.innerHTML = items + note;
+    suggestions.classList.add('is-visible');
+    suggestions.querySelectorAll('[data-suggestion]').forEach(button => button.addEventListener('click', () => {
+      const row = rows[Number(button.dataset.suggestion)];
+      input.value = mode === 'community' ? row : row.name;
+      hideSuggestions();
+      search();
+    }));
+  }
+
   function renderSchoolResult(rows, label, query) {
     const blocks = rows.map(school => {
       const className = school.level === '小学' ? 'primary' : 'middle';
       const homes = [...new Set(school.homes || [])];
-      return `<section class="school-group ${className}"><h3>${escape(school.district)} · ${escape(school.level)} · ${escape(school.name)}</h3><p class="hint">官方学区小区（${homes.length} 个）</p><ul>${homes.map(home => `<li><button class="result-link" type="button" data-home="${escape(home)}">${escape(home)}</button></li>`).join('')}</ul></section>`;
+      const visibleHomes = homes.slice(0, 10);
+      const extraHomes = homes.slice(10);
+      const list = visibleHomes.map(home => `<li><button class="result-link" type="button" data-home="${escape(home)}">${escape(home)}</button></li>`).join('')
+        + extraHomes.map(home => `<li hidden><button class="result-link" type="button" data-home="${escape(home)}">${escape(home)}</button></li>`).join('');
+      const more = extraHomes.length ? `<button class="show-homes" type="button" data-expand-homes>展开全部（另 ${extraHomes.length} 个）</button>` : '';
+      return `<section class="school-group ${className}"><h3>${escape(school.district)} · ${escape(school.level)} · ${escape(school.name)}</h3><p class="hint">官方学区小区（${homes.length} 个）</p><ul>${list}</ul>${more}</section>`;
     }).join('');
     result.innerHTML = `${resultHeader(label, query)}${blocks}`;
     activeResultQuery = query;
@@ -255,6 +334,7 @@ globalThis.SchoolDistrictDataReady.then(() => {
   }
 
   function search() {
+    hideSuggestions();
     if (loadError) {
       result.innerHTML = `<div class="empty"><span class="empty-icon">!</span><p>官方数据加载失败</p><small>${escape(loadError)}。请使用本地网页服务器或将本目录部署到静态网站后再打开。</small></div>`;
       return;
@@ -265,6 +345,10 @@ globalThis.SchoolDistrictDataReady.then(() => {
     if (mode === 'school') {
       const matchedSchools = schoolCandidates(query);
       if (matchedSchools.length === 1) { renderSchoolResult(matchedSchools, `搜索：${query}`, { mode: 'school', value: query }); return; }
+      if (matchedSchools.length > 50) {
+        result.innerHTML = `<div class="empty"><span class="empty-icon">⌕</span><p>找到 ${matchedSchools.length} 所相近学校</p><small>关键词范围较宽，请继续输入 1–2 个字缩小范围。</small></div>`;
+        return;
+      }
       if (matchedSchools.length > 1) { renderSchoolChoices(matchedSchools); return; }
       result.innerHTML = '<div class="empty"><span class="empty-icon">?</span><p>未找到该学校</p><small>可尝试学校名称的一部分，或到下方官方学区图核验。</small></div>';
       return;
@@ -272,6 +356,10 @@ globalThis.SchoolDistrictDataReady.then(() => {
     const homes = candidates(query);
     // 一般的局部输入会命中少量官方名称，直接合并反查，不让某一个名称丢失学段。
     if (homes.length >= 1 && homes.length <= 12) { renderResult(homes, `搜索：${query}`, { mode: 'community', value: query }); return; }
+    if (homes.length > 50) {
+      result.innerHTML = `<div class="empty"><span class="empty-icon">⌕</span><p>找到 ${homes.length} 个相近小区</p><small>关键词范围较宽，请继续输入 1–2 个字缩小范围。</small></div>`;
+      return;
+    }
     if (homes.length > 12) {
       result.innerHTML = `<h2>选择小区</h2><p class="hint">找到 ${homes.length} 个相近小区：</p><div class="candidates">${homes.map(home => `<button type="button" data-home="${escape(home)}">${escape(home)}</button>`).join('')}</div>`;
       result.querySelectorAll('[data-home]').forEach(button => button.addEventListener('click', () => {
@@ -300,6 +388,27 @@ globalThis.SchoolDistrictDataReady.then(() => {
   input.addEventListener('input', () => {
     modeState[mode].value = input.value.trim();
     if (!input.value.trim()) result.innerHTML = `<div class="empty"><span class="empty-icon">⌕</span><p>输入${mode === 'community' ? '小区名称' : '学校名称'}开始查询</p></div>`;
+    renderSuggestions();
   });
+  input.addEventListener('blur', () => setTimeout(hideSuggestions, 160));
+  const officialData = globalThis.NanshanDistrictData || {};
+  const timestamp = officialData.exportedAt || officialData.updatedAt;
+  if (timestamp) {
+    const date = new Date(timestamp);
+    snapshotTime.textContent = '更新时间：' + date.getFullYear() + ' 年 ' + (date.getMonth() + 1) + ' 月 ' + date.getDate() + ' 日';
+  }
+  const associationCount = schools.reduce((count, school) => count + (school.homes || []).length, 0);
+  dataSummary.textContent = '当前快照包含 ' + schools.length + ' 所学校、' + associationCount + ' 条学校—小区官方关联。';
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    navigator.serviceWorker.register('./sw.js').catch(error => console.warn('离线缓存注册失败：', error));
+  }
   renderSaved();
+  const shared = new URLSearchParams(location.search);
+  const sharedMode = shared.get('mode');
+  const sharedQuery = shared.get('q');
+  if (sharedQuery && (sharedMode === 'community' || sharedMode === 'school')) {
+    setMode(sharedMode, false);
+    input.value = sharedQuery;
+    search();
+  }
 });

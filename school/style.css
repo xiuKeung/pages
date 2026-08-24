@@ -58,3 +58,16 @@ button { padding:0 17px; color:#fff; background:var(--blue); border:0; border-ra
 .official-links a span { font-size:19px; }
 footer { padding:0 16px calc(16px + env(safe-area-inset-bottom)); color:#98a2b3; text-align:center; font-size:12px; }
 @media (min-width:720px) { .page { padding-left:24px; padding-right:24px; } .hero { margin-left:-24px; margin-right:-24px; padding-left:32px; padding-right:32px; border-radius:0 0 16px 16px; } }
+.suggestions { display:none; margin-top:8px; overflow:hidden; border:1px solid #d0d5dd; border-radius:9px; background:#fff; }
+.suggestions.is-visible { display:block; }
+.suggestion-item { display:flex; width:100%; min-height:38px; padding:8px 10px; color:#344054; background:#fff; border:0; border-bottom:1px solid var(--line); border-radius:0; font-size:13px; font-weight:500; text-align:left; }
+.suggestion-item:last-child { border-bottom:0; }
+.suggestion-item strong { margin-right:6px; color:var(--blue); font-weight:700; }
+.suggestion-note { margin:0; padding:9px 10px; color:var(--muted); font-size:13px; }
+.share-toggle { flex:0 0 auto; min-height:30px; padding:4px 9px; color:#475467; background:#fff; border:1px solid #d0d5dd; border-radius:999px; font-size:13px; }
+.show-homes { margin-top:9px; padding:6px 9px; color:var(--blue); background:#eff6ff; border:1px solid #bfd7ff; border-radius:7px; font-size:13px; }
+.official-links.data-version { padding-bottom:16px; }
+.official-links.data-version h2 { margin-bottom:7px; }
+.official-links.data-version p { margin:3px 0; color:var(--muted); font-size:13px; }
+.page-toast { position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); z-index:9999; max-width:calc(100vw - 32px); padding:10px 14px; color:#fff; background:rgba(16,24,40,.92); border-radius:9px; box-shadow:0 6px 18px rgba(16,24,40,.24); font-size:14px; transform:translateX(-50%); animation:toast-in .18s ease-out; }
+@keyframes toast-in { from { opacity:0; transform:translate(-50%,8px); } to { opacity:1; transform:translate(-50%,0); } }
