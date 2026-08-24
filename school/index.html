@@ -26,6 +26,18 @@
         <input id="community" type="search" autocomplete="off" placeholder="如：诺德假日花园" enterkeyhint="search">
         <button id="search" type="button">查询</button>
       </div>
+      <div class="filters" aria-label="查询筛选">
+        <select id="filter-district" aria-label="区域筛选">
+          <option value="">全部区域</option>
+          <option value="南山">南山</option>
+          <option value="福田">福田</option>
+        </select>
+        <select id="filter-level" aria-label="学段筛选">
+          <option value="">小学和初中</option>
+          <option value="小学">仅小学</option>
+          <option value="初中">仅初中</option>
+        </select>
+      </div>
       <div id="suggestions" class="suggestions" aria-live="polite"></div>
       <p id="query-hint" class="hint">支持模糊搜索；命中多个官方小区名称时，会合并展示其对应学校。</p>
     </section>
@@ -57,7 +69,9 @@
       <h2>数据版本</h2>
       <p id="data-summary">正在读取官方数据快照…</p>
       <p id="snapshot-time">更新时间加载中</p>
+      <p id="data-stale" hidden></p>
       <p>数据来源见下方四张官方学区图。</p>
+      <button id="install-app" class="install-app" type="button" hidden>添加到主屏幕</button>
     </section>
 
     <section class="official-links">

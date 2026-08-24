@@ -71,3 +71,25 @@ footer { padding:0 16px calc(16px + env(safe-area-inset-bottom)); color:#98a2b3;
 .official-links.data-version p { margin:3px 0; color:var(--muted); font-size:13px; }
 .page-toast { position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); z-index:9999; max-width:calc(100vw - 32px); padding:10px 14px; color:#fff; background:rgba(16,24,40,.92); border-radius:9px; box-shadow:0 6px 18px rgba(16,24,40,.24); font-size:14px; transform:translateX(-50%); animation:toast-in .18s ease-out; }
 @keyframes toast-in { from { opacity:0; transform:translate(-50%,8px); } to { opacity:1; transform:translate(-50%,0); } }
+.filters { display:flex; gap:8px; margin-top:9px; }
+.filters select { min-width:0; flex:1; padding:8px 9px; color:#475467; background:#fff; border:1px solid #d0d5dd; border-radius:8px; font:inherit; font-size:13px; }
+mark { padding:0; color:inherit; background:#fde68a; border-radius:2px; }
+.copy-homes { margin:9px 0 0; padding:6px 9px; color:#475467; background:#fff; border:1px solid #d0d5dd; border-radius:7px; font-size:13px; }
+.official-name-note { margin:9px 0 0; padding:8px 10px; color:#7a4e00; background:#fffaeb; border:1px solid #fedf89; border-radius:8px; font-size:13px; }
+.install-app { margin-top:8px; min-height:34px; padding:6px 10px; color:var(--blue); background:#eff6ff; border:1px solid #bfd7ff; border-radius:7px; font-size:13px; }
+#data-stale { color:#b42318; }
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme:dark; --ink:#f2f4f7; --muted:#a9b4c5; --line:#344054; --surface:#1d2939; --soft:#243654; }
+  body { background:#101828; }
+  input,.filters select,.suggestions,.suggestion-item,.share-toggle,.copy-homes { color:#eaecf0; background:#1d2939; border-color:#475467; }
+  .search-card,.result,.saved-queries,.official-links { box-shadow:none; }
+  .suggestion-item { border-bottom-color:#475467; }
+  .search-modes button { color:#cbd5e1; background:#25364f; border-color:#475467; }
+  .saved-item { background:#243654; border-color:#4773b8; }
+  .saved-open { color:#b2ccff; }
+  .community-name,.data-version h2,.search-card label { color:#eaecf0; }
+  .notice { background:#49370b; border-color:#8a6515; }
+  .notice h2,.notice p { color:#fde68a; }
+  .data-version { background:#1d2939; }
+  mark { background:#7a5c08; }
+}

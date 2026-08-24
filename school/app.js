@@ -9,6 +9,10 @@ globalThis.SchoolDistrictDataReady.then(() => {
   const suggestions = document.querySelector('#suggestions');
   const snapshotTime = document.querySelector('#snapshot-time');
   const dataSummary = document.querySelector('#data-summary');
+  const staleMessage = document.querySelector('#data-stale');
+  const districtFilter = document.querySelector('#filter-district');
+  const levelFilter = document.querySelector('#filter-level');
+  const installButton = document.querySelector('#install-app');
   const savedRecentButton = document.querySelector('#saved-recent');
   const savedFavoriteButton = document.querySelector('#saved-favorite');
   const clearSavedButton = document.querySelector('#clear-saved');
@@ -29,6 +33,7 @@ globalThis.SchoolDistrictDataReady.then(() => {
   const modeState = { community: { value: '' }, school: { value: '' } };
   let savedPanel = 'recent';
   let activeResultQuery = null;
+  let installPrompt = null;
   const storageKey = (type, queryMode = mode) => `sz-school-district-${type}-${queryMode}-v1`;
 
   function readSaved(type, queryMode = mode) {
@@ -41,6 +46,23 @@ globalThis.SchoolDistrictDataReady.then(() => {
 
   function queryKey(query) {
     return `${query.mode}|${query.value}`;
+  }
+
+  function visibleSchools() {
+    return schools.filter(school => (!districtFilter.value || school.district === districtFilter.value)
+      && (!levelFilter.value || school.level === levelFilter.value));
+  }
+
+  function visibleHomes() {
+    return [...new Set(visibleSchools().flatMap(school => school.homes || []))];
+  }
+
+  function highlight(value, query) {
+    const text = escape(value);
+    const needle = String(query || '').trim();
+    if (!needle) return text;
+    const escapedNeedle = escape(needle).replace(/[.*+?^$()|[\]\\]/g, '\\$&');
+    return text.replace(new RegExp(escapedNeedle, 'gi'), '<mark>$&</mark>');
   }
 
   function recordRecent(query) {
@@ -118,27 +140,29 @@ globalThis.SchoolDistrictDataReady.then(() => {
     setTimeout(() => toast.remove(), 3000);
   }
 
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch { /* 回退到传统复制方式 */ }
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+    document.body.append(textarea);
+    textarea.select();
+    const copied = document.execCommand('copy');
+    textarea.remove();
+    return copied;
+  }
+
   function bindResultControls(query) {
     result.querySelector('.share-toggle')?.addEventListener('click', async event => {
       const url = new URL(location.href);
       url.search = new URLSearchParams({ mode: query.mode, q: query.value }).toString();
-      let copied = false;
-      try {
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(url.href);
-          copied = true;
-        }
-      } catch { /* 回退到传统复制方式 */ }
-      if (!copied) {
-        const textarea = document.createElement('textarea');
-        textarea.value = url.href;
-        textarea.setAttribute('readonly', '');
-        textarea.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
-        document.body.append(textarea);
-        textarea.select();
-        copied = document.execCommand('copy');
-        textarea.remove();
-      }
+      const copied = await copyText(url.href);
       event.currentTarget.textContent = copied ? '链接已复制' : '复制失败';
       showToast(copied ? '链接已复制' : '复制失败，请长按地址栏复制当前链接');
       setTimeout(() => { event.currentTarget.textContent = '分享'; }, 1500);
@@ -166,6 +190,12 @@ globalThis.SchoolDistrictDataReady.then(() => {
       section.querySelectorAll('[hidden]').forEach(item => { item.hidden = false; });
       button.remove();
     }));
+    result.querySelectorAll('[data-copy-homes]').forEach(button => button.addEventListener('click', async () => {
+      const school = schoolByKey.get(button.dataset.copyHomes);
+      if (!school) return;
+      const copied = await copyText((school.homes || []).join('\n'));
+      showToast(copied ? '小区名单已复制' : '复制失败');
+    }));
   }
 
   // 以官方小区名单的并集反查学校：候选名称无论是简称、全称还是括号别名，
@@ -173,7 +203,7 @@ globalThis.SchoolDistrictDataReady.then(() => {
   function findMatches(homes) {
     const keys = new Set(homes.map(normalize));
     const matches = [];
-    schools.forEach(school => (school.homes || []).forEach(home => {
+    visibleSchools().forEach(school => (school.homes || []).forEach(home => {
       const homeKey = normalize(home);
       if (keys.has(homeKey)) matches.push({ school, home });
     }));
@@ -185,7 +215,7 @@ globalThis.SchoolDistrictDataReady.then(() => {
     if (key.length < 2) return [];
     // 即使存在完全相同的小区名，也保留同一输入命中的其他官方名称；
     // 例如“简称 / 全称（别名）”可能分别承载不同学段的官方关联。
-    return expandRelatedHomes(allHomes.filter(home => normalize(home).includes(key)))
+    return expandRelatedHomes(visibleHomes().filter(home => normalize(home).includes(key)))
       .sort((a, b) => {
         const aExact = normalize(a) === key ? 0 : 1;
         const bExact = normalize(b) === key ? 0 : 1;
@@ -200,7 +230,7 @@ globalThis.SchoolDistrictDataReady.then(() => {
     let changed = true;
     while (changed) {
       changed = false;
-      for (const home of allHomes) {
+      for (const home of visibleHomes()) {
         const homeKey = normalize(home);
         if ([...related].some(item => {
           const itemKey = normalize(item);
@@ -233,9 +263,9 @@ globalThis.SchoolDistrictDataReady.then(() => {
     const rows = grouped(findMatches(homes));
     const primary = rows.filter(row => row.level === '小学');
     const middle = rows.filter(row => row.level === '初中');
-    const block = (title, list, className) => list.length ? `<section class="school-group ${className}"><h3>${title}</h3><ul>${list.map(row => `<li><button class="result-link" type="button" data-school-key="${escape(`${row.district}|${row.level}|${row.name}`)}">${escape(row.name)}</button></li>`).join('')}</ul></section>` : '';
+    const block = (title, list, className) => list.length ? `<section class="school-group ${className}"><h3>${title}</h3><ul>${list.map(row => `<li><button class="result-link" type="button" data-school-key="${escape(`${row.district}|${row.level}|${row.name}`)}">${highlight(row.name, query.value)}</button></li>`).join('')}</ul></section>` : '';
     const officialHomes = rows.length
-      ? `<p class="community-name">官方匹配小区：${homes.map(escape).join('、')}</p>`
+      ? `<p class="community-name">官方匹配小区：${homes.map(home => highlight(home, query.value)).join('、')}</p>`
       : '<p class="hint">未找到对应学校，请先查看官方学区图核验。</p>';
     const multiNotice = primary.length > 1 || middle.length > 1
       ? '<p class="multi-notice">此小区对应多所学校，可能涉及多校选择或共享学区；最终入学安排请以当年官方招生政策为准。</p>'
@@ -249,7 +279,8 @@ globalThis.SchoolDistrictDataReady.then(() => {
   function schoolCandidates(value) {
     const key = normalize(value);
     if (key.length < 2) return [];
-    return allSchools
+    return allSchools.filter(school => (!districtFilter.value || school.district === districtFilter.value)
+      && (!levelFilter.value || school.level === levelFilter.value))
       .filter(school => normalize(school.name).includes(key))
       .sort((a, b) => {
         const aExact = normalize(a.name) === key ? 0 : 1;
@@ -292,10 +323,12 @@ globalThis.SchoolDistrictDataReady.then(() => {
       const homes = [...new Set(school.homes || [])];
       const visibleHomes = homes.slice(0, 10);
       const extraHomes = homes.slice(10);
-      const list = visibleHomes.map(home => `<li><button class="result-link" type="button" data-home="${escape(home)}">${escape(home)}</button></li>`).join('')
-        + extraHomes.map(home => `<li hidden><button class="result-link" type="button" data-home="${escape(home)}">${escape(home)}</button></li>`).join('');
+      const list = visibleHomes.map(home => `<li><button class="result-link" type="button" data-home="${escape(home)}">${highlight(home, query.value)}</button></li>`).join('')
+        + extraHomes.map(home => `<li hidden><button class="result-link" type="button" data-home="${escape(home)}">${highlight(home, query.value)}</button></li>`).join('');
       const more = extraHomes.length ? `<button class="show-homes" type="button" data-expand-homes>展开全部（另 ${extraHomes.length} 个）</button>` : '';
-      return `<section class="school-group ${className}"><h3>${escape(school.district)} · ${escape(school.level)} · ${escape(school.name)}</h3><p class="hint">官方学区小区（${homes.length} 个）</p><ul>${list}</ul>${more}</section>`;
+      const irregular = homes.some(home => /地段|范围|编号|交界|交叉|以东|以南|以西|以北/.test(home))
+        ? '<p class="official-name-note">名单含“地段/范围”等官方地图原文，请结合官方图核验具体楼栋或边界。</p>' : '';
+      return `<section class="school-group ${className}"><h3>${escape(school.district)} · ${escape(school.level)} · ${highlight(school.name, query.value)}</h3><p class="hint">官方学区小区（${homes.length} 个）</p><ul>${list}</ul>${more}<button class="copy-homes" type="button" data-copy-homes="${escape(`${school.district}|${school.level}|${school.name}`)}">复制全部小区</button>${irregular}</section>`;
     }).join('');
     result.innerHTML = `${resultHeader(label, query)}${blocks}`;
     activeResultQuery = query;
@@ -377,6 +410,10 @@ globalThis.SchoolDistrictDataReady.then(() => {
   searchButton.addEventListener('click', search);
   communityModeButton.addEventListener('click', () => setMode('community'));
   schoolModeButton.addEventListener('click', () => setMode('school'));
+  [districtFilter, levelFilter].forEach(filter => filter.addEventListener('change', () => {
+    renderSuggestions();
+    if (input.value.trim()) search();
+  }));
   savedRecentButton.addEventListener('click', () => { savedPanel = 'recent'; renderSaved(); });
   savedFavoriteButton.addEventListener('click', () => { savedPanel = 'favorite'; renderSaved(); });
   clearSavedButton.addEventListener('click', () => {
@@ -396,12 +433,29 @@ globalThis.SchoolDistrictDataReady.then(() => {
   if (timestamp) {
     const date = new Date(timestamp);
     snapshotTime.textContent = '更新时间：' + date.getFullYear() + ' 年 ' + (date.getMonth() + 1) + ' 月 ' + date.getDate() + ' 日';
+    const ageDays = Math.floor((Date.now() - date.getTime()) / 86_400_000);
+    if (ageDays > 90) {
+      staleMessage.hidden = false;
+      staleMessage.textContent = '该快照已超过 ' + ageDays + ' 天，建议重新同步官方数据。';
+    }
   }
   const associationCount = schools.reduce((count, school) => count + (school.homes || []).length, 0);
   dataSummary.textContent = '当前快照包含 ' + schools.length + ' 所学校、' + associationCount + ' 条学校—小区官方关联。';
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('./sw.js').catch(error => console.warn('离线缓存注册失败：', error));
   }
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    installPrompt = event;
+    installButton.hidden = false;
+  });
+  installButton.addEventListener('click', async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+    installPrompt = null;
+    installButton.hidden = true;
+  });
   renderSaved();
   const shared = new URLSearchParams(location.search);
   const sharedMode = shared.get('mode');
