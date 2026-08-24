@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#155eef">
+  <title>南山、福田学区查询</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">深圳小区学区查询</p>
+      <h1>南山、福田学区信息</h1>
+      <p>输入小区名，查询对应小学与初中。</p>
+    </header>
+
+    <section class="search-card" aria-label="小区学区查询">
+      <label for="community">小区名称</label>
+      <div class="search-row">
+        <input id="community" type="search" autocomplete="off" placeholder="如：厚德品园、诺德国际" enterkeyhint="search">
+        <button id="search" type="button">查询</button>
+      </div>
+      <p class="hint">支持常用别名；如有多个近似小区，请选择对应项。</p>
+    </section>
+
+    <section id="result" class="result" aria-live="polite">
+      <div class="empty">
+        <span class="empty-icon">⌕</span>
+        <p>输入小区名称开始查询</p>
+      </div>
+    </section>
+
+    <section class="notice">
+      <h2>使用说明</h2>
+      <p>结果仅作学区信息参考。最终入学资格、共享学区、多校选择与学位锁定，请以当年教育局招生政策及官方学区图为准。</p>
+    </section>
+
+    <section class="official-links">
+      <h2>官方学区图</h2>
+      <a href="https://nszs.szns.gov.cn/visitnsgbxyxqdt" target="_blank" rel="noreferrer">南山小学学区图 <span>↗</span></a>
+      <a href="https://nszs.szns.gov.cn/visitnsgbcyxqdt" target="_blank" rel="noreferrer">南山初中学区图 <span>↗</span></a>
+      <a href="https://zs.szft.gov.cn/visitftgbxyxqdt" target="_blank" rel="noreferrer">福田小学学区图 <span>↗</span></a>
+      <a href="https://zs.szft.gov.cn/visitftgbcyxqdt" target="_blank" rel="noreferrer">福田初中学区图 <span>↗</span></a>
+    </section>
+  </main>
+  <footer>数据快照仅来自南山、福田教育局四张官方学区图 · 请以当年官方招生政策及学区图为准</footer>
+  <script src="official-district-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

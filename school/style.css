@@ -1,0 +1,36 @@
+:root { color-scheme: light; --blue:#155eef; --ink:#101828; --muted:#667085; --line:#e4e7ec; --surface:#fff; --soft:#f5f8ff; }
+* { box-sizing: border-box; }
+body { margin:0; color:var(--ink); background:#f3f6fb; font:16px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; }
+.page { max-width:680px; min-height:calc(100vh - 42px); margin:auto; padding:env(safe-area-inset-top,18px) 16px 28px; }
+.hero { padding:28px 8px 22px; color:#fff; background:linear-gradient(135deg,#0f3f9d,#2779ed); margin:0 -16px 16px; padding-left:24px; padding-right:24px; }
+.eyebrow { margin:0 0 4px; opacity:.82; font-size:13px; }
+h1 { margin:0; font-size:27px; line-height:1.25; letter-spacing:.01em; }
+.hero > p:last-child { margin:7px 0 0; font-size:14px; opacity:.9; }
+.search-card,.result,.notice,.official-links { margin:14px 0; padding:16px; background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:0 4px 14px rgba(16,24,40,.035); }
+.search-card label { display:block; margin-bottom:7px; color:#344054; font-size:14px; font-weight:700; }
+.search-row { display:flex; gap:8px; }
+input { min-width:0; flex:1; padding:12px; color:var(--ink); border:1px solid #bfc7d5; border-radius:9px; font:inherit; outline:none; }
+input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(21,94,239,.13); }
+button { padding:0 17px; color:#fff; background:var(--blue); border:0; border-radius:9px; font:inherit; font-weight:700; cursor:pointer; }
+.hint { margin:8px 0 0; color:var(--muted); font-size:13px; }
+.empty { padding:23px 10px; text-align:center; color:var(--muted); }
+.empty-icon { display:block; margin-bottom:4px; color:#98a2b3; font-size:30px; }
+.empty p { margin:0; }
+.result h2,.notice h2,.official-links h2 { margin:0 0 10px; font-size:17px; }
+.community-name { margin:0 0 13px; color:#344054; font-weight:700; }
+.school-group { margin-top:10px; padding:12px; background:var(--soft); border-radius:10px; }
+.school-group h3 { margin:0 0 6px; color:var(--blue); font-size:14px; }
+.school-group.middle h3 { color:#c43225; }
+.school-group ul { margin:0; padding-left:20px; }
+.school-group li { margin:4px 0; }
+.matched { margin:12px 0 0; color:var(--muted); font-size:13px; }
+.candidates { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.candidates button { padding:8px 10px; color:var(--blue); background:#eff6ff; border:1px solid #bfd7ff; font-size:14px; font-weight:500; }
+.notice { background:#fffbeb; border-color:#fde68a; }
+.notice h2 { color:#92400e; }
+.notice p { margin:0; color:#785b22; font-size:14px; }
+.official-links { padding-bottom:6px; }
+.official-links a { display:flex; justify-content:space-between; align-items:center; padding:12px 0; color:var(--blue); border-top:1px solid var(--line); text-decoration:none; }
+.official-links a span { font-size:19px; }
+footer { padding:0 16px calc(16px + env(safe-area-inset-bottom)); color:#98a2b3; text-align:center; font-size:12px; }
+@media (min-width:720px) { .page { padding-left:24px; padding-right:24px; } .hero { margin-left:-24px; margin-right:-24px; padding-left:32px; padding-right:32px; border-radius:0 0 16px 16px; } }
