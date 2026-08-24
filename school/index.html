@@ -10,8 +10,7 @@
 <body>
   <main class="page">
     <header class="hero">
-      <p class="eyebrow">深圳小区学区查询</p>
-      <h1>南山、福田学区信息</h1>
+      <h1>深圳南山、福田学区信息</h1>
       <p>输入小区或学校，查询官方学区信息。</p>
     </header>
 
@@ -28,6 +27,17 @@
       <p id="query-hint" class="hint">支持模糊搜索；命中多个官方小区名称时，会合并展示其对应学校。</p>
     </section>
 
+    <section class="saved-queries" aria-label="查询记录和收藏">
+      <div class="saved-head">
+        <div class="saved-tabs" role="tablist" aria-label="本地查询记录">
+          <button class="is-active" id="saved-recent" type="button" role="tab" aria-selected="true">最近查询</button>
+          <button id="saved-favorite" type="button" role="tab" aria-selected="false">收藏</button>
+        </div>
+        <button id="clear-saved" class="clear-saved" type="button">清空</button>
+      </div>
+      <div id="saved-list" class="saved-list"></div>
+    </section>
+
     <section id="result" class="result" aria-live="polite">
       <div class="empty">
         <span class="empty-icon">⌕</span>
@@ -36,8 +46,8 @@
     </section>
 
     <section class="notice">
-      <h2>使用说明</h2>
-      <p>结果仅作学区信息参考。最终入学资格、共享学区、多校选择与学位锁定，请以当年教育局招生政策及官方学区图为准。</p>
+      <h2>重要说明</h2>
+      <p>结果仅供参考。<br>数据快照仅来自南山、福田教育局四张官方学区图，更新时间：2026 年 8 月 24 日。<br>最终入学资格、共享学区、多校选择与学位锁定，请以当年教育局招生政策及官方学区图为准。</p>
     </section>
 
     <section class="official-links">
@@ -48,7 +58,6 @@
       <a href="https://zs.szft.gov.cn/visitftgbcyxqdt" target="_blank" rel="noreferrer">福田初中学区图 <span>↗</span></a>
     </section>
   </main>
-  <footer>数据快照仅来自南山、福田教育局四张官方学区图 · 请以当年官方招生政策及学区图为准</footer>
   <script src="official-district-data.js"></script>
   <script src="app.js"></script>
 </body>
