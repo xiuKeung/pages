@@ -320,7 +320,7 @@ globalThis.SchoolDistrictDataReady.then(() => {
     communityModeButton.setAttribute('aria-selected', String(communityMode));
     schoolModeButton.setAttribute('aria-selected', String(!communityMode));
     queryLabel.textContent = communityMode ? '小区名称' : '学校名称';
-    input.placeholder = communityMode ? '如：厚德品园、诺德国际' : '如：南山实验教育集团荔林小学';
+    input.placeholder = communityMode ? '如：诺德假日花园' : '如：南山实验教育集团荔林小学';
     queryHint.textContent = communityMode
       ? '支持模糊搜索；命中多个官方小区名称时，会合并展示其对应学校。'
       : '支持学校名模糊搜索；同名或不同校区学校会先请你选择。';
