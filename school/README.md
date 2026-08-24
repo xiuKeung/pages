@@ -26,8 +26,8 @@
 
 更新入口只有一个：
 
-- macOS：双击 `同步官方数据.command`
-- Windows：双击 `同步官方数据.bat`
+- macOS：双击 `sync-official-data.command`
+- Windows：双击 `sync-official-data.bat`
 
 首次运行需要联网。脚本会自动：
 
@@ -49,5 +49,5 @@
 | `school-districts-official.json` | 四图导出的完整原始官方数据，含多边形 | 是 |
 | `official-district-data.js` | 网页离线查询所需的精简数据 | 是 |
 | `sync-official-data.js` | 一键同步逻辑 | 是 |
-| `同步官方数据.command` / `同步官方数据.bat` | macOS / Windows 双击入口 | 是 |
+| `sync-official-data.command` / `sync-official-data.bat` | macOS / Windows 双击入口 | 是 |
 | `node_modules/` 等 | 自动安装的本地依赖 | 否 |
