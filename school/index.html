@@ -12,16 +12,20 @@
     <header class="hero">
       <p class="eyebrow">深圳小区学区查询</p>
       <h1>南山、福田学区信息</h1>
-      <p>输入小区名，查询对应小学与初中。</p>
+      <p>输入小区或学校，查询官方学区信息。</p>
     </header>
 
-    <section class="search-card" aria-label="小区学区查询">
-      <label for="community">小区名称</label>
+    <section class="search-card" aria-label="学区查询">
+      <div class="search-modes" role="tablist" aria-label="查询方式">
+        <button id="mode-community" class="is-active" type="button" role="tab" aria-selected="true">小区查学校</button>
+        <button id="mode-school" type="button" role="tab" aria-selected="false">学校查小区</button>
+      </div>
+      <label id="query-label" for="community">小区名称</label>
       <div class="search-row">
         <input id="community" type="search" autocomplete="off" placeholder="如：厚德品园、诺德国际" enterkeyhint="search">
         <button id="search" type="button">查询</button>
       </div>
-      <p class="hint">支持常用别名；如有多个近似小区，请选择对应项。</p>
+      <p id="query-hint" class="hint">支持模糊搜索；命中多个官方小区名称时，会合并展示其对应学校。</p>
     </section>
 
     <section id="result" class="result" aria-live="polite">
