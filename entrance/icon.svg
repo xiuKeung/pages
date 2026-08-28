@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>深圳生活工具</title>
+  <rect width="128" height="128" rx="28" fill="#1769e0"/>
+  <path d="M18 59 43 37l25 22v35H53V76H33v18H18V59Z" fill="#fff"/>
+  <path d="M25 58 43 42l18 16" fill="none" stroke="#1769e0" stroke-linecap="round" stroke-linejoin="round" stroke-width="5"/>
+  <rect x="64" y="50" width="45" height="53" rx="7" fill="#eaf2ff"/>
+  <rect x="70" y="57" width="33" height="12" rx="3" fill="#1769e0"/>
+  <g fill="#1769e0"><rect x="71" y="75" width="7" height="7" rx="2"/><rect x="83" y="75" width="7" height="7" rx="2"/><rect x="95" y="75" width="7" height="7" rx="2"/><rect x="71" y="87" width="7" height="7" rx="2"/><rect x="83" y="87" width="7" height="7" rx="2"/><rect x="95" y="87" width="7" height="7" rx="2"/></g>
+</svg>
