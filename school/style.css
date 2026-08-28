@@ -3,6 +3,8 @@
 body { margin:0; color:var(--ink); background:#f3f6fb; font:16px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; }
 .page { max-width:680px; min-height:calc(100vh - 42px); margin:auto; padding:env(safe-area-inset-top,18px) 16px 28px; }
 .hero { padding:28px 8px 22px; color:#fff; background:linear-gradient(135deg,#0f3f9d,#2779ed); margin:0 -16px 16px; padding-left:24px; padding-right:24px; }
+.hero-back { display:inline-flex; margin:0 0 18px; color:#fff; text-decoration:none; font-size:14px; opacity:.92; }
+.hero-back:hover { text-decoration:underline; }
 .eyebrow { margin:0 0 4px; opacity:.82; font-size:13px; }
 h1 { margin:0; font-size:27px; line-height:1.25; letter-spacing:.01em; }
 .hero > p:last-child { margin:7px 0 0; font-size:14px; opacity:.9; }

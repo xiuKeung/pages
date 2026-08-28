@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>深圳生活工具</title>
+  <style>
+    :root { color-scheme: light; --blue:#1769e0; --ink:#17233b; --muted:#667085; --line:#e6edf8; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; color:var(--ink); background:linear-gradient(145deg,#eef5ff 0%,#f8fbff 46%,#f1f6ff 100%); }
+    main { width:min(720px,calc(100% - 40px)); margin:0 auto; padding:74px 0 48px; }
+    .eyebrow { margin:0 0 12px; color:var(--blue); font-size:14px; font-weight:700; letter-spacing:.08em; }
+    h1 { margin:0; font-size:clamp(30px,7vw,44px); line-height:1.18; letter-spacing:-.04em; }
+    .intro { margin:18px 0 34px; color:var(--muted); font-size:16px; line-height:1.7; }
+    .tools { display:grid; gap:16px; }
+    .tool { display:flex; align-items:center; gap:18px; min-height:132px; padding:22px; border:1px solid var(--line); border-radius:22px; background:rgba(255,255,255,.92); color:inherit; text-decoration:none; box-shadow:0 12px 32px rgba(37,93,177,.08); transition:transform .18s,box-shadow .18s,border-color .18s; }
+    .tool:hover { transform:translateY(-3px); border-color:#a9cbff; box-shadow:0 18px 38px rgba(37,93,177,.14); }
+    .icon { display:grid; place-items:center; align-self:center; flex:0 0 62px; width:62px; height:62px; border-radius:18px; background:#e8f1ff; font-size:44px; line-height:1; text-align:center; }
+    .icon .emoji { display:block; line-height:1; } .tool:first-child .icon { font-size:53px; } .tool:first-child .emoji { transform:translateY(-5px); } .tool:nth-child(2) .icon { background:#e9f8f0; }
+    .tool h2 { margin:0 0 6px; font-size:21px; }
+    .tool p { margin:0; color:var(--muted); font-size:14px; line-height:1.55; }
+    .arrow { margin-left:auto; color:var(--blue); font-size:26px; }
+    footer { margin-top:32px; color:#8a96a9; font-size:13px; text-align:center; }
+    @media (max-width:480px) { main{ width:min(100% - 28px,720px); padding-top:48px; } .tool{ padding:18px; gap:14px; } .icon{ flex-basis:54px; width:54px; height:54px; font-size:38px; } .tool:first-child .icon{font-size:46px;} }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">SHENZHEN TOOLBOX</p>
+    <h1>深圳生活工具</h1>
+    <p class="intro">查询南山、福田官方学区信息，或快速估算购房贷款月供。</p>
+    <section class="tools" aria-label="工具入口">
+      <a class="tool" href="../school/index.html">
+        <span class="icon" aria-hidden="true"><span class="emoji">🏫</span></span>
+        <span><h2>学区信息查询</h2><p>按小区查学校，或按学校查官方匹配小区。</p></span>
+        <span class="arrow" aria-hidden="true">›</span>
+      </a>
+      <a class="tool" href="../calculator/index.html">
+        <span class="icon" aria-hidden="true"><span class="emoji">🧮</span></span>
+        <span><h2>房贷计算器</h2><p>支持商业贷款、公积金贷款与组合贷款的月供估算。</p></span>
+        <span class="arrow" aria-hidden="true">›</span>
+      </a>
+    </section>
+  </main>
+</body>
+</html>
