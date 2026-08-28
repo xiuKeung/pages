@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title>房贷计算器</title>
+  <rect width="128" height="128" rx="28" fill="#1769e0"/>
+  <rect x="28" y="18" width="72" height="92" rx="12" fill="#fff"/>
+  <rect x="39" y="31" width="50" height="20" rx="5" fill="#dceaff"/>
+  <path d="M46 41h36" stroke="#1769e0" stroke-linecap="round" stroke-width="4"/>
+  <g fill="#1769e0"><rect x="40" y="61" width="12" height="12" rx="3"/><rect x="58" y="61" width="12" height="12" rx="3"/><rect x="76" y="61" width="12" height="12" rx="3"/><rect x="40" y="80" width="12" height="12" rx="3"/><rect x="58" y="80" width="12" height="12" rx="3"/><rect x="76" y="80" width="12" height="12" rx="3"/></g>
+</svg>
