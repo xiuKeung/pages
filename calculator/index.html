@@ -89,7 +89,7 @@
     const $ = id => document.getElementById(id);
     let type = 'commercial', amountMode = 'auto', lastPolicyDownPayment = 15;
     const years = $('years');
-    for (let year = 1; year <= 40; year++) years.add(new Option(`${year} 年`, year, false, year === 40));
+    for (let year = 1; year <= 40; year++) years.add(new Option(`${year} 年`, year, false, year === 30));
     const format = n => new Intl.NumberFormat('zh-CN',{maximumFractionDigits:0}).format(Math.max(0,n));
     const loan = (amountWan, rate, months, method) => {
       const principal = Number(amountWan || 0) * 10000, monthlyRate = Number(rate || 0) / 100 / 12;
