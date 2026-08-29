@@ -75,7 +75,7 @@
         <button class="calculate" id="calculate">开始计算</button>
       </section>
       <aside class="card">
-        <div class="result-head"><div><h2>计算结果</h2><p class="method" id="resultMethod">等额本息 · 30 年</p></div></div>
+        <div class="result-head"><div><h2>计算结果</h2><p class="method" id="resultMethod">等额本息 · 40 年</p></div></div>
         <div class="monthly"><span id="monthlyTitle">每月月供</span><strong id="monthly">—</strong></div>
         <div class="stats"><div class="stat"><span>贷款总额</span><strong id="totalLoan">—</strong></div><div class="stat"><span>利息总额</span><strong id="interest">—</strong></div><div class="stat"><span>还款总额</span><strong id="totalPayment">—</strong></div><div class="stat"><span id="periodLabel">还款期数</span><strong id="periods">—</strong></div></div>
         <section class="comparison"><h3 id="comparisonTitle">另一种还款方式</h3><div class="comparison-grid"><div class="comparison-item"><span id="compareMonthlyLabel">首月月供</span><strong id="compareMonthly">—</strong></div><div class="comparison-item"><span>利息总额</span><strong id="compareInterest">—</strong></div><div class="comparison-item"><span>利息差</span><strong id="compareDifference">—</strong></div></div></section>
@@ -89,7 +89,7 @@
     const $ = id => document.getElementById(id);
     let type = 'commercial', amountMode = 'auto', lastPolicyDownPayment = 15;
     const years = $('years');
-    for (let year = 1; year <= 30; year++) years.add(new Option(`${year} 年`, year, false, year === 30));
+    for (let year = 1; year <= 40; year++) years.add(new Option(`${year} 年`, year, false, year === 40));
     const format = n => new Intl.NumberFormat('zh-CN',{maximumFractionDigits:0}).format(Math.max(0,n));
     const loan = (amountWan, rate, months, method) => {
       const principal = Number(amountWan || 0) * 10000, monthlyRate = Number(rate || 0) / 100 / 12;
