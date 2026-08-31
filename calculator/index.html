@@ -29,10 +29,10 @@
     .section-title { margin:23px 0 13px; font-size:15px; } .extra.hidden, .hidden { display:none; } .rate-note,.allocation-note,.validation { margin:15px 0 0; color:var(--muted); font-size:12px; line-height:1.55; } .allocation-note.is-error,.validation.is-error { color:#b42318; } .loan-preview { grid-column:1 / -1; padding:11px 12px; border-radius:9px; background:#edf5ff; color:#3f526f; font-size:13px; } .loan-preview strong { color:var(--blue); font-size:16px; }
     .calculate { width:100%; margin-top:23px; padding:13px; border:0; border-radius:10px; color:#fff; background:var(--blue); font:inherit; font-weight:700; cursor:pointer; } .calculate:hover{ background:#0f5dcc; }
     .result-head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; } .result-head h2 { margin:0; font-size:18px; } .method { margin:4px 0 0; color:var(--muted); font-size:13px; }
-    .monthly { margin:23px 0; padding:18px; border-radius:13px; background:#edf5ff; } .monthly span { color:var(--muted); font-size:13px; } .monthly strong { display:block; margin-top:5px; color:var(--blue); font-size:32px; letter-spacing:-.04em; } .monthly em { font-size:15px; font-style:normal; }
+    .monthly { margin:23px 0; padding:18px; border-radius:13px; background:#edf5ff; } .monthly span { color:var(--muted); font-size:13px; } .monthly strong { display:block; margin-top:5px; color:var(--blue); font-size:32px; letter-spacing:-.04em; } .monthly em { font-size:15px; font-style:normal; } .monthly small { display:block; margin-top:7px; color:#51637d; font-size:12px; }
     .stats { display:grid; grid-template-columns:1fr 1fr; gap:13px; } .stat { padding:13px; border:1px solid var(--line); border-radius:11px; } .stat span { display:block; color:var(--muted); font-size:12px; } .stat strong { display:block; margin-top:6px; font-size:16px; }
-    .comparison { margin-top:18px; padding-top:18px; border-top:1px solid var(--line); } .comparison h3 { margin:0 0 11px; font-size:14px; } .comparison-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; } .comparison-item { padding:10px 8px; border-radius:9px; background:#f6f8fc; } .comparison-item span { display:block; color:var(--muted); font-size:11px; } .comparison-item strong { display:block; margin-top:4px; font-size:13px; }
-    .result-actions { display:flex; gap:9px; margin-top:18px; } .result-actions button,.details-toggle { min-height:36px; padding:7px 11px; border:1px solid #b9d1fb; border-radius:8px; color:var(--blue); background:#f5f9ff; font:inherit; font-size:13px; font-weight:650; cursor:pointer; } .result-actions button { flex:1; } .result-toast { min-height:18px; margin:7px 0 0; color:#15803d; font-size:12px; } .details { min-width:0; margin-top:18px; padding-top:18px; border-top:1px solid var(--line); } .details-head { display:flex; align-items:center; justify-content:space-between; gap:10px; } .details-head h3 { margin:0; font-size:14px; } .schedule-wrap { width:100%; max-width:100%; max-height:360px; margin-top:12px; overflow-x:auto; overflow-y:auto; border:1px solid var(--line); border-radius:9px; -webkit-overflow-scrolling:touch; } table { width:100%; min-width:440px; border-collapse:collapse; font-size:12px; white-space:nowrap; } th,td { padding:8px 6px; border-bottom:1px solid var(--line); text-align:right; } th:first-child,td:first-child{text-align:left;} th { position:sticky; top:0; color:var(--muted); background:#f7f9fc; font-weight:650; } tr:last-child td{border-bottom:0;}
+    .comparison { margin-top:18px; padding-top:18px; border-top:1px solid var(--line); } .comparison h3 { margin:0 0 4px; font-size:14px; } .comparison > p { margin:0 0 11px; color:var(--muted); font-size:12px; } .comparison-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; } .comparison-item { padding:10px 8px; border-radius:9px; background:#f6f8fc; } .comparison-item span { display:block; color:var(--muted); font-size:11px; } .comparison-item strong { display:block; margin-top:4px; font-size:13px; }
+    .result-actions { display:flex; gap:9px; margin-top:18px; } .result-actions button,.details-toggle,.all-years { min-height:36px; padding:7px 11px; border:1px solid #b9d1fb; border-radius:8px; color:var(--blue); background:#f5f9ff; font:inherit; font-size:13px; font-weight:650; cursor:pointer; } .result-actions button { flex:1; } .result-toast { min-height:18px; margin:7px 0 0; color:#15803d; font-size:12px; } .details { min-width:0; margin-top:18px; padding-top:18px; border-top:1px solid var(--line); } .details-head { display:flex; align-items:center; justify-content:space-between; gap:10px; } .details-head h3 { margin:0; font-size:14px; } .schedule-wrap { width:100%; max-width:100%; max-height:360px; margin-top:12px; overflow-x:auto; overflow-y:auto; border:1px solid var(--line); border-radius:9px; -webkit-overflow-scrolling:touch; } .all-years { width:100%; margin-top:9px; } table { width:100%; min-width:440px; border-collapse:collapse; font-size:12px; white-space:nowrap; } th,td { padding:8px 6px; border-bottom:1px solid var(--line); text-align:right; } th:first-child,td:first-child{text-align:left;} th { position:sticky; top:0; color:var(--muted); background:#f7f9fc; font-weight:650; } tr:last-child td{border-bottom:0;}
     .note { margin:19px 0 0; color:var(--muted); font-size:12px; line-height:1.65; }
     @media(max-width:720px) { main{width:min(100% - 24px,960px);padding-top:20px}.layout{grid-template-columns:1fr}.fields{gap:12px}.card{padding:18px} }
   </style>
@@ -51,8 +51,8 @@
           <button class="active" data-amount-mode="auto">按房屋总价计算</button><button data-amount-mode="direct">直接输入贷款金额</button>
         </div>
         <div id="priceFields" class="fields">
-          <label>房屋总价<span class="unit has-clear"><input id="housePrice" type="number" min="0" value="500"><button class="clear-input" type="button" data-clear="housePrice" aria-label="清空房屋总价">×</button><span>万元</span></span></label>
-          <label>首付比例<span class="unit has-clear"><input id="downPaymentRate" type="number" min="0" max="100" step="1" value="15"><button class="clear-input" type="button" data-clear="downPaymentRate" aria-label="清空首付比例">×</button><span>%</span></span></label>
+          <label>房屋总价<span class="unit has-clear"><input id="housePrice" type="number" inputmode="decimal" min="0" value="500"><button class="clear-input" type="button" data-clear="housePrice" aria-label="清空房屋总价">×</button><span>万元</span></span></label>
+          <label>首付比例<span class="unit has-clear"><input id="downPaymentRate" type="number" inputmode="decimal" min="0" max="100" step="1" value="15"><button class="clear-input" type="button" data-clear="downPaymentRate" aria-label="清空首付比例">×</button><span>%</span></span></label>
           <div class="loan-preview">预计首付 <strong id="autoDownPayment">—</strong> 万元；预计贷款 <strong id="autoLoan">—</strong> 万元</div>
         </div>
         <div class="fields">
@@ -60,14 +60,14 @@
           <label>贷款期限<select id="years"></select></label>
         </div>
         <div id="singleFields" class="fields extra">
-          <label><span id="singleLabel">贷款金额</span><span class="unit has-clear"><input id="singleAmount" type="number" min="0" value="300"><button class="clear-input" type="button" data-clear="singleAmount" aria-label="清空贷款金额">×</button><span>万元</span></span></label>
-          <label><span id="singleRateLabel">年利率</span><span class="unit has-clear"><input id="singleRate" type="number" min="0" step="0.01" value="3.05"><button class="clear-input" type="button" data-clear="singleRate" aria-label="清空年利率">×</button><span>%</span></span></label>
+          <label><span id="singleLabel">贷款金额</span><span class="unit has-clear"><input id="singleAmount" type="number" inputmode="decimal" min="0" value="300"><button class="clear-input" type="button" data-clear="singleAmount" aria-label="清空贷款金额">×</button><span>万元</span></span></label>
+          <label><span id="singleRateLabel">年利率</span><span class="unit has-clear"><input id="singleRate" type="number" inputmode="decimal" min="0" step="0.01" value="3.05"><button class="clear-input" type="button" data-clear="singleRate" aria-label="清空年利率">×</button><span>%</span></span></label>
         </div>
         <div id="combinedFields" class="fields extra hidden">
-          <label>商业贷款金额<span class="unit has-clear"><input id="commercialAmount" type="number" min="0" value="200"><button class="clear-input" type="button" data-clear="commercialAmount" aria-label="清空商业贷款金额">×</button><span>万元</span></span></label>
-          <label>商业贷款年利率<span class="unit has-clear"><input id="commercialRate" type="number" min="0" step="0.01" value="3.05"><button class="clear-input" type="button" data-clear="commercialRate" aria-label="清空商业贷款利率">×</button><span>%</span></span></label>
-          <label>公积金贷款金额<span class="unit has-clear"><input id="fundAmount" type="number" min="0" value="100"><button class="clear-input" type="button" data-clear="fundAmount" aria-label="清空公积金贷款金额">×</button><span>万元</span></span></label>
-          <label>公积金贷款年利率<span class="unit has-clear"><input id="fundRate" type="number" min="0" step="0.01" value="2.60"><button class="clear-input" type="button" data-clear="fundRate" aria-label="清空公积金贷款利率">×</button><span>%</span></span></label>
+          <label>商业贷款金额<span class="unit has-clear"><input id="commercialAmount" type="number" inputmode="decimal" min="0" value="200"><button class="clear-input" type="button" data-clear="commercialAmount" aria-label="清空商业贷款金额">×</button><span>万元</span></span></label>
+          <label>商业贷款年利率<span class="unit has-clear"><input id="commercialRate" type="number" inputmode="decimal" min="0" step="0.01" value="3.05"><button class="clear-input" type="button" data-clear="commercialRate" aria-label="清空商业贷款利率">×</button><span>%</span></span></label>
+          <label>公积金贷款金额<span class="unit has-clear"><input id="fundAmount" type="number" inputmode="decimal" min="0" value="100"><button class="clear-input" type="button" data-clear="fundAmount" aria-label="清空公积金贷款金额">×</button><span>万元</span></span></label>
+          <label>公积金贷款年利率<span class="unit has-clear"><input id="fundRate" type="number" inputmode="decimal" min="0" step="0.01" value="2.60"><button class="clear-input" type="button" data-clear="fundRate" aria-label="清空公积金贷款利率">×</button><span>%</span></span></label>
         </div>
         <p class="allocation-note hidden" id="allocationNote"></p>
         <p class="validation" id="validation" aria-live="polite"></p>
@@ -75,19 +75,24 @@
         <button class="calculate" id="calculate">开始计算</button>
       </section>
       <aside class="card">
+<<<<<<< Updated upstream
         <div class="result-head"><div><h2>计算结果</h2><p class="method" id="resultMethod">等额本息 · 40 年</p></div></div>
         <div class="monthly"><span id="monthlyTitle">每月月供</span><strong id="monthly">—</strong></div>
+=======
+        <div class="result-head"><div><h2>计算结果</h2><p class="method" id="resultMethod">等额本息 · 30 年</p></div></div>
+        <div class="monthly"><span id="monthlyTitle">每月月供</span><strong id="monthly">—</strong><small id="monthlyDetail"></small></div>
+>>>>>>> Stashed changes
         <div class="stats"><div class="stat"><span>贷款总额</span><strong id="totalLoan">—</strong></div><div class="stat"><span>利息总额</span><strong id="interest">—</strong></div><div class="stat"><span>还款总额</span><strong id="totalPayment">—</strong></div><div class="stat"><span id="periodLabel">还款期数</span><strong id="periods">—</strong></div></div>
-        <section class="comparison"><h3 id="comparisonTitle">另一种还款方式</h3><div class="comparison-grid"><div class="comparison-item"><span id="compareMonthlyLabel">首月月供</span><strong id="compareMonthly">—</strong></div><div class="comparison-item"><span>利息总额</span><strong id="compareInterest">—</strong></div><div class="comparison-item"><span>利息差</span><strong id="compareDifference">—</strong></div></div></section>
+        <section class="comparison"><h3 id="comparisonTitle">另一种还款方式</h3><p id="comparisonHint"></p><div class="comparison-grid"><div class="comparison-item"><span id="compareMonthlyLabel">首月月供</span><strong id="compareMonthly">—</strong></div><div class="comparison-item"><span>利息总额</span><strong id="compareInterest">—</strong></div><div class="comparison-item"><span>利息差</span><strong id="compareDifference">—</strong></div></div></section>
         <div class="result-actions"><button id="saveScheme" type="button">保存当前方案</button><button id="shareScheme" type="button">复制分享链接</button></div><p class="result-toast" id="resultToast" aria-live="polite"></p>
-        <section class="details"><div class="details-head"><h3>年度还款明细</h3><button class="details-toggle" id="detailsToggle" type="button">展开明细</button></div><div class="schedule-wrap hidden" id="scheduleWrap"><table><thead><tr><th>年份</th><th>偿还本金</th><th>偿还利息</th><th>年度还款</th><th>剩余本金</th></tr></thead><tbody id="scheduleBody"></tbody></table></div></section>
+        <section class="details"><div class="details-head"><h3>年度还款明细</h3><button class="details-toggle" id="detailsToggle" type="button">展开明细</button></div><div class="schedule-wrap hidden" id="scheduleWrap"><table><thead><tr><th>年份</th><th>偿还本金</th><th>偿还利息</th><th>年度还款</th><th>剩余本金</th></tr></thead><tbody id="scheduleBody"></tbody></table></div><button class="all-years" id="allYearsButton" type="button" hidden>查看全部年度</button></section>
         <p class="note">默认按深圳现行利率口径估算：商贷使用最低利率，实际执行利率以银行审批为准；未计入提前还款、利率调整、服务费等因素。</p>
       </aside>
     </div>
   </main>
   <script>
     const $ = id => document.getElementById(id);
-    let type = 'commercial', amountMode = 'auto', lastPolicyDownPayment = 15;
+    let type = 'commercial', amountMode = 'auto', lastPolicyDownPayment = 15, scheduleAll = false;
     const years = $('years');
     for (let year = 1; year <= 40; year++) years.add(new Option(`${year} 年`, year, false, year === 30));
     const format = n => new Intl.NumberFormat('zh-CN',{maximumFractionDigits:0}).format(Math.max(0,n));
@@ -180,7 +185,9 @@
         const year = Math.floor(index / 12); if (!annual[year]) annual[year] = {principal:0,interest:0,payment:0,remaining:0};
         annual[year].principal += item.principal; annual[year].interest += item.interest; annual[year].payment += item.payment; annual[year].remaining = item.remaining;
       }
-      $('scheduleBody').innerHTML = annual.map((item,index) => `<tr><td>第 ${index + 1} 年</td><td>${format(item.principal)} 元</td><td>${format(item.interest)} 元</td><td>${format(item.payment)} 元</td><td>${format(item.remaining)} 元</td></tr>`).join('');
+      const visibleAnnual = scheduleAll ? annual : annual.slice(0, 5);
+      $('scheduleBody').innerHTML = visibleAnnual.map((item,index) => `<tr><td>第 ${index + 1} 年</td><td>${format(item.principal)} 元</td><td>${format(item.interest)} 元</td><td>${format(item.payment)} 元</td><td>${format(item.remaining)} 元</td></tr>`).join('');
+      $('allYearsButton').hidden = $('scheduleWrap').classList.contains('hidden') || scheduleAll || annual.length <= 5;
     }
     function getState() {
       return { type, amountMode, method:$('method').value, years:years.value, housePrice:$('housePrice').value, downPaymentRate:$('downPaymentRate').value, singleAmount:$('singleAmount').value, singleRate:$('singleRate').value, commercialAmount:$('commercialAmount').value, commercialRate:$('commercialRate').value, fundAmount:$('fundAmount').value, fundRate:$('fundRate').value };
@@ -208,6 +215,9 @@
       const principal = type === 'combined' ? (Number($('commercialAmount').value || 0)+Number($('fundAmount').value || 0))*10000 : Number($('singleAmount').value || 0)*10000;
       $('monthly').innerHTML = `${format(total.first)} <em>元</em>`;
       $('monthlyTitle').textContent = method === 'equal' ? '每月月供' : '首月月供（每月递减）';
+      const detailPlans = type === 'combined' ? [monthlyPlan($('commercialAmount').value,$('commercialRate').value,months,method),monthlyPlan($('fundAmount').value,$('fundRate').value,months,method)] : [monthlyPlan($('singleAmount').value,$('singleRate').value,months,method)];
+      const secondMonth = detailPlans.reduce((sum, plan) => sum + (plan[1]?.payment || 0), 0);
+      $('monthlyDetail').textContent = method === 'equal' ? '月供固定，首月压力相对较低。' : `每月月供约减少 ${format(Math.max(0, total.first - secondMonth))} 元。`;
       $('resultMethod').textContent = `${method === 'equal' ? '等额本息' : '等额本金'} · ${years.value} 年`;
       $('totalLoan').textContent = `${format(principal / 10000)} 万元`;
       $('interest').textContent = `${format(total.interest / 10000)} 万元`;
@@ -215,11 +225,12 @@
       $('periods').textContent = `${months} 期`;
       const otherMethod = method === 'equal' ? 'principal' : 'equal', comparison = combine(currentParts(otherMethod));
       $('comparisonTitle').textContent = `若选择${otherMethod === 'equal' ? '等额本息' : '等额本金'}`;
+      $('comparisonHint').textContent = otherMethod === 'equal' ? '月供更稳定，但总利息更高。' : '总利息更少，但首月月供更高。';
       $('compareMonthlyLabel').textContent = otherMethod === 'equal' ? '每月月供' : '首月月供';
       $('compareMonthly').textContent = `${format(comparison.first)} 元`;
       $('compareInterest').textContent = `${format(comparison.interest / 10000)} 万`;
       const difference = comparison.interest - total.interest;
-      $('compareDifference').textContent = `${difference === 0 ? '—' : `${difference > 0 ? '+' : '−'}${format(Math.abs(difference) / 10000)} 万`}`;
+      $('compareDifference').textContent = difference === 0 ? '—' : `比当前${difference > 0 ? '多' : '少'} ${format(Math.abs(difference) / 10000)} 万`;
       validateInputs(); renderSchedule(); saveState();
     }
     document.querySelectorAll('.tabs button').forEach(button => button.addEventListener('click', () => {
@@ -233,10 +244,11 @@
     }));
     $('calculate').addEventListener('click',calculate);
     document.querySelectorAll('input').forEach(node=>node.addEventListener('input',() => { updateLoanDisplay(); calculate(); }));
-    document.querySelectorAll('[data-clear]').forEach(button => button.addEventListener('click', () => { $(button.dataset.clear).value = ''; $(button.dataset.clear).focus(); updateLoanDisplay(); calculate(); }));
+    document.querySelectorAll('[data-clear]').forEach(button => button.addEventListener('click', () => { $(button.dataset.clear).value = ''; $(button.dataset.clear).focus(); updateLoanDisplay(); calculate(); showToast(`${button.getAttribute('aria-label').replace('清空', '')}已清空。`); }));
     $('method').addEventListener('input',calculate);
     years.addEventListener('input',() => { applyPolicyRates(); calculate(); });
-    $('detailsToggle').addEventListener('click', () => { const open = $('scheduleWrap').classList.toggle('hidden'); $('detailsToggle').textContent = open ? '展开明细' : '收起明细'; });
+    $('detailsToggle').addEventListener('click', () => { const hidden = $('scheduleWrap').classList.toggle('hidden'); $('detailsToggle').textContent = hidden ? '展开明细' : '收起明细'; if (!hidden) { scheduleAll = false; renderSchedule(); } else $('allYearsButton').hidden = true; });
+    $('allYearsButton').addEventListener('click', () => { scheduleAll = true; renderSchedule(); });
     $('saveScheme').addEventListener('click', () => { saveState(); showToast('已保存到本机，下次打开会自动恢复。'); });
     $('shareScheme').addEventListener('click', async () => { const link = `${location.href.split('?')[0]}?c=${encodeURIComponent(btoa(JSON.stringify(getState())))}`; try { await navigator.clipboard.writeText(link); } catch (_) { const area=document.createElement('textarea'); area.value=link; document.body.append(area); area.select(); document.execCommand('copy'); area.remove(); } showToast('分享链接已复制。'); });
     applyPolicyRates(); restoreState(); updateLoanDisplay(); calculate();
