@@ -1512,6 +1512,11 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     picker.type = 'file';
     picker.accept = 'image/*';
     picker.multiple = true;
+    picker.hidden = true;
+    const chooseImages = document.createElement('button');
+    chooseImages.type = 'button';
+    chooseImages.textContent = '选择图片';
+    chooseImages.addEventListener('click', () => picker.click());
     const refsInput = document.createElement('input');
     refsInput.id = 'imageRefs';
     refsInput.name = 'imageRefs';
@@ -1519,7 +1524,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     const preview = document.createElement('div');
     preview.className = 'image-preview';
     field.append(picker, refsInput);
-    imageSection.append(field, preview);
+    imageSection.append(field, chooseImages, preview);
     prosLabel.before(imageSection);
 
     const lightbox = document.createElement('div');
