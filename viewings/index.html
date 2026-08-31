@@ -276,6 +276,48 @@
     }
     .record-images summary { cursor: pointer; }
     .record-images .image-preview { margin-top: 10px; }
+    .date-priority-row > label {
+      min-width: 0;
+      grid-column: auto !important;
+    }
+    .date-priority-row input[type="date"] {
+      width: 100%;
+      min-width: 0;
+      min-inline-size: 0;
+    }
+    .image-lightbox {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(12, 20, 36, .88);
+    }
+    .image-lightbox[hidden] { display: none; }
+    .image-lightbox img {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .image-lightbox button {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      min-height: auto;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      color: #fff;
+      background: rgba(255, 255, 255, .2);
+      font-size: 26px;
+      line-height: 36px;
+    }
+    .image-item img { cursor: zoom-in; }
   </style>
 </head>
 <script>
@@ -1461,8 +1503,9 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     };
     const createId = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 
+    const imageSection = document.createElement('div');
+    imageSection.className = 'wide';
     const field = document.createElement('label');
-    field.className = 'wide';
     field.textContent = '房源图片（可多选）';
     const picker = document.createElement('input');
     picker.id = 'imagePicker';
@@ -1475,8 +1518,38 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     refsInput.type = 'hidden';
     const preview = document.createElement('div');
     preview.className = 'image-preview';
-    field.append(picker, refsInput, preview);
-    prosLabel.before(field);
+    field.append(picker, refsInput);
+    imageSection.append(field, preview);
+    prosLabel.before(imageSection);
+
+    const lightbox = document.createElement('div');
+    lightbox.className = 'image-lightbox';
+    lightbox.hidden = true;
+    const lightboxImage = document.createElement('img');
+    const closeLightbox = document.createElement('button');
+    closeLightbox.type = 'button';
+    closeLightbox.textContent = '×';
+    closeLightbox.setAttribute('aria-label', '关闭大图预览');
+    lightbox.append(lightboxImage, closeLightbox);
+    document.body.append(lightbox);
+    let lightboxUrl = '';
+    const hideLightbox = () => {
+      lightbox.hidden = true;
+      if (lightboxUrl) URL.revokeObjectURL(lightboxUrl);
+      lightboxUrl = '';
+      lightboxImage.removeAttribute('src');
+    };
+    const showLightbox = (blob, name) => {
+      hideLightbox();
+      lightboxUrl = URL.createObjectURL(blob);
+      lightboxImage.src = lightboxUrl;
+      lightboxImage.alt = name || '房源图片';
+      lightbox.hidden = false;
+    };
+    closeLightbox.addEventListener('click', hideLightbox);
+    lightbox.addEventListener('click', event => {
+      if (event.target === lightbox) hideLightbox();
+    });
 
     let refs = [];
     const sync = () => {
@@ -1493,6 +1566,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       image.src = url;
       image.alt = ref.name || '房源图片';
       image.onload = () => URL.revokeObjectURL(url);
+      image.addEventListener('click', () => showLightbox(blob, ref.name));
       item.append(image);
       if (removable) {
         const remove = document.createElement('button');
