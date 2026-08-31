@@ -78,6 +78,77 @@
     }
     .loan-input-row label { min-width: 0; }
     .priority-date-field { grid-column: 2; }
+    .building-field { grid-column: 2; }
+    .building-total-row {
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .area-layout-row {
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .date-priority-row {
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .field-pair-row {
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .record-index {
+      display: inline-flex;
+      align-items: center;
+      margin-right: 8px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      color: var(--muted);
+      background: var(--soft);
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      vertical-align: 2px;
+    }
+    .editor-fold {
+      grid-column: 1 / -1;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fbfcff;
+    }
+    .editor-fold > summary {
+      padding: 10px 12px;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 650;
+      list-style: none;
+    }
+    .editor-fold > summary::-webkit-details-marker { display: none; }
+    .editor-fold > summary::after {
+      float: right;
+      color: var(--muted);
+      content: '⌃';
+    }
+    .editor-fold:not([open]) > summary::after { content: '⌄'; }
+    .editor-fold-content {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      padding: 2px 12px 12px;
+    }
+    .editor-fold-content > .date-priority-row,
+    .editor-fold-content > .field-pair-row,
+    .editor-fold-content > .loan-input-row,
+    .editor-fold-content > .loan-preview { grid-column: 1 / -1; }
+    .viewed-year-field { grid-column: 1; }
+    .floor-row { display: none !important; }
     .autosave-status {
       grid-column: 1 / -1;
       margin: -4px 0 2px;
@@ -103,6 +174,20 @@
       box-shadow: 0 0 0 3px rgba(23, 105, 224, .12);
     }
     .record.is-muted { opacity: .48; }
+    .summary-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+    }
+    .summary-part { white-space: nowrap; }
+    .summary-part:not(:last-child)::after {
+      margin: 0 5px;
+      color: var(--muted);
+      content: '·';
+    }
+    .record .payment-meta {
+      margin-top: 7px;
+    }
     #records.is-editing-active .record-actions {
       opacity: .42;
       pointer-events: none;
@@ -118,17 +203,68 @@
       font: inherit;
       font-size: 13px;
     }
+    #copyRecord,
+    #cancel { display: none; }
+    #cancel.is-visible { display: inline-flex; }
     .search-empty {
       margin: 14px 0 0;
       color: var(--muted);
       text-align: center;
       font-size: 13px;
     }
+    .record-count {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
     @media (max-width: 600px) {
       .priority-date-field { grid-column: auto; }
+      .building-field { grid-column: auto; }
+      .building-total-row { grid-column: auto; }
+      .area-layout-row,
+      .viewed-year-field,
+      .date-priority-row,
+      .field-pair-row { grid-column: auto; }
     }
   </style>
+  <style>
+    .record-actions {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .record-actions::-webkit-scrollbar { display: none; }
+    .record-actions > * { flex: 0 0 auto; }
+  </style>
 </head>
+<script>
+  window.calculateViewingLoan = ({ targetPrice, downPaymentRate, commercialRate, loanYears }) => {
+    const number = value => Number(value || 0);
+    const price = number(targetPrice) * 10000;
+    const downPayment = Math.min(100, Math.max(0, number(downPaymentRate)));
+    const monthlyRate = Math.max(0, number(commercialRate)) / 100 / 12;
+    const months = Math.max(1, number(loanYears) * 12);
+    const loan = price * (1 - downPayment / 100);
+    if (!price || !loan) return null;
+    const monthlyPrincipal = loan / months;
+    const equalPayment = monthlyRate
+      ? loan * monthlyRate * (1 + monthlyRate) ** months / ((1 + monthlyRate) ** months - 1)
+      : monthlyPrincipal;
+    return {
+      price,
+      downPaymentAmount: price - loan,
+      loan,
+      equalPayment,
+      firstPrincipalPayment: monthlyPrincipal + loan * monthlyRate,
+      lastPrincipalPayment: monthlyPrincipal + monthlyPrincipal * monthlyRate
+    };
+  };
+</script>
 <body>
 <main>
   <a class="back" data-back href="../entrance/index.html">← 返回上一页</a>
@@ -422,27 +558,21 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     const preview = document.createElement('p');
     preview.className = 'loan-preview';
     previousField.after(preview);
-    const number = value => Number(value || 0);
     const format = value => new Intl.NumberFormat('zh-CN', {
       maximumFractionDigits: 0
     }).format(Math.round(value));
     const calculate = () => {
-      const price = number(targetPrice.value) * 10000;
-      const downPayment = Math.min(100, Math.max(0, number(downPaymentRate.value)));
-      const rate = Math.max(0, number(commercialRate.value)) / 100 / 12;
-      const months = Math.max(1, number(loanYears.value) * 12);
-      const loan = price * (1 - downPayment / 100);
-      if (!price || !loan) {
-        preview.textContent = '填写预期成交价后，自动计算等额本金月供。';
+      const plan = window.calculateViewingLoan({
+        targetPrice: targetPrice.value,
+        downPaymentRate: downPaymentRate.value,
+        commercialRate: commercialRate.value,
+        loanYears: loanYears.value
+      });
+      if (!plan) {
+        preview.textContent = '填写报价后，自动计算月供。';
         return;
       }
-      const monthlyPrincipal = loan / months;
-      const firstPayment = monthlyPrincipal + loan * rate;
-      const lastPayment = monthlyPrincipal + monthlyPrincipal * rate;
-      const equalPayment = rate
-        ? loan * rate * (1 + rate) ** months / ((1 + rate) ** months - 1)
-        : monthlyPrincipal;
-      preview.innerHTML = `预计首付 <strong>${format(price - loan)} 元</strong>；预计贷款 <strong>${format(loan)} 元</strong><br>等额本息：月供 <strong>${format(equalPayment)} 元</strong><br>等额本金：首月月供 <strong>${format(firstPayment)} 元</strong>，末月约 ${format(lastPayment)} 元（逐月递减）`;
+      preview.innerHTML = `预计首付 <strong>${format(plan.downPaymentAmount)} 元</strong>；预计贷款 <strong>${format(plan.loan)} 元</strong><br>等额本息：月供 <strong>${format(plan.equalPayment)} 元</strong><br>等额本金：首月月供 <strong>${format(plan.firstPrincipalPayment)} 元</strong>，末月约 ${format(plan.lastPrincipalPayment)} 元（逐月递减）`;
     };
     const setPlan = plan => {
       downPaymentRate.value = plan?.downPaymentRate || '20';
@@ -546,13 +676,18 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       [
         'recordId', 'community', 'priority', 'totalPrice', 'area', 'layout',
         'orientation', 'floor', 'totalFloor', 'builtYear', 'targetPrice',
-        'viewedAt', 'sourceLink', 'pros', 'cons', 'notes',
+        'viewedAt', 'building', 'sourceLink', 'pros', 'cons', 'notes',
         'downPaymentRate', 'commercialRate', 'loanYears'
       ].forEach(id => setValue(id, id === 'recordId' ? record.id : record[id]));
 
       editor.classList.remove('hidden');
       document.getElementById('editorTitle').textContent = '编辑房源';
       document.getElementById('community')?.dispatchEvent(new Event('input', { bubbles: true }));
+      const suggestionPanel = document.querySelector('.community-suggestions');
+      if (suggestionPanel) {
+        suggestionPanel.hidden = true;
+        suggestionPanel.replaceChildren();
+      }
       if (record.primarySchools) setValue('primarySchools', record.primarySchools);
       if (record.middleSchools) setValue('middleSchools', record.middleSchools);
       document.getElementById('targetPrice')?.dispatchEvent(new Event('input', { bubbles: true }));
@@ -590,20 +725,49 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
         const id = card.querySelector('[data-edit]')?.dataset.edit;
         const record = records.find(item => String(item.id) === String(id));
         if (!record) return;
-        const floor = record.floor && record.totalFloor
-          ? `${record.floor}/${record.totalFloor}层`
-          : record.floor ? `${record.floor}层`
-          : record.totalFloor ? `总${record.totalFloor}层` : '';
+        const floor = record.totalFloor ? `总${record.totalFloor}层` : '';
         const unit = record.targetPrice && record.area
           ? `${format(Number(record.targetPrice) / Number(record.area))} 万/㎡`
           : '';
         const detail = [
-          record.area && `${format(record.area)}㎡`, record.layout, record.orientation,
+          record.area && `${format(record.area)}㎡`, record.layout, record.orientation, record.building,
           floor, record.builtYear && `${record.builtYear}年`,
-          record.targetPrice && `预期 ${format(record.targetPrice)}万`, unit
-        ].filter(Boolean).join(' · ');
+          record.targetPrice && `报价 ${format(record.targetPrice)}万`, unit
+        ].filter(Boolean);
         const meta = card.querySelector('.record-top .meta');
-        if (meta) meta.textContent = `${detail || '暂未填写预期成交价'}${record.viewedAt ? ` · 看房：${record.viewedAt}` : ''}`;
+        if (meta) {
+          meta.classList.add('summary-meta');
+          meta.replaceChildren(...(detail.length ? detail : ['暂未填写报价']).map(part => {
+            const span = document.createElement('span');
+            span.className = 'summary-part';
+            span.textContent = part;
+            return span;
+          }));
+        }
+        const editedMeta = [...card.querySelectorAll('.record-top .meta')]
+          .filter(item => !item.classList.contains('payment-meta'))[1];
+        let paymentMeta = card.querySelector('.payment-meta');
+        if (!paymentMeta) {
+          paymentMeta = document.createElement('p');
+          paymentMeta.className = 'meta payment-meta';
+          editedMeta?.before(paymentMeta);
+        }
+        const plan = window.calculateViewingLoan({
+          targetPrice: record.targetPrice,
+          downPaymentRate: record.downPaymentRate || 20,
+          commercialRate: record.commercialRate || 3.05,
+          loanYears: record.loanYears || 30
+        });
+        if (plan) {
+          paymentMeta.textContent = `月供：等额本息 ${format(plan.equalPayment)} 元；等额本金首月 ${format(plan.firstPrincipalPayment)} 元`;
+          paymentMeta.hidden = false;
+        } else {
+          paymentMeta.hidden = true;
+        }
+        if (editedMeta) {
+          const editedText = editedMeta.textContent.replace(/ · 看房：.*$/, '');
+          editedMeta.textContent = `${editedText}${record.viewedAt ? ` · 看房：${record.viewedAt}` : ''}`;
+        }
         collapse(card, '.schools', '学校信息');
         collapse(card, '.notes', '优点、缺点与备注');
       });
@@ -640,30 +804,39 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       }
     };
     const recordText = record => {
-      const floor = record.floor && record.totalFloor
-        ? `${record.floor}/${record.totalFloor}层`
-        : record.floor ? `${record.floor}层`
-        : record.totalFloor ? `总${record.totalFloor}层` : '';
+      const plan = window.calculateViewingLoan({
+        targetPrice: record.targetPrice,
+        downPaymentRate: record.downPaymentRate || 20,
+        commercialRate: record.commercialRate || 3.05,
+        loanYears: record.loanYears || 30
+      });
+      const currency = value => `${Math.round(value).toLocaleString('zh-CN')} 元`;
+      const editedAt = record.updatedAt || record.createdAt;
       return [
         ['小区', record.community],
         ['关注等级', record.priority === 'focus' ? '重点关注' : record.priority === 'excluded' ? '已排除' : '普通'],
-        ['当前报价', record.totalPrice && `${record.totalPrice} 万元`],
-        ['预期成交价', record.targetPrice && `${record.targetPrice} 万元`],
+        ['报价', record.targetPrice && `${record.targetPrice} 万元`],
         ['面积', record.area && `${record.area} ㎡`],
         ['户型', record.layout],
         ['客厅朝向', record.orientation],
-        ['楼层', floor],
+        ['楼栋 / 单元', record.building],
+        ['总楼层', record.totalFloor && `总${record.totalFloor}层`],
         ['建成年份', record.builtYear && `${record.builtYear} 年`],
         ['小学', record.primarySchools],
         ['中学', record.middleSchools],
         ['首付比例', record.downPaymentRate && `${record.downPaymentRate}%`],
         ['商贷年利率', record.commercialRate && `${record.commercialRate}%`],
         ['贷款年限', record.loanYears && `${record.loanYears} 年`],
+        ['等额本息月供', plan && currency(plan.equalPayment)],
+        ['等额本金首月月供', plan && currency(plan.firstPrincipalPayment)],
         ['看房日期', record.viewedAt],
+        ['物业公司', record.propertyCompany],
+        ['物业费', record.propertyFee && record.propertyFee + ' 元/㎡·月'],
         ['房源链接', record.sourceLink],
         ['优点', record.pros],
         ['缺点 / 风险', record.cons],
-        ['个人备注', record.notes]
+        ['个人备注', record.notes],
+        ['最后编辑', editedAt && new Date(Number(editedAt)).toLocaleString('zh-CN', { hour12: false })]
       ].filter(([, value]) => value).map(([label, value]) => `${label}：${value}`).join('\n');
     };
 
@@ -710,6 +883,9 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     suggestions.id = 'recordSearchSuggestions';
     input.after(suggestions);
     toolbar.querySelector('.filter')?.after(input);
+    const count = document.createElement('span');
+    count.className = 'record-count';
+    toolbar.querySelector('.filter')?.after(count);
 
     const empty = document.createElement('p');
     empty.className = 'search-empty';
@@ -726,6 +902,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
         .sort((a, b) => a.localeCompare(b, 'zh-CN'));
       suggestions.innerHTML = names.map(name => `<option value="${name}"></option>`).join('');
       const query = input.value.trim().toLocaleLowerCase();
+      const hasStatusFilter = document.getElementById('filter')?.value !== 'all';
       let visible = 0;
       recordsNode.querySelectorAll('.record').forEach(card => {
         const id = card.querySelector('[data-edit]')?.dataset.edit;
@@ -734,11 +911,342 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
         card.hidden = !match;
         if (match) visible += 1;
       });
+      count.textContent = !query && !hasStatusFilter
+        ? `共 ${visible} 条记录`
+        : `当前 ${visible} 条 / 共 ${records.length} 条`;
       empty.hidden = !query || visible > 0;
     };
     input.addEventListener('input', refresh);
     new MutationObserver(refresh).observe(recordsNode, { childList: true });
     refresh();
+  })();
+</script>
+<script>
+  (() => {
+    const select = document.getElementById('builtYear');
+    if (!select) return;
+    const selected = select.value;
+    const latestYear = new Date().getFullYear() + 10;
+    select.replaceChildren(new Option('不详', ''));
+    for (let year = latestYear; year >= 1950; year -= 1) {
+      select.add(new Option(`${year}年`, year));
+    }
+    select.value = selected;
+  })();
+</script>
+<script>
+  (() => {
+    const viewedAt = document.getElementById('viewedAt');
+    if (!viewedAt || document.getElementById('building')) return;
+    const label = document.createElement('label');
+    label.className = 'building-field';
+    label.textContent = '楼栋 / 单元';
+    const input = document.createElement('input');
+    input.id = 'building';
+    input.name = 'building';
+    input.type = 'text';
+    input.placeholder = '1栋10A';
+    label.append(input);
+    viewedAt.closest('label')?.after(label);
+
+    const today = () => {
+      const date = new Date();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${date.getFullYear()}-${month}-${day}`;
+    };
+    document.addEventListener('click', event => {
+      if (event.target.closest('#add')) {
+        setTimeout(() => {
+          viewedAt.value = today();
+          input.value = '';
+        }, 0);
+      }
+    });
+  })();
+</script>
+<script>
+  (() => {
+    const currentPriceLabel = document.getElementById('totalPrice')?.closest('label');
+    const targetPriceLabel = document.getElementById('targetPrice')?.closest('label');
+    const buildingLabel = document.getElementById('building')?.closest('label');
+    const floorRow = document.querySelector('.floor-row');
+    if (currentPriceLabel) currentPriceLabel.hidden = true;
+    if (targetPriceLabel?.firstChild?.nodeType === Node.TEXT_NODE) {
+      targetPriceLabel.firstChild.nodeValue = '报价（万元）';
+    }
+    const floorLabel = document.getElementById('floor')?.closest('label');
+    const totalFloorLabel = document.getElementById('totalFloor')?.closest('label');
+    if (buildingLabel && totalFloorLabel) {
+      const buildingTotalRow = document.createElement('div');
+      buildingTotalRow.className = 'building-total-row';
+      buildingLabel.before(buildingTotalRow);
+      buildingTotalRow.append(buildingLabel, totalFloorLabel);
+    }
+    if (floorLabel) floorLabel.hidden = true;
+    if (floorRow) floorRow.hidden = true;
+  })();
+</script>
+<script>
+  (() => {
+    const editor = document.getElementById('editor');
+    const community = document.getElementById('community');
+    const cancel = document.getElementById('cancel');
+    if (!editor || !community || !cancel) return;
+    const updateCancel = () => {
+      cancel.classList.toggle('is-visible', !editor.classList.contains('hidden') && !community.value.trim());
+    };
+    community.addEventListener('input', updateCancel);
+    new MutationObserver(updateCancel).observe(editor, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    document.addEventListener('click', () => setTimeout(updateCancel, 0));
+    updateCancel();
+  })();
+</script>
+<script>
+  (() => {
+    const form = document.getElementById('recordForm');
+    const retireField = id => {
+      const field = document.getElementById(id);
+      const label = field?.closest('label');
+      if (!field || !form) return;
+      field.removeAttribute('name');
+      field.hidden = true;
+      field.setAttribute('aria-hidden', 'true');
+      form.append(field);
+      label?.remove();
+    };
+    retireField('totalPrice');
+    retireField('floor');
+    document.getElementById('unitPrice')?.remove();
+  })();
+</script>
+<script>
+  (() => {
+    const areaLabel = document.getElementById('area')?.closest('label');
+    const layoutLabel = document.getElementById('layout')?.closest('label');
+    const viewedAtLabel = document.getElementById('viewedAt')?.closest('label');
+    const builtYearLabel = document.getElementById('builtYear')?.closest('label');
+    if (areaLabel && layoutLabel) {
+      const row = document.createElement('div');
+      row.className = 'area-layout-row';
+      areaLabel.before(row);
+      row.append(areaLabel, layoutLabel);
+    }
+    if (viewedAtLabel && builtYearLabel) {
+      builtYearLabel.classList.add('viewed-year-field');
+      viewedAtLabel.after(builtYearLabel);
+    }
+  })();
+</script>
+<script>
+  (() => {
+    const viewedAtLabel = document.getElementById('viewedAt')?.closest('label');
+    const priorityLabel = document.getElementById('priority')?.closest('label');
+    const builtYearLabel = document.getElementById('builtYear')?.closest('label');
+    if (!viewedAtLabel || !priorityLabel) return;
+    const row = document.createElement('div');
+    row.className = 'date-priority-row';
+    priorityLabel.before(row);
+    row.append(viewedAtLabel, priorityLabel);
+    if (builtYearLabel) row.after(builtYearLabel);
+  })();
+</script>
+<script>
+  (() => {
+    const form = document.getElementById('recordForm');
+    const labelFor = id => document.getElementById(id)?.closest('label');
+    const builtYear = labelFor('builtYear');
+    const building = labelFor('building');
+    const totalFloor = labelFor('totalFloor');
+    const area = labelFor('area');
+    const layout = labelFor('layout');
+    const orientation = labelFor('orientation');
+    if (!form || !builtYear || !building || !totalFloor || !area || !layout || !orientation) return;
+
+    const makeRow = (...labels) => {
+      const row = document.createElement('div');
+      row.className = 'field-pair-row';
+      labels.forEach(label => row.append(label));
+      return row;
+    };
+    const firstRow = makeRow(builtYear, building);
+    const secondRow = makeRow(totalFloor, area);
+    const thirdRow = makeRow(layout, orientation);
+    form.querySelector('.date-priority-row')?.after(firstRow);
+    firstRow.after(secondRow);
+    secondRow.after(thirdRow);
+    document.querySelectorAll('.building-total-row, .area-layout-row').forEach(row => {
+      if (!row.children.length) row.remove();
+    });
+  })();
+</script>
+<script>
+  (() => {
+    const sourceLink = document.getElementById('sourceLink');
+    if (!sourceLink) return;
+    sourceLink.type = 'text';
+    sourceLink.placeholder = '可选：网址或小程序口令';
+  })();
+</script>
+<script>
+  (() => {
+    const form = document.getElementById('recordForm');
+    const dateRow = form?.querySelector('.date-priority-row');
+    if (!form || !dateRow || document.getElementById('propertyCompany')) return;
+    const createField = (labelText, id, placeholder) => {
+      const label = document.createElement('label');
+      label.textContent = labelText;
+      const input = document.createElement('input');
+      input.id = id;
+      input.name = id;
+      input.type = 'text';
+      input.placeholder = placeholder;
+      label.append(input);
+      return label;
+    };
+    const row = document.createElement('div');
+    row.className = 'field-pair-row property-row';
+    row.append(
+      createField('物业公司', 'propertyCompany', '如：万科物业'),
+      createField('物业费（元/㎡·月）', 'propertyFee', '如：3.8')
+    );
+    dateRow.after(row);
+
+    const company = document.getElementById('propertyCompany');
+    const fee = document.getElementById('propertyFee');
+    const restore = () => {
+      const id = document.getElementById('recordId')?.value;
+      if (!id) return;
+      const record = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]')
+        .find(item => String(item.id) === String(id));
+      company.value = record?.propertyCompany || '';
+      fee.value = record?.propertyFee || '';
+    };
+    new MutationObserver(() => {
+      if (!document.getElementById('editor')?.classList.contains('hidden')) restore();
+    }).observe(document.getElementById('editor'), { attributes: true, attributeFilter: ['class'] });
+    document.addEventListener('click', event => {
+      if (event.target.closest('#add')) {
+        setTimeout(() => { company.value = ''; fee.value = ''; }, 0);
+      }
+    }, true);
+  })();
+</script>
+<script>
+  (() => {
+    const form = document.getElementById('recordForm');
+    const copy = async text => {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (_) {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+        document.body.append(area);
+        area.select();
+        document.execCommand('copy');
+        area.remove();
+      }
+    };
+    document.addEventListener('click', async event => {
+      if (!event.target.closest('#copyRecord') || !form) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const data = Object.fromEntries(new FormData(form));
+      const plan = window.calculateViewingLoan?.({
+        targetPrice: data.targetPrice,
+        downPaymentRate: data.downPaymentRate || 20,
+        commercialRate: data.commercialRate || 3.05,
+        loanYears: data.loanYears || 30
+      });
+      const currency = value => Math.round(value).toLocaleString('zh-CN') + ' 元';
+      const rows = [
+        ['小区', data.community],
+        ['关注等级', data.priority === 'focus' ? '重点关注' : data.priority === 'excluded' ? '已排除' : '普通'],
+        ['报价', data.targetPrice && data.targetPrice + ' 万元'],
+        ['面积', data.area && data.area + ' ㎡'],
+        ['户型', data.layout],
+        ['客厅朝向', data.orientation],
+        ['楼栋 / 单元', data.building],
+        ['总楼层', data.totalFloor && '总' + data.totalFloor + '层'],
+        ['建成年份', data.builtYear && data.builtYear + ' 年'],
+        ['小学', data.primarySchools],
+        ['中学', data.middleSchools],
+        ['首付比例', data.downPaymentRate && data.downPaymentRate + '%'],
+        ['商贷年利率', data.commercialRate && data.commercialRate + '%'],
+        ['贷款年限', data.loanYears && data.loanYears + ' 年'],
+        ['等额本息月供', plan && currency(plan.equalPayment)],
+        ['等额本金首月月供', plan && currency(plan.firstPrincipalPayment)],
+        ['看房日期', data.viewedAt],
+        ['物业公司', data.propertyCompany],
+        ['物业费', data.propertyFee && data.propertyFee + ' 元/㎡·月'],
+        ['房源链接', data.sourceLink],
+        ['优点', data.pros],
+        ['缺点 / 风险', data.cons],
+        ['个人备注', data.notes]
+      ].filter(([, value]) => value).map(([label, value]) => label + '：' + value);
+      await copy(rows.join('\n'));
+      const toast = document.getElementById('toast');
+      if (toast) toast.textContent = '当前编辑信息已复制。';
+    }, true);
+  })();
+</script>
+<script>
+  (() => {
+    const recordsNode = document.getElementById('records');
+    if (!recordsNode) return;
+    const updateIndices = () => {
+      let records = [];
+      try { records = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]'); }
+      catch (_) { return; }
+      const ids = new Map(
+        records.slice().sort((a, b) => {
+          const timeOf = record => Number(record.createdAt || record.updatedAt || 0);
+          return timeOf(a) - timeOf(b);
+        }).map((record, index) => [String(record.id), index + 1])
+      );
+      recordsNode.querySelectorAll('.record').forEach(card => {
+        const id = card.querySelector('[data-edit]')?.dataset.edit;
+        const title = card.querySelector('.record-top h2');
+        if (!id || !title) return;
+        let badge = [...title.children].find(node => node.classList.contains('record-index'));
+        if (!badge) {
+          badge = document.createElement('span');
+          badge.className = 'record-index';
+          title.prepend(badge);
+        }
+        badge.textContent = '记录 ' + String(ids.get(String(id)) || '');
+      });
+    };
+    new MutationObserver(updateIndices).observe(recordsNode, { childList: true });
+    updateIndices();
+  })();
+</script>
+<script>
+  (() => {
+    const form = document.getElementById('recordForm');
+    const dateRow = form?.querySelector('.date-priority-row');
+    const propertyRow = form?.querySelector('.property-row');
+    const loanRow = form?.querySelector('.loan-input-row');
+    const preview = form?.querySelector('.loan-preview');
+    if (!form || !dateRow || !propertyRow || !loanRow || !preview || form.querySelector('.editor-fold')) return;
+
+    const section = document.createElement('details');
+    section.className = 'editor-fold';
+    section.open = true;
+    const summary = document.createElement('summary');
+    summary.textContent = '看房与贷款信息';
+    const content = document.createElement('div');
+    content.className = 'editor-fold-content';
+    section.append(summary, content);
+    dateRow.before(section);
+
+    const fieldRows = [...form.querySelectorAll('.field-pair-row')]
+      .filter(row => row !== propertyRow);
+    [dateRow, propertyRow, ...fieldRows, loanRow, preview].forEach(item => content.append(item));
   })();
 </script>
 </body>
