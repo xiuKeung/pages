@@ -39,7 +39,7 @@
 </head>
 <body>
   <main>
-    <a class="back" href="../entrance/index.html">← 返回工具入口</a>
+    <a class="back" data-back href="../entrance/index.html">← 返回上一页</a>
     <h1>房贷计算器</h1>
     <p class="subtitle">按当前输入估算月供、利息和还款总额。</p>
     <div class="layout">
@@ -248,5 +248,6 @@
     $('shareScheme').addEventListener('click', async () => { const link = `${location.href.split('?')[0]}?c=${encodeURIComponent(btoa(JSON.stringify(getState())))}`; try { await navigator.clipboard.writeText(link); } catch (_) { const area=document.createElement('textarea'); area.value=link; document.body.append(area); area.select(); document.execCommand('copy'); area.remove(); } showToast('分享链接已复制。'); });
     applyPolicyRates(); restoreState(); updateLoanDisplay(); calculate();
   </script>
+  <script>document.querySelector('[data-back]')?.addEventListener('click', event => { if (history.length > 1) { event.preventDefault(); history.back(); } });</script>
 </body>
 </html>

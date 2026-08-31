@@ -23,7 +23,7 @@
     .tool { display:flex; align-items:center; gap:18px; min-height:132px; padding:22px; border:1px solid var(--line); border-radius:22px; background:rgba(255,255,255,.92); color:inherit; text-decoration:none; box-shadow:0 12px 32px rgba(37,93,177,.08); transition:transform .18s,box-shadow .18s,border-color .18s; }
     .tool:hover { transform:translateY(-3px); border-color:#a9cbff; box-shadow:0 18px 38px rgba(37,93,177,.14); }
     .icon { display:grid; place-items:center; align-self:center; flex:0 0 62px; width:62px; height:62px; border-radius:18px; background:#e8f1ff; font-size:44px; line-height:1; text-align:center; }
-    .icon .emoji { display:block; line-height:1; } .tool:first-child .icon { font-size:53px; } .tool:first-child .emoji { transform:translateY(-5px); } .tool:nth-child(2) .icon { background:#e9f8f0; }
+    .icon .emoji { display:block; line-height:1; } .tool:first-child .icon { font-size:53px; } .tool:first-child .emoji { transform:translateY(-5px); } .tool:nth-child(2) .icon { background:#e9f8f0; } .tool:nth-child(3) .icon { background:#fff4e6; } .tool:nth-child(4) .icon { background:#f1ebff; }
     .tool h2 { margin:0 0 6px; font-size:21px; }
     .tool p { margin:0; color:var(--muted); font-size:14px; line-height:1.55; }
     .arrow { margin-left:auto; color:var(--blue); font-size:26px; }
@@ -35,7 +35,7 @@
   <main>
     <p class="eyebrow">SHENZHEN TOOLBOX</p>
     <h1>深圳生活工具</h1>
-    <p class="intro">查询南山、福田官方学区信息，或快速估算购房贷款月供。</p>
+    <p class="intro">围绕深圳买房的查学区、算贷款、看房记录与流程核验工具。</p>
     <section class="tools" aria-label="工具入口">
       <a class="tool" href="../school/index.html">
         <span class="icon" aria-hidden="true"><span class="emoji">🏫</span></span>
@@ -45,6 +45,16 @@
       <a class="tool" href="../calculator/index.html">
         <span class="icon" aria-hidden="true"><span class="emoji">🧮</span></span>
         <span><h2>房贷计算器</h2><p>支持商业贷款、公积金贷款与组合贷款的月供估算。</p></span>
+        <span class="arrow" aria-hidden="true">›</span>
+      </a>
+      <a class="tool" href="../viewings/index.html">
+        <span class="icon" aria-hidden="true"><span class="emoji">⌂</span></span>
+        <span><h2>看房记录</h2><p>记录房源、报价、优缺点与个人看房结论。</p></span>
+        <span class="arrow" aria-hidden="true">›</span>
+      </a>
+      <a class="tool" href="../checklist/index.html">
+        <span class="icon" aria-hidden="true"><span class="emoji">✓</span></span>
+        <span><h2>深圳购房清单</h2><p>按阶段核对看房、贷款、签约、过户与交楼事项。</p></span>
         <span class="arrow" aria-hidden="true">›</span>
       </a>
     </section>
