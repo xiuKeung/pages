@@ -1,0 +1,13 @@
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.shenzhenhome.toolbox',
+  appName: '深圳买房工具',
+  webDir: 'www',
+  bundledWebRuntime: false,
+  server: {
+    cleartext: false
+  }
+};
+
+export default config;

@@ -1,0 +1,4 @@
+# Generated Capacitor web assets and local npm installation.
+node_modules/
+www/
+npm-debug.log*

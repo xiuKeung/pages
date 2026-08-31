@@ -147,6 +147,7 @@
     .editor-fold-content > .field-pair-row,
     .editor-fold-content > .loan-input-row,
     .editor-fold-content > .loan-preview { grid-column: 1 / -1; }
+    .parking-fee-field { grid-column: 1 / -1; }
     .viewed-year-field { grid-column: 1; }
     .floor-row { display: none !important; }
     .autosave-status {
@@ -240,6 +241,41 @@
     }
     .record-actions::-webkit-scrollbar { display: none; }
     .record-actions > * { flex: 0 0 auto; }
+    .image-preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .image-item {
+      position: relative;
+      aspect-ratio: 1;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--soft);
+    }
+    .image-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .image-item button {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      min-height: auto;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      color: #fff;
+      background: rgba(27, 41, 66, .72);
+      line-height: 22px;
+    }
+    .record-images summary { cursor: pointer; }
+    .record-images .image-preview { margin-top: 10px; }
   </style>
 </head>
 <script>
@@ -725,13 +761,15 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
         const id = card.querySelector('[data-edit]')?.dataset.edit;
         const record = records.find(item => String(item.id) === String(id));
         if (!record) return;
-        const floor = record.totalFloor ? `总${record.totalFloor}层` : '';
+        const buildingFloor = [
+          record.building,
+          record.totalFloor ? `${record.totalFloor}层` : ''
+        ].filter(Boolean).join(' / ');
         const unit = record.targetPrice && record.area
           ? `${format(Number(record.targetPrice) / Number(record.area))} 万/㎡`
           : '';
         const detail = [
-          record.area && `${format(record.area)}㎡`, record.layout, record.orientation, record.building,
-          floor, record.builtYear && `${record.builtYear}年`,
+          record.area && `${format(record.area)}㎡`, record.layout, record.orientation, buildingFloor,
           record.targetPrice && `报价 ${format(record.targetPrice)}万`, unit
         ].filter(Boolean);
         const meta = card.querySelector('.record-top .meta');
@@ -814,27 +852,31 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       const editedAt = record.updatedAt || record.createdAt;
       return [
         ['小区', record.community],
+        ['小学', record.primarySchools],
+        ['中学', record.middleSchools],
+        ['看房日期', record.viewedAt],
         ['关注等级', record.priority === 'focus' ? '重点关注' : record.priority === 'excluded' ? '已排除' : '普通'],
-        ['报价', record.targetPrice && `${record.targetPrice} 万元`],
+        ['物业公司', record.propertyCompany],
+        ['物业费', record.propertyFee && record.propertyFee + ' 元/㎡·月'],
+        ['建成年份', record.builtYear && `${record.builtYear} 年`],
+        ['楼栋 / 单元', record.building],
+        ['总楼层', record.totalFloor && `总${record.totalFloor}层`],
         ['面积', record.area && `${record.area} ㎡`],
         ['户型', record.layout],
         ['客厅朝向', record.orientation],
-        ['楼栋 / 单元', record.building],
-        ['总楼层', record.totalFloor && `总${record.totalFloor}层`],
-        ['建成年份', record.builtYear && `${record.builtYear} 年`],
-        ['小学', record.primarySchools],
-        ['中学', record.middleSchools],
+        ['梯户比', record.elevatorRatio],
+        ['车位情况', record.parkingStatus],
+        ['车位费用', record.parkingFee],
+        ['报价', record.targetPrice && `${record.targetPrice} 万元`],
+        ['贷款年限', record.loanYears && `${record.loanYears} 年`],
         ['首付比例', record.downPaymentRate && `${record.downPaymentRate}%`],
         ['商贷年利率', record.commercialRate && `${record.commercialRate}%`],
-        ['贷款年限', record.loanYears && `${record.loanYears} 年`],
         ['等额本息月供', plan && currency(plan.equalPayment)],
         ['等额本金首月月供', plan && currency(plan.firstPrincipalPayment)],
-        ['看房日期', record.viewedAt],
-        ['物业公司', record.propertyCompany],
-        ['物业费', record.propertyFee && record.propertyFee + ' 元/㎡·月'],
         ['房源链接', record.sourceLink],
         ['优点', record.pros],
         ['缺点 / 风险', record.cons],
+        ['附近地标', record.nearbyLandmark],
         ['个人备注', record.notes],
         ['最后编辑', editedAt && new Date(Number(editedAt)).toLocaleString('zh-CN', { hour12: false })]
       ].filter(([, value]) => value).map(([label, value]) => `${label}：${value}`).join('\n');
@@ -1165,27 +1207,31 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       const currency = value => Math.round(value).toLocaleString('zh-CN') + ' 元';
       const rows = [
         ['小区', data.community],
+        ['小学', data.primarySchools],
+        ['中学', data.middleSchools],
+        ['看房日期', data.viewedAt],
         ['关注等级', data.priority === 'focus' ? '重点关注' : data.priority === 'excluded' ? '已排除' : '普通'],
-        ['报价', data.targetPrice && data.targetPrice + ' 万元'],
+        ['物业公司', data.propertyCompany],
+        ['物业费', data.propertyFee && data.propertyFee + ' 元/㎡·月'],
+        ['建成年份', data.builtYear && data.builtYear + ' 年'],
+        ['楼栋 / 单元', data.building],
+        ['总楼层', data.totalFloor && '总' + data.totalFloor + '层'],
         ['面积', data.area && data.area + ' ㎡'],
         ['户型', data.layout],
         ['客厅朝向', data.orientation],
-        ['楼栋 / 单元', data.building],
-        ['总楼层', data.totalFloor && '总' + data.totalFloor + '层'],
-        ['建成年份', data.builtYear && data.builtYear + ' 年'],
-        ['小学', data.primarySchools],
-        ['中学', data.middleSchools],
+        ['梯户比', data.elevatorRatio],
+        ['车位情况', data.parkingStatus],
+        ['车位费用', data.parkingFee],
+        ['报价', data.targetPrice && data.targetPrice + ' 万元'],
+        ['贷款年限', data.loanYears && data.loanYears + ' 年'],
         ['首付比例', data.downPaymentRate && data.downPaymentRate + '%'],
         ['商贷年利率', data.commercialRate && data.commercialRate + '%'],
-        ['贷款年限', data.loanYears && data.loanYears + ' 年'],
         ['等额本息月供', plan && currency(plan.equalPayment)],
         ['等额本金首月月供', plan && currency(plan.firstPrincipalPayment)],
-        ['看房日期', data.viewedAt],
-        ['物业公司', data.propertyCompany],
-        ['物业费', data.propertyFee && data.propertyFee + ' 元/㎡·月'],
         ['房源链接', data.sourceLink],
         ['优点', data.pros],
         ['缺点 / 风险', data.cons],
+        ['附近地标', data.nearbyLandmark],
         ['个人备注', data.notes]
       ].filter(([, value]) => value).map(([label, value]) => label + '：' + value);
       await copy(rows.join('\n'));
@@ -1247,6 +1293,283 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     const fieldRows = [...form.querySelectorAll('.field-pair-row')]
       .filter(row => row !== propertyRow);
     [dateRow, propertyRow, ...fieldRows, loanRow, preview].forEach(item => content.append(item));
+  })();
+</script>
+<script>
+  (() => {
+    const form = document.getElementById('recordForm');
+    const layoutRow = document.getElementById('layout')?.closest('.field-pair-row');
+    const notesLabel = document.getElementById('notes')?.closest('label');
+    if (!form || !layoutRow || !notesLabel || document.getElementById('elevatorRatio')) return;
+
+    const createField = (title, id, placeholder, className = '') => {
+      const label = document.createElement('label');
+      label.className = className;
+      label.textContent = title;
+      const input = document.createElement('input');
+      input.id = id;
+      input.name = id;
+      input.type = 'text';
+      input.placeholder = placeholder;
+      label.append(input);
+      return label;
+    };
+    const createElevatorRatioField = () => {
+      const label = document.createElement('label');
+      label.textContent = '梯户比';
+      const select = document.createElement('select');
+      select.id = 'elevatorRatio';
+      select.name = 'elevatorRatio';
+      ['1梯1户', '1梯2户', '1梯3户', '2梯2户', '2梯3户', '2梯4户', '2梯5户', '2梯6户',
+        '3梯4户', '3梯6户', '3梯8户', '4梯6户', '4梯8户', '4梯10户', '4梯12户',
+        '6梯12户'].forEach(value => select.add(new Option(value, value)));
+      select.prepend(new Option('请选择', ''));
+      select.add(new Option('其他（手动填写）', '其他'));
+      const custom = document.createElement('input');
+      custom.id = 'elevatorRatioCustom';
+      custom.type = 'text';
+      custom.placeholder = '如：5梯9户';
+      custom.hidden = true;
+      const setMode = isCustom => {
+        select.name = isCustom ? '' : 'elevatorRatio';
+        custom.name = isCustom ? 'elevatorRatio' : '';
+        custom.hidden = !isCustom;
+      };
+      select.addEventListener('change', () => setMode(select.value === '其他'));
+      label.append(select, custom);
+      return label;
+    };
+    const parkingRow = document.createElement('div');
+    parkingRow.className = 'field-pair-row parking-row';
+    parkingRow.append(
+      createElevatorRatioField(),
+      createField('车位情况', 'parkingStatus', '如：固定车位 / 无车位')
+    );
+    const parkingFee = createField('车位费用', 'parkingFee', '如：600 元/月', 'parking-fee-field');
+    layoutRow.after(parkingRow);
+    parkingRow.after(parkingFee);
+
+    const landmark = document.createElement('label');
+    landmark.className = 'wide';
+    landmark.textContent = '附近地标';
+    const landmarkInput = document.createElement('textarea');
+    landmarkInput.id = 'nearbyLandmark';
+    landmarkInput.name = 'nearbyLandmark';
+    landmarkInput.placeholder = '如：万象天地步行 8 分钟';
+    landmark.append(landmarkInput);
+    notesLabel.before(landmark);
+
+    const fields = ['parkingStatus', 'parkingFee', 'nearbyLandmark'];
+    const restore = () => {
+      const id = document.getElementById('recordId')?.value;
+      if (!id) return;
+      const record = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]')
+        .find(item => String(item.id) === String(id));
+      const ratio = record?.elevatorRatio || '';
+      const ratioSelect = document.getElementById('elevatorRatio');
+      const ratioCustom = document.getElementById('elevatorRatioCustom');
+      const isPreset = [...ratioSelect.options].some(option => option.value === ratio);
+      ratioSelect.value = isPreset ? ratio : ratio ? '其他' : '';
+      ratioSelect.name = ratio && !isPreset ? '' : 'elevatorRatio';
+      ratioCustom.name = ratio && !isPreset ? 'elevatorRatio' : '';
+      ratioCustom.hidden = !ratio || isPreset;
+      ratioCustom.value = ratio && !isPreset ? ratio : '';
+      fields.forEach(field => {
+        const input = document.getElementById(field);
+        const value = record?.[field] || '';
+        input.value = value;
+      });
+    };
+    new MutationObserver(() => {
+      if (!document.getElementById('editor')?.classList.contains('hidden')) restore();
+    }).observe(document.getElementById('editor'), { attributes: true, attributeFilter: ['class'] });
+    document.addEventListener('click', event => {
+      if (event.target.closest('#add')) {
+        setTimeout(() => {
+          const ratioSelect = document.getElementById('elevatorRatio');
+          const ratioCustom = document.getElementById('elevatorRatioCustom');
+          ratioSelect.value = '';
+          ratioSelect.name = 'elevatorRatio';
+          ratioCustom.value = '';
+          ratioCustom.name = '';
+          ratioCustom.hidden = true;
+          fields.forEach(field => { document.getElementById(field).value = ''; });
+        }, 0);
+      }
+    }, true);
+  })();
+</script>
+<script>
+  (() => {
+    const form = document.getElementById('recordForm');
+    const recordsNode = document.getElementById('records');
+    if (!form || !recordsNode) return;
+    form.addEventListener('submit', () => {
+      const idBeforeSave = document.getElementById('recordId')?.value;
+      const community = document.getElementById('community')?.value.trim();
+      setTimeout(() => {
+        let id = idBeforeSave;
+        if (!id) {
+          try {
+            const records = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]');
+            id = records
+              .filter(record => record.community === community)
+              .sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0))[0]?.id;
+          } catch (_) {}
+        }
+        const card = [...recordsNode.querySelectorAll('.record')]
+          .find(item => String(item.querySelector('[data-edit]')?.dataset.edit) === String(id));
+        card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 0);
+    });
+  })();
+</script>
+<script>
+  (() => {
+    const form = document.getElementById('recordForm');
+    const editor = document.getElementById('editor');
+    const recordsNode = document.getElementById('records');
+    const prosLabel = document.getElementById('pros')?.closest('label');
+    if (!form || !editor || !recordsNode || !prosLabel || document.getElementById('imageRefs')) return;
+
+    const databaseName = 'shenzhen-viewing-images-v1';
+    const storeName = 'images';
+    const openDatabase = () => new Promise((resolve, reject) => {
+      const request = indexedDB.open(databaseName, 1);
+      request.onupgradeneeded = () => request.result.createObjectStore(storeName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const database = openDatabase();
+    const run = async (mode, action) => new Promise(async (resolve, reject) => {
+      try {
+        const db = await database;
+        const transaction = db.transaction(storeName, mode);
+        const request = action(transaction.objectStore(storeName));
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      } catch (error) { reject(error); }
+    });
+    const putImage = (id, blob) => run('readwrite', store => store.put(blob, id));
+    const getImage = id => run('readonly', store => store.get(id));
+    const deleteImage = id => run('readwrite', store => store.delete(id));
+    const parseRefs = value => {
+      try {
+        const refs = JSON.parse(value || '[]');
+        return Array.isArray(refs) ? refs : [];
+      } catch (_) { return []; }
+    };
+    const createId = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+
+    const field = document.createElement('label');
+    field.className = 'wide';
+    field.textContent = '房源图片（可多选）';
+    const picker = document.createElement('input');
+    picker.id = 'imagePicker';
+    picker.type = 'file';
+    picker.accept = 'image/*';
+    picker.multiple = true;
+    const refsInput = document.createElement('input');
+    refsInput.id = 'imageRefs';
+    refsInput.name = 'imageRefs';
+    refsInput.type = 'hidden';
+    const preview = document.createElement('div');
+    preview.className = 'image-preview';
+    field.append(picker, refsInput, preview);
+    prosLabel.before(field);
+
+    let refs = [];
+    const sync = () => {
+      refsInput.value = JSON.stringify(refs);
+      form.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    const thumbnail = async (ref, removable, target) => {
+      const blob = await getImage(ref.id);
+      if (!blob) return;
+      const item = document.createElement('div');
+      item.className = 'image-item';
+      const image = document.createElement('img');
+      const url = URL.createObjectURL(blob);
+      image.src = url;
+      image.alt = ref.name || '房源图片';
+      image.onload = () => URL.revokeObjectURL(url);
+      item.append(image);
+      if (removable) {
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = '×';
+        remove.title = '删除图片';
+        remove.addEventListener('click', async () => {
+          refs = refs.filter(item => item.id !== ref.id);
+          await deleteImage(ref.id);
+          sync();
+          renderEditor();
+        });
+        item.append(remove);
+      }
+      target.append(item);
+    };
+    const renderEditor = async () => {
+      preview.replaceChildren();
+      for (const ref of refs) await thumbnail(ref, true, preview);
+    };
+    const setRefs = async value => {
+      refs = parseRefs(value);
+      refsInput.value = JSON.stringify(refs);
+      await renderEditor();
+    };
+    picker.addEventListener('change', async () => {
+      const files = [...picker.files || []].filter(file => file.type.startsWith('image/'));
+      for (const file of files) {
+        const id = createId();
+        await putImage(id, file);
+        refs.push({ id, name: file.name, type: file.type, createdAt: Date.now() });
+      }
+      picker.value = '';
+      sync();
+      await renderEditor();
+    });
+    new MutationObserver(() => {
+      if (editor.classList.contains('hidden')) return;
+      const id = document.getElementById('recordId')?.value;
+      const record = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]')
+        .find(item => String(item.id) === String(id));
+      setRefs(record?.imageRefs);
+    }).observe(editor, { attributes: true, attributeFilter: ['class'] });
+    document.addEventListener('click', event => {
+      if (event.target.closest('#add')) {
+        setTimeout(() => { refs = []; refsInput.value = '[]'; preview.replaceChildren(); }, 0);
+      }
+    }, true);
+
+    const renderRecordImages = async () => {
+      const records = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]');
+      for (const card of recordsNode.querySelectorAll('.record')) {
+        const id = card.querySelector('[data-edit]')?.dataset.edit;
+        const record = records.find(item => String(item.id) === String(id));
+        const imageRefs = parseRefs(record?.imageRefs);
+        let details = card.querySelector('.record-images');
+        if (!imageRefs.length) {
+          details?.remove();
+          continue;
+        }
+        if (details?.dataset.imageIds === JSON.stringify(imageRefs.map(item => item.id))) continue;
+        if (!details) {
+          details = document.createElement('details');
+          details.className = 'record-extra record-images';
+          card.querySelector('.record-actions')?.before(details);
+        }
+        details.dataset.imageIds = JSON.stringify(imageRefs.map(item => item.id));
+        const summary = document.createElement('summary');
+        summary.textContent = '房源图片（' + imageRefs.length + ' 张）';
+        const list = document.createElement('div');
+        list.className = 'image-preview';
+        details.replaceChildren(summary, list);
+        for (const ref of imageRefs) await thumbnail(ref, false, list);
+      }
+    };
+    new MutationObserver(renderRecordImages).observe(recordsNode, { childList: true });
+    renderRecordImages();
   })();
 </script>
 </body>
