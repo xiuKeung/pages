@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
@@ -7,6 +7,7 @@ const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const webSourceRoot = resolve(appRoot, '..');
 const outputDir = join(appRoot, 'www');
 const bundleDir = join(appRoot, 'dist');
+const websiteSharedDir = join(webSourceRoot, 'shared');
 const siteDirectories = ['entrance', 'school', 'calculator', 'viewings', 'checklist'];
 const bundles = ['native-store', 'checklist-page', 'backup-page'];
 
@@ -20,6 +21,8 @@ await build({
   target: ['es2020'],
   minify: false
 });
+await rm(websiteSharedDir, { recursive: true, force: true });
+await cp(bundleDir, websiteSharedDir, { recursive: true });
 await rm(outputDir, { recursive: true, force: true });
 await mkdir(outputDir, { recursive: true });
 await cp(join(appRoot, 'index.html'), join(outputDir, 'index.html'));
@@ -29,16 +32,4 @@ for (const directory of siteDirectories) {
   await cp(join(webSourceRoot, directory), join(outputDir, directory), { recursive: true });
 }
 
-for (const page of ['checklist', 'calculator', 'school', 'viewings']) {
-  const pagePath = join(outputDir, page, 'index.html');
-  const pageHtml = await readFile(pagePath, 'utf8');
-  await writeFile(
-    pagePath,
-    pageHtml
-      .replaceAll('../app/dist/native-store.js', '../shared/native-store.js')
-      .replaceAll('../app/dist/checklist-page.js', '../shared/checklist-page.js')
-      .replaceAll('../app/dist/backup-page.js', '../shared/backup-page.js')
-  );
-}
-
-console.log(`Bundled ${bundles.length} native scripts and copied ${siteDirectories.length} static page directories to ${outputDir}`);
+console.log(`Bundled ${bundles.length} shared scripts for the website and copied ${siteDirectories.length} pages to ${outputDir}`);
