@@ -902,14 +902,14 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
         ['物业公司', record.propertyCompany],
         ['物业费', record.propertyFee && record.propertyFee + ' 元/㎡·月'],
         ['建成年份', record.builtYear && `${record.builtYear} 年`],
+        ['车位情况', record.parkingStatus],
         ['楼栋 / 单元', record.building],
+        ['车位费用', record.parkingFee],
         ['总楼层', record.totalFloor && `总${record.totalFloor}层`],
         ['面积', record.area && `${record.area} ㎡`],
         ['户型', record.layout],
         ['客厅朝向', record.orientation],
         ['梯户比', record.elevatorRatio],
-        ['车位情况', record.parkingStatus],
-        ['车位费用', record.parkingFee],
         ['报价', record.targetPrice && `${record.targetPrice} 万元`],
         ['贷款年限', record.loanYears && `${record.loanYears} 年`],
         ['首付比例', record.downPaymentRate && `${record.downPaymentRate}%`],
@@ -1257,14 +1257,14 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
         ['物业公司', data.propertyCompany],
         ['物业费', data.propertyFee && data.propertyFee + ' 元/㎡·月'],
         ['建成年份', data.builtYear && data.builtYear + ' 年'],
+        ['车位情况', data.parkingStatus],
         ['楼栋 / 单元', data.building],
+        ['车位费用', data.parkingFee],
         ['总楼层', data.totalFloor && '总' + data.totalFloor + '层'],
         ['面积', data.area && data.area + ' ㎡'],
         ['户型', data.layout],
         ['客厅朝向', data.orientation],
         ['梯户比', data.elevatorRatio],
-        ['车位情况', data.parkingStatus],
-        ['车位费用', data.parkingFee],
         ['报价', data.targetPrice && data.targetPrice + ' 万元'],
         ['贷款年限', data.loanYears && data.loanYears + ' 年'],
         ['首付比例', data.downPaymentRate && data.downPaymentRate + '%'],
@@ -1342,8 +1342,11 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
   (() => {
     const form = document.getElementById('recordForm');
     const layoutRow = document.getElementById('layout')?.closest('.field-pair-row');
+    const builtYearRow = document.getElementById('builtYear')?.closest('.field-pair-row');
+    const builtYearLabel = document.getElementById('builtYear')?.closest('label');
+    const buildingLabel = document.getElementById('building')?.closest('label');
     const notesLabel = document.getElementById('notes')?.closest('label');
-    if (!form || !layoutRow || !notesLabel || document.getElementById('elevatorRatio')) return;
+    if (!form || !layoutRow || !builtYearRow || !builtYearLabel || !buildingLabel || !notesLabel || document.getElementById('elevatorRatio')) return;
 
     const createField = (title, id, placeholder, className = '') => {
       const label = document.createElement('label');
@@ -1382,15 +1385,18 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       label.append(select, custom);
       return label;
     };
-    const parkingRow = document.createElement('div');
-    parkingRow.className = 'field-pair-row parking-row';
-    parkingRow.append(
-      createElevatorRatioField(),
-      createField('车位情况', 'parkingStatus', '如：固定车位 / 无车位')
-    );
-    const parkingFee = createField('车位费用', 'parkingFee', '如：600 元/月', 'parking-fee-field');
-    layoutRow.after(parkingRow);
-    parkingRow.after(parkingFee);
+    const parkingStatus = createField('车位情况', 'parkingStatus', '如：固定车位 / 无车位');
+    const parkingFee = createField('车位费用', 'parkingFee', '如：600 元/月');
+    const buildingParkingRow = document.createElement('div');
+    buildingParkingRow.className = 'field-pair-row parking-row';
+    buildingParkingRow.append(buildingLabel, parkingFee);
+    builtYearRow.replaceChildren(builtYearLabel, parkingStatus);
+    builtYearRow.after(buildingParkingRow);
+
+    const elevatorRow = document.createElement('div');
+    elevatorRow.className = 'field-pair-row elevator-row';
+    elevatorRow.append(createElevatorRatioField());
+    layoutRow.after(elevatorRow);
 
     const landmark = document.createElement('label');
     landmark.className = 'wide';
@@ -1464,6 +1470,63 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
           .find(item => String(item.querySelector('[data-edit]')?.dataset.edit) === String(id));
         card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 0);
+    });
+  })();
+</script>
+<script>
+  (() => {
+    const form = document.getElementById('recordForm');
+    const community = document.getElementById('community');
+    const recordId = document.getElementById('recordId');
+    if (!form || !community || !recordId) return;
+
+    const fieldIds = ['propertyCompany', 'propertyFee', 'builtYear', 'parkingFee'];
+    const autoValues = new Map();
+    const normalize = value => String(value || '').replace(/[\s（）()]/g, '').toLocaleLowerCase();
+    const savedRecords = () => {
+      try { return JSON.parse(window.NativeStore.viewingRecordsJson() || '[]'); }
+      catch (_) { return []; }
+    };
+    const clearAutoFill = () => {
+      autoValues.clear();
+      fieldIds.forEach(id => {
+        const field = document.getElementById(id);
+        if (field) field.value = '';
+      });
+    };
+    const fillFromRecentCommunity = () => {
+      if (recordId.value) return;
+      const key = normalize(community.value);
+      if (!key) return;
+      const latest = savedRecords()
+        .filter(record => normalize(record.community) === key)
+        .sort((a, b) => Number(b.updatedAt || b.createdAt || 0) - Number(a.updatedAt || a.createdAt || 0))[0];
+      if (!latest) return;
+
+      let filled = false;
+      fieldIds.forEach(id => {
+        const field = document.getElementById(id);
+        const value = latest[id] ?? '';
+        if (!field || value === '') return;
+        if (!field.value || field.value === autoValues.get(id)) {
+          field.value = value;
+          autoValues.set(id, value);
+          filled = true;
+        }
+      });
+      if (filled) {
+        const toast = document.getElementById('toast');
+        if (toast) toast.textContent = '已带入同小区最近记录的物业、建成年份和车位费用信息。';
+      }
+    };
+
+    document.addEventListener('click', event => {
+      if (event.target.closest('#add')) clearAutoFill();
+    }, true);
+    community.addEventListener('input', fillFromRecentCommunity);
+    community.addEventListener('change', fillFromRecentCommunity);
+    document.addEventListener('pointerdown', event => {
+      if (event.target.closest('.community-suggestion')) setTimeout(fillFromRecentCommunity, 0);
     });
   })();
 </script>
