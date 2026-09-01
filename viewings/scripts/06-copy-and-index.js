@@ -66,26 +66,19 @@
     const recordsNode = document.getElementById('records');
     if (!recordsNode) return;
     const updateIndices = () => {
-      let records = [];
-      try { records = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]'); }
-      catch (_) { return; }
-      const ids = new Map(
-        records.slice().sort((a, b) => {
-          const timeOf = record => Number(record.createdAt || record.updatedAt || 0);
-          return timeOf(a) - timeOf(b);
-        }).map((record, index) => [String(record.id), index + 1])
-      );
-      recordsNode.querySelectorAll('.record').forEach(card => {
-        const id = card.querySelector('[data-edit]')?.dataset.edit;
+      const cards = [...recordsNode.querySelectorAll('.record')];
+      cards.forEach((card, index) => {
         const title = card.querySelector('.record-top h2');
-        if (!id || !title) return;
+        if (!title) return;
         let badge = [...title.children].find(node => node.classList.contains('record-index'));
         if (!badge) {
           badge = document.createElement('span');
           badge.className = 'record-index';
           title.prepend(badge);
         }
-        badge.textContent = '记录 ' + String(ids.get(String(id)) || '');
+        // 列表按最近看房记录在前渲染：最上方显示最大的序号，向下递减。
+        // 每次导入、删除或筛选后列表都会重绘，因此序号始终以当前列表为准。
+        badge.textContent = '记录 ' + String(cards.length - index);
       });
     };
     new MutationObserver(updateIndices).observe(recordsNode, { childList: true });

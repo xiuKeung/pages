@@ -34,6 +34,22 @@
     const getFullImage = ref => nativeImages
       ? window.NativeStore.getViewingImage(ref, false)
       : run('readonly', store => store.get(ref.id));
+    const imageSizes = new Map();
+    const formatBytes = value => {
+      const size = Number(value || 0);
+      if (!size) return '大小未知';
+      if (size < 1024 * 1024) return `${(size / 1024).toFixed(size < 100 * 1024 ? 0 : 1)} KB`;
+      return `${(size / (1024 * 1024)).toFixed(size < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+    };
+    const getImageSize = async (ref, loadedBlob = null) => {
+      if (imageSizes.has(ref.id)) return imageSizes.get(ref.id);
+      let size = Number(ref.size || 0);
+      if (!size && nativeImages) size = await window.NativeStore.getViewingImageSize(ref);
+      if (!size) size = Number(loadedBlob?.size || (await getFullImage(ref))?.size || 0);
+      imageSizes.set(ref.id, size);
+      return size;
+    };
+    const totalImageSize = async items => (await Promise.all(items.map(ref => getImageSize(ref)))).reduce((sum, size) => sum + size, 0);
     const deleteImage = ref => nativeImages
       ? window.NativeStore.deleteViewingImage(ref)
       : run('readwrite', store => store.delete(ref.id));
@@ -48,7 +64,8 @@
     const imageSection = document.createElement('div');
     imageSection.className = 'wide';
     const field = document.createElement('label');
-    field.textContent = '房源图片（可多选）';
+    const imageTitle = document.createElement('span');
+    imageTitle.textContent = '房源图片（可多选）';
     const picker = document.createElement('input');
     picker.id = 'imagePicker';
     picker.type = 'file';
@@ -78,7 +95,7 @@
     const imageActions = document.createElement('div');
     imageActions.className = 'image-actions';
     imageActions.append(chooseImages, takePhoto);
-    field.append(picker, camera, refsInput);
+    field.append(imageTitle, picker, camera, refsInput);
     imageSection.append(field, imageActions, preview);
     prosLabel.before(imageSection);
 
@@ -93,6 +110,18 @@
     closeLightbox.type = 'button';
     closeLightbox.textContent = '×';
     closeLightbox.setAttribute('aria-label', '关闭大图预览');
+    const previousImage = document.createElement('button');
+    previousImage.className = 'lightbox-nav lightbox-previous';
+    previousImage.type = 'button';
+    previousImage.textContent = '‹';
+    previousImage.setAttribute('aria-label', '上一张图片');
+    const nextImage = document.createElement('button');
+    nextImage.className = 'lightbox-nav lightbox-next';
+    nextImage.type = 'button';
+    nextImage.textContent = '›';
+    nextImage.setAttribute('aria-label', '下一张图片');
+    const imageCounter = document.createElement('p');
+    imageCounter.className = 'lightbox-counter';
     const lightboxActions = document.createElement('div');
     lightboxActions.className = 'lightbox-actions';
     const saveCurrent = document.createElement('button');
@@ -105,7 +134,7 @@
     const lightboxMessage = document.createElement('p');
     lightboxMessage.className = 'lightbox-message';
     viewport.append(lightboxImage);
-    lightbox.append(viewport, closeLightbox, lightboxMessage, lightboxActions);
+    lightbox.append(viewport, closeLightbox, previousImage, nextImage, imageCounter, lightboxMessage, lightboxActions);
     document.body.append(lightbox);
     let lightboxUrl = '', lightboxBlob = null, lightboxRef = null, lightboxRefs = [], scale = 1, offsetX = 0, offsetY = 0;
     const renderTransform = () => { lightboxImage.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`; };
@@ -115,21 +144,46 @@
       clearTimeout(showLightboxMessage.timer);
       showLightboxMessage.timer = setTimeout(() => { lightboxMessage.textContent = ''; }, 3000);
     };
+    const currentImageIndex = () => lightboxRefs.findIndex(ref => String(ref.id) === String(lightboxRef?.id));
+    const updateNavigation = () => {
+      const index = currentImageIndex();
+      const multiple = lightboxRefs.length > 1;
+      previousImage.hidden = !multiple;
+      nextImage.hidden = !multiple;
+      previousImage.disabled = !multiple || index <= 0;
+      nextImage.disabled = !multiple || index < 0 || index >= lightboxRefs.length - 1;
+      imageCounter.textContent = multiple && index >= 0 ? `${index + 1} / ${lightboxRefs.length}` : '';
+    };
+    const setLightboxImage = (blob, name, ref) => {
+      if (lightboxUrl) URL.revokeObjectURL(lightboxUrl);
+      lightboxUrl = URL.createObjectURL(blob);
+      lightboxImage.src = lightboxUrl;
+      lightboxImage.alt = name || '房源图片';
+      lightboxBlob = blob;
+      lightboxRef = ref;
+      resetTransform();
+      updateNavigation();
+    };
     const hideLightbox = () => {
       lightbox.hidden = true;
       if (lightboxUrl) URL.revokeObjectURL(lightboxUrl);
-      lightboxUrl = ''; lightboxBlob = null; lightboxRef = null; lightboxRefs = []; lightboxMessage.textContent = '';
+      lightboxUrl = ''; lightboxBlob = null; lightboxRef = null; lightboxRefs = []; lightboxMessage.textContent = ''; imageCounter.textContent = '';
       lightboxImage.removeAttribute('src');
       resetTransform();
     };
     const showLightbox = (blob, name, ref, allRefs = []) => {
       hideLightbox();
-      lightboxUrl = URL.createObjectURL(blob);
-      lightboxImage.src = lightboxUrl;
-      lightboxImage.alt = name || '房源图片';
-      lightboxBlob = blob; lightboxRef = ref; lightboxRefs = allRefs;
+      lightboxRefs = allRefs;
+      setLightboxImage(blob, name, ref);
       saveAll.disabled = allRefs.length < 2;
       lightbox.hidden = false;
+    };
+    const switchImage = async direction => {
+      const index = currentImageIndex();
+      const target = lightboxRefs[index + direction];
+      if (!target) return;
+      const blob = await getFullImage(target);
+      if (blob) setLightboxImage(blob, target.name, target);
     };
     const safeName = (name, index = 0) => {
       const extension = /\.[a-z0-9]{2,5}$/i.test(name || '') ? '' : '.jpg';
@@ -165,6 +219,8 @@
       } finally { saveAll.disabled = lightboxRefs.length < 2; }
     });
     closeLightbox.addEventListener('click', hideLightbox);
+    previousImage.addEventListener('click', () => switchImage(-1));
+    nextImage.addEventListener('click', () => switchImage(1));
     lightbox.addEventListener('click', event => {
       if (event.target === lightbox) hideLightbox();
     });
@@ -185,7 +241,19 @@
       else if (dragStart && scale > 1) { offsetX = dragStart.offsetX + event.clientX - dragStart.x; offsetY = dragStart.offsetY + event.clientY - dragStart.y; }
       renderTransform();
     });
-    const releasePointer = event => { pointers.delete(event.pointerId); if (pointers.size < 2) pinchDistance = 0; if (!pointers.size) dragStart = null; };
+    const releasePointer = event => {
+      const point = pointers.get(event.pointerId);
+      const start = dragStart;
+      const wasSinglePointer = pointers.size === 1;
+      pointers.delete(event.pointerId);
+      if (wasSinglePointer && start && point && scale === 1) {
+        const deltaX = point.x - start.x;
+        const deltaY = point.y - start.y;
+        if (Math.abs(deltaX) > 56 && Math.abs(deltaX) > Math.abs(deltaY)) void switchImage(deltaX < 0 ? 1 : -1);
+      }
+      if (pointers.size < 2) pinchDistance = 0;
+      if (!pointers.size) dragStart = null;
+    };
     viewport.addEventListener('pointerup', releasePointer); viewport.addEventListener('pointercancel', releasePointer);
     viewport.addEventListener('wheel', event => { event.preventDefault(); scale = Math.min(4, Math.max(1, scale + (event.deltaY < 0 ? .2 : -.2))); renderTransform(); }, { passive:false });
 
@@ -208,6 +276,10 @@
         showLightbox(await getFullImage(ref) || blob, ref.name, ref, allRefs);
       });
       item.append(image);
+      const caption = document.createElement('span');
+      caption.className = 'image-caption';
+      caption.textContent = formatBytes(await getImageSize(ref, nativeImages ? null : blob));
+      item.append(caption);
       if (removable) {
         const remove = document.createElement('button');
         remove.type = 'button';
@@ -227,6 +299,9 @@
     const renderEditor = async () => {
       preview.replaceChildren();
       for (const ref of refs) await thumbnail(ref, true, preview, refs);
+      imageTitle.textContent = refs.length
+        ? `房源图片（${refs.length} 张 · 共 ${formatBytes(await totalImageSize(refs))}）`
+        : '房源图片（可多选）';
     };
     const setRefs = async value => {
       refs = parseRefs(value);
@@ -243,7 +318,7 @@
       for (const file of files) {
         const id = createId();
         const stored = await putImage(recordId, id, file);
-        refs.push(nativeImages ? stored : { id, name: file.name, type: file.type, createdAt: Date.now() });
+        refs.push(nativeImages ? stored : { id, name: file.name, type: file.type, size: file.size, createdAt: Date.now() });
       }
       input.value = '';
       sync();
@@ -262,6 +337,18 @@
       if (event.target.closest('#add')) {
         setTimeout(() => { refs = []; refsInput.value = '[]'; preview.replaceChildren(); }, 0);
       }
+    }, true);
+    document.addEventListener('click', async event => {
+      if (!event.target.closest('#cancel')) return;
+      const recordId = document.getElementById('recordId')?.value;
+      const saved = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]')
+        .some(record => String(record.id) === String(recordId));
+      if (saved || !refs.length) return;
+      const temporaryRefs = refs;
+      refs = [];
+      refsInput.value = '[]';
+      preview.replaceChildren();
+      await Promise.all(temporaryRefs.map(ref => deleteImage(ref)));
     }, true);
 
     const renderRecordImages = async () => {
@@ -283,7 +370,7 @@
         }
         details.dataset.imageIds = JSON.stringify(imageRefs.map(item => item.id));
         const summary = document.createElement('summary');
-        summary.textContent = '房源图片（' + imageRefs.length + ' 张）';
+        summary.textContent = `房源图片（${imageRefs.length} 张 · 共 ${formatBytes(await totalImageSize(imageRefs))}）`;
         const list = document.createElement('div');
         list.className = 'image-preview';
         details.replaceChildren(summary, list);

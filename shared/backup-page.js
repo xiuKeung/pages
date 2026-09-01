@@ -3824,6 +3824,15 @@
       link.remove();
     }, 500);
   }
+  async function clearIOSBackupCache() {
+    if (!window.NativeStore.isNative() || Capacitor.getPlatform() !== "ios") return;
+    try {
+      const result = await Filesystem.readdir({ path: "backups", directory: Directory.Cache });
+      await Promise.all((result.files || []).filter((file) => String(file.name || "").startsWith("\u5B89\u5BB6\u7B14\u8BB0\u5907\u4EFD-")).map((file) => Filesystem.deleteFile({ path: `backups/${file.name}`, directory: Directory.Cache })));
+    } catch (_) {
+    }
+  }
+  void clearIOSBackupCache();
   function browserImageStore(mode, action) {
     return new Promise((resolve2, reject) => {
       const request = indexedDB.open(BROWSER_IMAGE_DATABASE, 1);
@@ -3938,7 +3947,12 @@
     const path = `backups/${name}`;
     await Filesystem.writeFile({ path, data: base64, directory: Directory.Cache, recursive: true });
     const uri = await Filesystem.getUri({ path, directory: Directory.Cache });
-    await Share.share({ title: "\u5B89\u5BB6\u7B14\u8BB0\u5907\u4EFD", files: [uri.uri], dialogTitle: "\u5BFC\u51FA\u5907\u4EFD" });
+    try {
+      await Share.share({ title: "\u5B89\u5BB6\u7B14\u8BB0\u5907\u4EFD", files: [uri.uri], dialogTitle: "\u5BFC\u51FA\u5907\u4EFD" });
+    } finally {
+      await Filesystem.deleteFile({ path, directory: Directory.Cache }).catch(() => {
+      });
+    }
   }
   async function chooseBackup() {
     if (window.NativeStore.isNative()) {

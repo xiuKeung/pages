@@ -67,6 +67,19 @@ function download(blob, name) {
   setTimeout(() => { URL.revokeObjectURL(link.href); link.remove(); }, 500);
 }
 
+async function clearIOSBackupCache() {
+  if (!window.NativeStore.isNative() || Capacitor.getPlatform() !== 'ios') return;
+  try {
+    const result = await Filesystem.readdir({ path: 'backups', directory: Directory.Cache });
+    await Promise.all((result.files || [])
+      .filter(file => String(file.name || '').startsWith('安家笔记备份-'))
+      .map(file => Filesystem.deleteFile({ path: `backups/${file.name}`, directory: Directory.Cache })));
+  } catch (_) {
+    // Cache may not have been created yet, which is already clean.
+  }
+}
+void clearIOSBackupCache();
+
 function browserImageStore(mode, action) {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(BROWSER_IMAGE_DATABASE, 1);
@@ -159,7 +172,11 @@ async function createBackup(dataOverride = null) {
   const path = `backups/${name}`;
   await Filesystem.writeFile({ path, data: base64, directory: Directory.Cache, recursive: true });
   const uri = await Filesystem.getUri({ path, directory: Directory.Cache });
-  await Share.share({ title: '安家笔记备份', files: [uri.uri], dialogTitle: '导出备份' });
+  try {
+    await Share.share({ title: '安家笔记备份', files: [uri.uri], dialogTitle: '导出备份' });
+  } finally {
+    await Filesystem.deleteFile({ path, directory: Directory.Cache }).catch(() => {});
+  }
 }
 
 async function chooseBackup() {

@@ -469,6 +469,7 @@ async function storeViewingImage(recordId, photoId, file) {
     thumbnailPath,
     width: thumbnail.width,
     height: thumbnail.height,
+    size: Number(file.size || 0),
     createdAt: Date.now()
   };
 }
@@ -481,6 +482,18 @@ async function getViewingImage(ref, thumbnail = true) {
   const result = await Filesystem.readFile({ path, directory: Directory.Data });
   const response = await fetch(`data:${mimeType};base64,${result.data}`);
   return response.blob();
+}
+
+async function getViewingImageSize(ref) {
+  if (!isNative()) return Number(ref?.size || 0);
+  if (Number(ref?.size || 0) > 0) return Number(ref.size);
+  if (!ref?.filePath) return 0;
+  try {
+    const result = await Filesystem.stat({ path: ref.filePath, directory: Directory.Data });
+    return Number(result.size || 0);
+  } catch {
+    return 0;
+  }
 }
 
 async function deleteViewingImage(ref) {
@@ -753,6 +766,7 @@ window.NativeStore = {
   setViewingRecordsJson,
   storeViewingImage,
   getViewingImage,
+  getViewingImageSize,
   deleteViewingImage,
   saveViewingImagesToDevice,
   readPrivateFile,

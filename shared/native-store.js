@@ -2502,6 +2502,8 @@
   var viewingCache;
   var BackupFile = registerPlugin("BackupFile");
   var PhotoLibrary = registerPlugin("PhotoLibrary");
+  var BROWSER_IMAGE_DATABASE = "shenzhen-viewing-images-v1";
+  var BROWSER_IMAGE_STORE = "images";
   function dataUrlPayload(dataUrl) {
     return dataUrl.split(",", 2)[1] || "";
   }
@@ -2512,6 +2514,44 @@
       reader.onerror = () => reject(reader.error || new Error("\u65E0\u6CD5\u8BFB\u53D6\u56FE\u7247"));
       reader.readAsDataURL(blob);
     });
+  }
+  function browserImageStore(mode, action) {
+    return new Promise((resolve2, reject) => {
+      const request = indexedDB.open(BROWSER_IMAGE_DATABASE, 1);
+      request.onupgradeneeded = () => request.result.createObjectStore(BROWSER_IMAGE_STORE);
+      request.onerror = () => reject(request.error || new Error("\u65E0\u6CD5\u6253\u5F00\u6D4F\u89C8\u5668\u56FE\u7247\u5E93"));
+      request.onsuccess = () => {
+        const database = request.result;
+        const transaction = database.transaction(BROWSER_IMAGE_STORE, mode);
+        try {
+          action(transaction.objectStore(BROWSER_IMAGE_STORE));
+        } catch (error) {
+          database.close();
+          reject(error);
+          return;
+        }
+        transaction.oncomplete = () => {
+          database.close();
+          resolve2();
+        };
+        transaction.onerror = () => {
+          database.close();
+          reject(transaction.error || new Error("\u6D4F\u89C8\u5668\u56FE\u7247\u5E93\u64CD\u4F5C\u5931\u8D25"));
+        };
+        transaction.onabort = () => {
+          database.close();
+          reject(transaction.error || new Error("\u6D4F\u89C8\u5668\u56FE\u7247\u5E93\u64CD\u4F5C\u5931\u8D25"));
+        };
+      };
+    });
+  }
+  function imageRefsForRecord(record) {
+    try {
+      const refs = JSON.parse(record?.imageRefs || "[]");
+      return Array.isArray(refs) ? refs : [];
+    } catch {
+      return [];
+    }
   }
   async function makeThumbnail(blob) {
     const sourceUrl = URL.createObjectURL(blob);
@@ -2872,6 +2912,18 @@
     }
     await Promise.all(filesToRemove.map(removePrivateFile));
   }
+  async function deleteViewingRecord(recordId) {
+    const records = await getViewingRecords();
+    const record = records.find((item) => String(item.id) === String(recordId));
+    if (!record) return false;
+    const remaining = records.filter((item) => String(item.id) !== String(recordId));
+    if (!isNative()) {
+      const ids = imageRefsForRecord(record).map((ref) => ref?.id).filter(Boolean);
+      if (ids.length) await browserImageStore("readwrite", (store) => ids.forEach((id) => store.delete(id)));
+    }
+    await saveViewingRecords(remaining);
+    return true;
+  }
   function setViewingRecordsJson(serialized) {
     try {
       const records = JSON.parse(serialized);
@@ -2906,6 +2958,7 @@
       thumbnailPath,
       width: thumbnail.width,
       height: thumbnail.height,
+      size: Number(file.size || 0),
       createdAt: Date.now()
     };
   }
@@ -2917,6 +2970,17 @@
     const result = await Filesystem.readFile({ path, directory: Directory.Data });
     const response = await fetch(`data:${mimeType};base64,${result.data}`);
     return response.blob();
+  }
+  async function getViewingImageSize(ref) {
+    if (!isNative()) return Number(ref?.size || 0);
+    if (Number(ref?.size || 0) > 0) return Number(ref.size);
+    if (!ref?.filePath) return 0;
+    try {
+      const result = await Filesystem.stat({ path: ref.filePath, directory: Directory.Data });
+      return Number(result.size || 0);
+    } catch {
+      return 0;
+    }
   }
   async function deleteViewingImage(ref) {
     if (!isNative()) return;
@@ -3239,10 +3303,12 @@
     saveSchoolSaved,
     getViewingRecords,
     saveViewingRecords,
+    deleteViewingRecord,
     viewingRecordsJson,
     setViewingRecordsJson,
     storeViewingImage,
     getViewingImage,
+    getViewingImageSize,
     deleteViewingImage,
     saveViewingImagesToDevice,
     readPrivateFile,
