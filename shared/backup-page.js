@@ -3552,6 +3552,7 @@
 
   // src/backup-page.js
   var import_jszip = __toESM(require_jszip_min(), 1);
+  init_dist();
 
   // node_modules/@capacitor/filesystem/dist/esm/index.js
   init_dist();
@@ -3757,6 +3758,7 @@
   // src/backup-page.js
   var FORMAT = "shenzhen-home-tools-backup";
   var VERSION = 1;
+  var BackupFile = registerPlugin("BackupFile");
   var validPath = (path) => typeof path === "string" && path && !path.startsWith("/") && !path.includes("..") && !path.includes("\\");
   var toast = (text) => {
     const node = document.getElementById("toast");
@@ -3769,7 +3771,7 @@
   };
   function fileName() {
     const time = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-    return `\u6DF1\u5733\u4E70\u623F\u5DE5\u5177\u5907\u4EFD-${time}.zip`;
+    return `\u5B89\u5BB6\u7B14\u8BB0\u5907\u4EFD-${time}.zip`;
   }
   function download(blob, name) {
     const link = document.createElement("a");
@@ -3782,9 +3784,9 @@
       link.remove();
     }, 500);
   }
-  async function createBackup() {
+  async function createBackup(dataOverride = null) {
     const native = window.NativeStore.isNative();
-    const data = await window.NativeStore.getBackupData();
+    const data = dataOverride || await window.NativeStore.getBackupData();
     const zip = new import_jszip.default();
     const portablePhotos = [];
     for (const photo of data.photos) {
@@ -3815,15 +3817,15 @@
       download(await zip.generateAsync({ type: "blob" }), name);
       return;
     }
+    const base64 = await zip.generateAsync({ type: "base64" });
+    if (Capacitor.getPlatform() === "android") {
+      await BackupFile.save({ filename: name, data: base64 });
+      return;
+    }
     const path = `backups/${name}`;
-    await Filesystem.writeFile({
-      path,
-      data: await zip.generateAsync({ type: "base64" }),
-      directory: Directory.Cache,
-      recursive: true
-    });
+    await Filesystem.writeFile({ path, data: base64, directory: Directory.Cache, recursive: true });
     const uri = await Filesystem.getUri({ path, directory: Directory.Cache });
-    await Share.share({ title: "\u6DF1\u5733\u4E70\u623F\u5DE5\u5177\u5B8C\u6574\u5907\u4EFD", files: [uri.uri], dialogTitle: "\u5BFC\u51FA\u5B8C\u6574\u5907\u4EFD" });
+    await Share.share({ title: "\u5B89\u5BB6\u7B14\u8BB0\u5907\u4EFD", files: [uri.uri], dialogTitle: "\u5BFC\u51FA\u5907\u4EFD" });
   }
   async function chooseBackup() {
     if (window.NativeStore.isNative()) {
@@ -3853,7 +3855,93 @@
       input.click();
     });
   }
-  async function restoreBackup() {
+  function chooseImportMode() {
+    return new Promise((resolve2) => {
+      const dialog = document.createElement("div");
+      dialog.className = "backup-mode-dialog";
+      dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="\u9009\u62E9\u5BFC\u5165\u65B9\u5F0F"><h3>\u9009\u62E9\u5BFC\u5165\u65B9\u5F0F</h3><p><strong>\u589E\u91CF\u5BFC\u5165</strong>\u4F1A\u4FDD\u7559\u672C\u673A\u5DF2\u6709\u6570\u636E\uFF0C\u4EC5\u8865\u5145\u65B0\u8BB0\u5F55\uFF0C\u5E76\u4EE5\u6700\u540E\u7F16\u8F91\u65F6\u95F4\u8F83\u65B0\u7684\u8BB0\u5F55\u4E3A\u51C6\u3002</p><p><strong>\u8986\u76D6\u5BFC\u5165</strong>\u4F1A\u6E05\u7A7A\u672C\u673A\u73B0\u6709\u6570\u636E\uFF0C\u518D\u5B8C\u6574\u6062\u590D\u5907\u4EFD\u3002</p><div><button type="button" data-mode="merge">\u589E\u91CF\u5BFC\u5165</button><button type="button" class="danger" data-mode="replace">\u8986\u76D6\u5BFC\u5165</button></div><button type="button" class="cancel" data-mode="cancel">\u53D6\u6D88</button></div>';
+      const finish = (mode) => {
+        dialog.remove();
+        resolve2(mode === "cancel" ? null : mode);
+      };
+      dialog.addEventListener("click", (event) => {
+        if (event.target === dialog) return finish("cancel");
+        const button = event.target.closest("[data-mode]");
+        if (button) finish(button.dataset.mode);
+      });
+      document.body.append(dialog);
+    });
+  }
+  function chooseExportMode() {
+    return new Promise((resolve2) => {
+      const dialog = document.createElement("div");
+      dialog.className = "backup-mode-dialog";
+      dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="\u9009\u62E9\u5BFC\u51FA\u65B9\u5F0F"><h3>\u9009\u62E9\u5BFC\u51FA\u65B9\u5F0F</h3><p><strong>\u5168\u91CF\u5BFC\u51FA</strong>\u4F1A\u5BFC\u51FA\u5168\u90E8\u770B\u623F\u8BB0\u5F55\u3001\u56FE\u7247\u3001\u8D2D\u623F\u6E05\u5355\u3001\u8D37\u6B3E\u65B9\u6848\u548C\u5B66\u533A\u6536\u85CF\u3002</p><p><strong>\u624B\u52A8\u9009\u62E9\u8BB0\u5F55\u5BFC\u51FA</strong>\u4EC5\u5BFC\u51FA\u4F60\u52FE\u9009\u7684\u770B\u623F\u8BB0\u5F55\u53CA\u5176\u56FE\u7247\u3002</p><div><button type="button" data-mode="full">\u5168\u91CF\u5BFC\u51FA</button><button type="button" data-mode="records">\u9009\u62E9\u8BB0\u5F55</button></div><button type="button" class="cancel" data-mode="cancel">\u53D6\u6D88</button></div>';
+      const finish = (mode) => {
+        dialog.remove();
+        resolve2(mode === "cancel" ? null : mode);
+      };
+      dialog.addEventListener("click", (event) => {
+        if (event.target === dialog) return finish("cancel");
+        const button = event.target.closest("[data-mode]");
+        if (button) finish(button.dataset.mode);
+      });
+      document.body.append(dialog);
+    });
+  }
+  async function chooseRecordsForExport() {
+    const records = (await window.NativeStore.getViewingRecords()).sort((a, b) => {
+      const time = (record) => record.viewedAt ? Date.parse(`${record.viewedAt}T00:00:00`) : Number(record.updatedAt || record.createdAt || 0);
+      return time(b) - time(a);
+    });
+    if (!records.length) throw new Error("\u6682\u65E0\u53EF\u5BFC\u51FA\u7684\u770B\u623F\u8BB0\u5F55");
+    const priority = (value) => ({ focus: ["\u91CD\u70B9\u5173\u6CE8", "focus"], excluded: ["\u5DF2\u6392\u9664", "excluded"], normal: ["\u666E\u901A", ""] })[value] || ["\u666E\u901A", ""];
+    return new Promise((resolve2) => {
+      const dialog = document.createElement("div");
+      dialog.className = "backup-mode-dialog";
+      dialog.innerHTML = `<div class="backup-mode-panel backup-record-picker" role="dialog" aria-modal="true" aria-label="\u9009\u62E9\u8981\u5BFC\u51FA\u7684\u8BB0\u5F55"><h3>\u9009\u62E9\u8981\u5BFC\u51FA\u7684\u8BB0\u5F55</h3><p>\u4EC5\u5BFC\u51FA\u6240\u9009\u8BB0\u5F55\u53CA\u5176\u56FE\u7247\u3002</p><div class="backup-record-list">${records.map((record) => {
+        const [label, kind] = priority(record.priority);
+        return `<label><input type="checkbox" value="${String(record.id).replace(/&/g, "&amp;").replace(/"/g, "&quot;")}"><span class="backup-record-info"><b>${String(record.community || "\u672A\u547D\u540D\u5C0F\u533A").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</b><span><i class="badge ${kind}">${label}</i><small>\u770B\u623F\uFF1A${String(record.viewedAt || "\u672A\u586B\u5199").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</small></span></span></label>`;
+      }).join("")}</div><button type="button" class="primary" data-export-selected disabled>\u5BFC\u51FA 0 \u6761\u8BB0\u5F55</button><button type="button" class="cancel" data-cancel>\u53D6\u6D88</button></div>`;
+      const button = dialog.querySelector("[data-export-selected]");
+      const update = () => {
+        const count = dialog.querySelectorAll("input:checked").length;
+        button.disabled = count === 0;
+        button.textContent = `\u5BFC\u51FA ${count} \u6761\u8BB0\u5F55`;
+      };
+      dialog.addEventListener("change", update);
+      dialog.addEventListener("click", (event) => {
+        if (event.target === dialog || event.target.closest("[data-cancel]")) {
+          dialog.remove();
+          return resolve2(null);
+        }
+        if (!event.target.closest("[data-export-selected]")) return;
+        const ids = new Set([...dialog.querySelectorAll("input:checked")].map((input) => input.value));
+        dialog.remove();
+        resolve2(records.filter((record) => ids.has(String(record.id))));
+      });
+      document.body.append(dialog);
+    });
+  }
+  async function prepareIncrementalRecords(data) {
+    const makeId = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    const ids = /* @__PURE__ */ new Map();
+    const records = (data.records || []).map((record) => {
+      const id = makeId();
+      ids.set(String(record.id), id);
+      return { ...record, id };
+    });
+    return {
+      ...data,
+      records,
+      photos: (data.photos || []).filter((photo) => ids.has(String(photo.recordId))).map((photo) => ({
+        ...photo,
+        id: makeId(),
+        recordId: ids.get(String(photo.recordId))
+      }))
+    };
+  }
+  async function restoreBackup(mode) {
     const selected = await chooseBackup();
     if (!selected) return;
     const zip = await import_jszip.default.loadAsync(selected.base64, { base64: true });
@@ -3862,9 +3950,11 @@
     if (!manifestEntry || !dataEntry) throw new Error("\u5907\u4EFD\u6587\u4EF6\u7F3A\u5C11\u5FC5\u8981\u6570\u636E");
     const manifest = JSON.parse(await manifestEntry.async("text"));
     if (manifest.format !== FORMAT || manifest.version !== VERSION) throw new Error("\u4E0D\u662F\u53EF\u8BC6\u522B\u7684\u5B8C\u6574\u5907\u4EFD\u6587\u4EF6");
-    const data = JSON.parse(await dataEntry.async("text"));
+    let data = JSON.parse(await dataEntry.async("text"));
     if (!Array.isArray(data.records) || !Array.isArray(data.photos)) throw new Error("\u5907\u4EFD\u6570\u636E\u683C\u5F0F\u4E0D\u6B63\u786E");
     if (!window.NativeStore.isNative()) throw new Error("\u6D4F\u89C8\u5668\u4EC5\u652F\u6301\u5BFC\u51FA\uFF1B\u5B8C\u6574\u6062\u590D\u8BF7\u5728 App \u4E2D\u8FDB\u884C");
+    if (mode === "replace" && !confirm("\u8986\u76D6\u5BFC\u5165\u4F1A\u6E05\u7A7A\u5F53\u524D App \u5185\u7684\u6240\u6709\u672C\u5730\u6570\u636E\uFF0C\u786E\u8BA4\u7EE7\u7EED\u5417\uFF1F")) return;
+    if (mode === "merge") data = await prepareIncrementalRecords(data);
     const prefix = `viewings/restored-${Date.now()}`;
     const written = [];
     try {
@@ -3882,21 +3972,41 @@
         await window.NativeStore.writePrivateFile(photo.thumbnailPath, await thumbnailEntry.async("base64"));
         written.push(photo.filePath, photo.thumbnailPath);
       }
-      await window.NativeStore.restoreBackupData(data);
+      const result = mode === "merge" ? await window.NativeStore.mergeBackupData(data) : await window.NativeStore.restoreBackupData(data);
+      const message = mode === "merge" ? `\u5DF2\u589E\u91CF\u5BFC\u5165 ${result.records} \u6761\u770B\u623F\u8BB0\u5F55\uFF0C\u9875\u9762\u5373\u5C06\u5237\u65B0\u3002` : `\u5DF2\u6062\u590D ${data.records.length} \u6761\u770B\u623F\u8BB0\u5F55\uFF0C\u9875\u9762\u5373\u5C06\u5237\u65B0\u3002`;
+      toast(message);
     } catch (error) {
       await Promise.all(written.map((path) => window.NativeStore.deleteViewingImage({ filePath: path, thumbnailPath: path })));
       throw error;
     }
-    toast(`\u5DF2\u6062\u590D ${data.records.length} \u6761\u770B\u623F\u8BB0\u5F55\uFF0C\u9875\u9762\u5373\u5C06\u5237\u65B0\u3002`);
     setTimeout(() => location.reload(), 700);
   }
   document.getElementById("export")?.addEventListener("click", async (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
     try {
-      toast("\u6B63\u5728\u751F\u6210\u5B8C\u6574\u5907\u4EFD\u2026");
-      await createBackup();
-      toast("\u5B8C\u6574\u5907\u4EFD\u5DF2\u751F\u6210\u3002");
+      const mode = await chooseExportMode();
+      if (!mode) return;
+      if (mode === "full") {
+        toast("\u6B63\u5728\u751F\u6210\u5168\u91CF\u5907\u4EFD\u2026");
+        await createBackup();
+        toast("\u5168\u91CF\u5907\u4EFD\u5DF2\u751F\u6210\u3002");
+      } else {
+        const records = await chooseRecordsForExport();
+        if (!records) return;
+        const data = await window.NativeStore.getBackupData();
+        const ids = new Set(records.map((record) => String(record.id)));
+        toast(`\u6B63\u5728\u751F\u6210 ${records.length} \u6761\u8BB0\u5F55\u7684\u5907\u4EFD\u2026`);
+        await createBackup({
+          ...data,
+          records,
+          photos: (data.photos || []).filter((photo) => ids.has(String(photo.recordId))),
+          checklist: {},
+          mortgage: [],
+          school: []
+        });
+        toast(`\u5DF2\u5BFC\u51FA ${records.length} \u6761\u8BB0\u5F55\u3002`);
+      }
     } catch (error) {
       console.error(error);
       toast(`\u5BFC\u51FA\u5931\u8D25\uFF1A${error.message || "\u8BF7\u91CD\u8BD5"}`);
@@ -3906,7 +4016,9 @@
     event.preventDefault();
     event.stopImmediatePropagation();
     try {
-      await restoreBackup();
+      const mode = await chooseImportMode();
+      if (!mode) return;
+      await restoreBackup(mode);
     } catch (error) {
       console.error(error);
       toast(`\u5BFC\u5165\u5931\u8D25\uFF1A${error.message || "\u8BF7\u9009\u62E9\u6B63\u786E\u7684 ZIP \u5907\u4EFD"}`);

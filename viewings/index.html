@@ -9,9 +9,10 @@
     :root{--blue:#1769e0;--ink:#1b2942;--muted:#68768e;--line:#e4ebf5;--soft:#f5f8fc;--danger:#b42318}*{box-sizing:border-box}body{margin:0;background:var(--soft);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}main{width:min(860px,calc(100% - 28px));margin:auto;padding:26px 0 48px}.back{display:inline-flex;margin-bottom:16px;color:var(--blue);font-size:14px;text-decoration:none}h1{margin:0;font-size:29px}.intro{margin:6px 0 22px;color:var(--muted);font-size:14px}.card{margin:14px 0;padding:18px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 6px 20px rgba(25,59,110,.05)}.toolbar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;justify-content:space-between}.toolbar-actions{display:flex;gap:8px;flex-wrap:wrap}button,.button{min-height:36px;padding:7px 11px;border:1px solid #bfd3f6;border-radius:8px;color:var(--blue);background:#f4f8ff;font:inherit;font-size:13px;font-weight:650;cursor:pointer;text-decoration:none}.primary{color:#fff;background:var(--blue);border-color:var(--blue)}.danger{color:var(--danger);border-color:#f2c4c0;background:#fff7f6}.filter{min-width:115px;min-height:36px;padding:0 9px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:#fff;font:inherit;font-size:13px}.form{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.form h2{grid-column:1/-1;margin:2px 0 0;font-size:18px}.form label{display:block;color:#475467;font-size:13px;font-weight:650}.form input,.form select,.form textarea{width:100%;margin-top:6px;padding:9px 10px;border:1px solid #cdd8e8;border-radius:8px;color:var(--ink);background:#fff;font:inherit;font-size:14px}.form input,.form select{height:40px}.form textarea{min-height:82px;resize:vertical}.form .wide{grid-column:1/-1}.unit-preview{display:block;margin-top:6px;color:var(--blue);font-size:12px;font-weight:600}.form-actions{display:flex;gap:9px;grid-column:1/-1}.hidden{display:none}.records{display:grid;gap:12px}.record{padding:16px;border:1px solid var(--line);border-radius:13px;background:#fff}.record-top{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}.record h2{margin:0;font-size:18px}.record .meta{margin:5px 0;color:var(--muted);font-size:13px}.badge{display:inline-block;padding:3px 7px;border-radius:999px;background:#edf5ff;color:var(--blue);font-size:12px;font-weight:650;white-space:nowrap}.badge.focus{background:#fff3d8;color:#9a6700}.badge.excluded{background:#fcecec;color:var(--danger)}.record .schools,.record .notes{margin:10px 0 0;padding:10px;border-radius:8px;background:#f7f9fd;color:#4b5b73;font-size:13px}.record .notes{white-space:pre-wrap}.record-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.empty{padding:38px 16px;color:var(--muted);text-align:center}.toast{min-height:20px;margin:6px 0 0;color:#15803d;font-size:13px}@media(max-width:600px){main{width:min(100% - 20px,860px);padding-top:18px}.card{padding:14px}.form{grid-template-columns:1fr}.form h2,.form .wide,.form-actions{grid-column:auto}.toolbar{align-items:stretch}.toolbar-actions{width:100%}.toolbar-actions button{flex:1}.record h2{font-size:17px}}
   </style>
   <style>
+    .intro { display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .page-version {
-      display: inline-block;
-      margin-left: 6px;
+      flex:0 0 auto;
+      text-align:right;
       color: #8a97aa;
       font-size: 12px;
       white-space: nowrap;
@@ -258,6 +259,15 @@
       gap: 10px;
       margin-top: 8px;
     }
+    .image-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .backup-mode-dialog { position:fixed; z-index:1000; inset:0; display:grid; place-items:center; padding:20px; background:rgba(20,32,52,.42); }
+    .backup-mode-panel { width:min(100%,390px); padding:20px; border-radius:16px; background:#fff; box-shadow:0 18px 48px rgba(16,35,65,.26); }
+    .backup-mode-panel h3 { margin:0 0 12px; font-size:18px; }.backup-mode-panel p { margin:9px 0; color:#51637d; font-size:13px; line-height:1.65; }.backup-mode-panel p strong { color:var(--ink); }.backup-mode-panel div { display:flex; gap:10px; margin-top:17px; }.backup-mode-panel div button { flex:1; }.backup-mode-panel .danger { color:var(--danger); border-color:#f2c4c0; background:#fff7f6; }.backup-mode-panel .cancel { display:block; width:100%; margin-top:10px; border-color:transparent; color:var(--muted); background:transparent; }.backup-record-picker { max-height:min(80vh,620px); display:flex; flex-direction:column; }.backup-record-picker .backup-record-list { display:grid; max-height:42vh; margin:12px 0 4px; overflow:auto; border:1px solid var(--line); border-radius:10px; }.backup-record-picker .backup-record-list label { display:grid; grid-template-columns:auto minmax(0,1fr); gap:9px; align-items:center; padding:10px; border-bottom:1px solid var(--line); color:var(--ink); font-size:14px; cursor:pointer; }.backup-record-picker .backup-record-list label:last-child { border-bottom:0; }.backup-record-picker .backup-record-list input { width:17px; height:17px; margin:0; }.backup-record-picker .backup-record-info { min-width:0; }.backup-record-picker .backup-record-info b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.backup-record-picker .backup-record-info > span { display:flex; align-items:center; gap:7px; margin-top:4px; }.backup-record-picker .backup-record-info .badge { padding:1px 6px; font-size:11px; }.backup-record-picker .backup-record-info small { color:var(--muted); font-size:11px; white-space:nowrap; }.backup-record-picker [data-export-selected] { width:100%; margin-top:12px; }.backup-record-picker [data-export-selected]:disabled { cursor:not-allowed; opacity:.55; }
     .image-item {
       position: relative;
       aspect-ratio: 1;
@@ -400,9 +410,9 @@
 </script>
 <body>
 <main>
-  <a class="back" data-back href="../entrance/index.html">← 返回上一页</a>
-  <h1>看房记录</h1><p class="intro">将房源、看房印象、学区和贷款方案集中保存在当前设备。<span class="page-version">网页版本 v2026.09.01.3</span></p>
-  <section class="card toolbar"><select class="filter" id="filter"><option value="all">全部记录</option><option value="focus">重点关注</option><option value="normal">普通</option><option value="excluded">已排除</option></select><div class="toolbar-actions"><button id="export" type="button">导出完整备份</button><button id="importButton" type="button">导入完整备份</button><input id="importFile" type="file" accept=".zip,application/zip" hidden><button class="primary" id="add" type="button">＋ 新增房源</button></div></section>
+  <a class="back" data-back href="../entrance/index.html">← 返回</a>
+  <h1>看房记录</h1><p class="intro"><span>将房源、看房印象、学区和贷款方案集中保存在当前设备。</span><span class="page-version">版本 v2026.09.01.3</span></p>
+  <section class="card toolbar"><select class="filter" id="filter"><option value="all">全部记录</option><option value="focus">重点关注</option><option value="normal">普通</option><option value="excluded">已排除</option></select><div class="toolbar-actions"><button id="export" type="button">导出备份</button><button id="importButton" type="button">导入备份</button><input id="importFile" type="file" accept=".zip,application/zip" hidden><button class="primary" id="add" type="button">＋ 新增房源</button></div></section>
   <section class="card hidden" id="editor"><form class="form" id="recordForm"><h2 id="editorTitle">新增房源</h2><input id="recordId" name="recordId" type="hidden"><label>小区名称<input id="community" name="community" list="communityHistory" required placeholder="如：诺德假日花园"><datalist id="communityHistory"></datalist></label><label>关注等级<select id="priority" name="priority"><option value="focus">重点关注</option><option value="normal">普通</option><option value="excluded">已排除</option></select></label><label>当前报价（万元）<input id="totalPrice" name="totalPrice" type="number" inputmode="decimal" min="0" placeholder="如：800"></label><label>面积（㎡）<input id="area" name="area" type="number" inputmode="decimal" min="0" placeholder="如：86.15"><span class="unit-preview" id="unitPrice">填写总价和面积后自动计算单价</span></label><label>户型<select id="layout" name="layout"><option value="">请选择</option><option>1室0厅</option><option>1室1厅</option><option>2室1厅</option><option>2室2厅</option><option>3室1厅</option><option>3室2厅</option><option>4室1厅</option><option>4室2厅</option><option>4室3厅</option><option>5室2厅</option><option>5室3厅</option><option>6室及以上</option><option>别墅 / 联排</option><option>其他</option></select></label><label>朝向<input id="orientation" name="orientation" placeholder="如：南 / 东南"></label><label>楼层<select id="floor" name="floor"><option value="">请选择</option></select></label><label>总楼层<input id="totalFloor" name="totalFloor" type="number" inputmode="numeric" min="1" max="200" placeholder="如：32"></label><label>建成年份<select id="builtYear" name="builtYear"><option value="">不详</option></select></label><label>预期成交价（万元）<input id="targetPrice" name="targetPrice" type="number" inputmode="decimal" min="0"></label><label>看房日期<input id="viewedAt" name="viewedAt" type="date"></label><label>房源链接<input id="sourceLink" name="sourceLink" type="url" placeholder="可选"></label><label class="wide">优点<textarea id="pros" name="pros" placeholder="采光、楼层、户型、交通等"></textarea></label><label class="wide">缺点 / 风险<textarea id="cons" name="cons" placeholder="噪音、学位、装修、产权等"></textarea></label><label class="wide">个人备注<textarea id="notes" name="notes" placeholder="记录和家人讨论后的结论"></textarea></label><div class="form-actions"><button class="primary" type="submit">保存记录</button><button id="copyRecord" type="button">复制信息</button><button id="cancel" type="button">取消</button></div></form></section>
   <p class="toast" id="toast" aria-live="polite"></p><section class="records" id="records"></section>
 </main>
@@ -895,7 +905,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
           loanYears: record.loanYears || 30
         });
         if (plan) {
-          paymentMeta.textContent = `月供：等额本息 ${format(plan.equalPayment)} 元；等额本金首月 ${format(plan.firstPrincipalPayment)} 元`;
+          paymentMeta.textContent = `月供：等额本息 ${format(plan.equalPayment)} 元；等额本金首月 ${format(plan.firstPrincipalPayment)} 元 · ${record.loanYears || 30}年`;
           paymentMeta.hidden = false;
         } else {
           paymentMeta.hidden = true;
@@ -1663,8 +1673,11 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     refsInput.type = 'hidden';
     const preview = document.createElement('div');
     preview.className = 'image-preview';
+    const imageActions = document.createElement('div');
+    imageActions.className = 'image-actions';
+    imageActions.append(chooseImages, takePhoto);
     field.append(picker, camera, refsInput);
-    imageSection.append(field, chooseImages, takePhoto, preview);
+    imageSection.append(field, imageActions, preview);
     prosLabel.before(imageSection);
 
     const lightbox = document.createElement('div');
@@ -1830,6 +1843,34 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       if (event.target.closest('#add, [data-edit]')) setTimeout(render, 0);
     });
     render();
+  })();
+</script>
+<script>
+  (() => {
+    const records = document.getElementById('records');
+    if (!records) return;
+    const updateActions = () => {
+      let savedRecords = [];
+      try { savedRecords = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]'); }
+      catch (_) {}
+      records.querySelectorAll('.record-actions').forEach(actions => {
+        const view = actions.querySelector('[data-edit]');
+        if (!view) return;
+        view.textContent = '查看';
+        actions.prepend(view);
+
+        const record = savedRecords.find(item => String(item.id) === String(view.dataset.edit));
+        const calculator = actions.querySelector('a[href*="../calculator/index.html"]');
+        if (!record || !calculator) return;
+        const housePrice = record.targetPrice ?? record.totalPrice ?? '';
+        const calculatorState = {
+          type: 'commercial', amountMode: 'auto', housePrice, downPaymentRate: '15'
+        };
+        calculator.href = '../calculator/index.html?c=' + encodeURIComponent(btoa(JSON.stringify(calculatorState)));
+      });
+    };
+    new MutationObserver(updateActions).observe(records, { childList: true });
+    updateActions();
   })();
 </script>
 <script src="../shared/backup-page.js"></script>

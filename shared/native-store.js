@@ -3091,6 +3091,129 @@
       removePrivateFile(photo.thumbnail_path)
     ]));
   }
+  async function mergeBackupData(data) {
+    if (!isNative()) throw new Error("\u589E\u91CF\u5BFC\u5165\u4EC5\u5728\u539F\u751F App \u4E2D\u53EF\u7528");
+    const records = (Array.isArray(data?.records) ? data.records : []).filter(
+      (record) => record?.id && String(record.community || "").trim()
+    );
+    const recordIds = new Set(records.map((record) => String(record.id)));
+    const photos = (Array.isArray(data?.photos) ? data.photos : []).filter(
+      (photo) => photo?.id && recordIds.has(String(photo.recordId)) && photo.filePath && photo.thumbnailPath
+    );
+    const connection = await ready();
+    const previousPhotos = recordIds.size ? await connection.query(`SELECT file_path, thumbnail_path FROM viewing_photos WHERE record_id IN (${[...recordIds].map(() => "?").join(",")})`, [...recordIds]) : { values: [] };
+    const now = Date.now();
+    const photosByRecord = /* @__PURE__ */ new Map();
+    for (const photo of photos) {
+      const ref = {
+        id: String(photo.id),
+        name: photo.name || "\u623F\u6E90\u56FE\u7247",
+        type: photo.type || "image/jpeg",
+        filePath: photo.filePath,
+        thumbnailPath: photo.thumbnailPath,
+        width: photo.width || null,
+        height: photo.height || null,
+        sortOrder: Number(photo.sortOrder || 0),
+        createdAt: Number(photo.createdAt || now)
+      };
+      const list = photosByRecord.get(String(photo.recordId)) || [];
+      list.push(ref);
+      photosByRecord.set(String(photo.recordId), list);
+    }
+    await connection.beginTransaction();
+    try {
+      for (const id of recordIds) {
+        await connection.run("DELETE FROM viewing_photos WHERE record_id = ?", [id], false);
+        await connection.run("DELETE FROM viewing_records WHERE id = ?", [id], false);
+      }
+      for (const record of records) {
+        const imageRefs = (photosByRecord.get(String(record.id)) || []).sort(
+          (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
+        );
+        const restored = { ...record, imageRefs: JSON.stringify(imageRefs) };
+        await connection.run(
+          `INSERT INTO viewing_records (id, community, priority, viewed_at, created_at, updated_at, data_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            restored.id,
+            restored.community,
+            restored.priority || "normal",
+            restored.viewedAt || null,
+            Number(restored.createdAt || now),
+            Number(restored.updatedAt || now),
+            JSON.stringify(restored)
+          ],
+          false
+        );
+      }
+      for (const photo of photos) {
+        await connection.run(
+          `INSERT INTO viewing_photos
+           (id, record_id, file_path, thumbnail_path, original_name, mime_type, width, height, sort_order, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            photo.id,
+            photo.recordId,
+            photo.filePath,
+            photo.thumbnailPath,
+            photo.name || null,
+            photo.type || "image/jpeg",
+            photo.width || null,
+            photo.height || null,
+            photo.sortOrder || 0,
+            Number(photo.createdAt || now),
+            Number(photo.updatedAt || now)
+          ],
+          false
+        );
+      }
+      const checklistRows = await connection.query("SELECT item_id FROM checklist_items");
+      const checklistIds = new Set((checklistRows.values || []).map((row) => String(row.item_id)));
+      for (const [itemId, item] of Object.entries(data?.checklist || {})) {
+        if (checklistIds.has(String(itemId))) continue;
+        await connection.run(
+          "INSERT INTO checklist_items (item_id, done, note, is_open, updated_at) VALUES (?, ?, ?, ?, ?)",
+          [itemId, item.done ? 1 : 0, item.note || "", item.open ? 1 : 0, now],
+          false
+        );
+      }
+      const schemeRows = await connection.query("SELECT id, updated_at FROM mortgage_schemes");
+      const schemes = new Map((schemeRows.values || []).map((row) => [String(row.id), Number(row.updated_at || 0)]));
+      for (const scheme of Array.isArray(data?.mortgage) ? data.mortgage : []) {
+        if (!scheme?.id || !scheme.data) continue;
+        const incoming = Number(scheme.updatedAt || scheme.createdAt || 0);
+        if (schemes.has(String(scheme.id)) && incoming <= schemes.get(String(scheme.id))) continue;
+        await connection.run("DELETE FROM mortgage_schemes WHERE id = ?", [scheme.id], false);
+        await connection.run(
+          "INSERT INTO mortgage_schemes (id, name, data_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+          [scheme.id, scheme.name || "\u5F53\u524D\u65B9\u6848", JSON.stringify(scheme.data), Number(scheme.createdAt || now), Number(scheme.updatedAt || now)],
+          false
+        );
+      }
+      const schoolRows = await connection.query("SELECT list_type, mode, value FROM school_saved_queries");
+      const schoolKeys = new Set((schoolRows.values || []).map((row) => `${row.list_type}::${row.mode}::${row.value}`));
+      for (const row of Array.isArray(data?.school) ? data.school : []) {
+        if (!row?.list_type || !row?.mode || !row?.value) continue;
+        const key = `${row.list_type}::${row.mode}::${row.value}`;
+        if (schoolKeys.has(key)) continue;
+        await connection.run(
+          "INSERT INTO school_saved_queries (list_type, mode, value, created_at) VALUES (?, ?, ?, ?)",
+          [row.list_type, row.mode, row.value, Number(row.created_at || now)],
+          false
+        );
+      }
+      await connection.commitTransaction();
+      viewingCache = null;
+    } catch (error) {
+      await connection.rollbackTransaction();
+      throw error;
+    }
+    await Promise.all((previousPhotos.values || []).flatMap((photo) => [
+      removePrivateFile(photo.file_path),
+      removePrivateFile(photo.thumbnail_path)
+    ]));
+    return { records: records.length };
+  }
   window.NativeStore = {
     isNative,
     ready,
@@ -3110,7 +3233,8 @@
     readPrivateFile,
     writePrivateFile,
     getBackupData,
-    restoreBackupData
+    restoreBackupData,
+    mergeBackupData
   };
 })();
 /*! Bundled license information:

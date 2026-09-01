@@ -1,6 +1,6 @@
 {
-  "name": "深圳生活工具",
-  "short_name": "深圳工具",
+  "name": "安家笔记",
+  "short_name": "安家笔记",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
