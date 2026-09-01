@@ -347,20 +347,21 @@
 <main>
   <a class="back" data-back href="../entrance/index.html">← 返回上一页</a>
   <h1>看房记录</h1><p class="intro">将房源、看房印象、学区和贷款方案集中保存在当前设备。</p>
-  <section class="card toolbar"><select class="filter" id="filter"><option value="all">全部记录</option><option value="focus">重点关注</option><option value="normal">普通</option><option value="excluded">已排除</option></select><div class="toolbar-actions"><button id="export" type="button">导出备份</button><button id="importButton" type="button">导入备份</button><input id="importFile" type="file" accept="application/json" hidden><button class="primary" id="add" type="button">＋ 新增房源</button></div></section>
+  <section class="card toolbar"><select class="filter" id="filter"><option value="all">全部记录</option><option value="focus">重点关注</option><option value="normal">普通</option><option value="excluded">已排除</option></select><div class="toolbar-actions"><button id="export" type="button">导出完整备份</button><button id="importButton" type="button">导入完整备份</button><input id="importFile" type="file" accept=".zip,application/zip" hidden><button class="primary" id="add" type="button">＋ 新增房源</button></div></section>
   <section class="card hidden" id="editor"><form class="form" id="recordForm"><h2 id="editorTitle">新增房源</h2><input id="recordId" name="recordId" type="hidden"><label>小区名称<input id="community" name="community" list="communityHistory" required placeholder="如：诺德假日花园"><datalist id="communityHistory"></datalist></label><label>关注等级<select id="priority" name="priority"><option value="focus">重点关注</option><option value="normal">普通</option><option value="excluded">已排除</option></select></label><label>当前报价（万元）<input id="totalPrice" name="totalPrice" type="number" inputmode="decimal" min="0" placeholder="如：800"></label><label>面积（㎡）<input id="area" name="area" type="number" inputmode="decimal" min="0" placeholder="如：86.15"><span class="unit-preview" id="unitPrice">填写总价和面积后自动计算单价</span></label><label>户型<select id="layout" name="layout"><option value="">请选择</option><option>1室0厅</option><option>1室1厅</option><option>2室1厅</option><option>2室2厅</option><option>3室1厅</option><option>3室2厅</option><option>4室1厅</option><option>4室2厅</option><option>4室3厅</option><option>5室2厅</option><option>5室3厅</option><option>6室及以上</option><option>别墅 / 联排</option><option>其他</option></select></label><label>朝向<input id="orientation" name="orientation" placeholder="如：南 / 东南"></label><label>楼层<select id="floor" name="floor"><option value="">请选择</option></select></label><label>总楼层<input id="totalFloor" name="totalFloor" type="number" inputmode="numeric" min="1" max="200" placeholder="如：32"></label><label>建成年份<select id="builtYear" name="builtYear"><option value="">不详</option></select></label><label>预期成交价（万元）<input id="targetPrice" name="targetPrice" type="number" inputmode="decimal" min="0"></label><label>看房日期<input id="viewedAt" name="viewedAt" type="date"></label><label>房源链接<input id="sourceLink" name="sourceLink" type="url" placeholder="可选"></label><label class="wide">优点<textarea id="pros" name="pros" placeholder="采光、楼层、户型、交通等"></textarea></label><label class="wide">缺点 / 风险<textarea id="cons" name="cons" placeholder="噪音、学位、装修、产权等"></textarea></label><label class="wide">个人备注<textarea id="notes" name="notes" placeholder="记录和家人讨论后的结论"></textarea></label><div class="form-actions"><button class="primary" type="submit">保存记录</button><button id="copyRecord" type="button">复制信息</button><button id="cancel" type="button">取消</button></div></form></section>
   <p class="toast" id="toast" aria-live="polite"></p><section class="records" id="records"></section>
 </main>
+<script src="../app/dist/native-store.js"></script>
 <script src="../school/official-district-data.js"></script>
 <script>
-(() => { const $=id=>document.getElementById(id), key='shenzhen-viewing-records-v1'; let records=[];
+(async () => { const $=id=>document.getElementById(id), key='shenzhen-viewing-records-v1'; let records=[];
 const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); const wan=v=>Number(v||0).toLocaleString('zh-CN',{maximumFractionDigits:2}); const time=v=>{const d=new Date(Number(v));return Number.isNaN(d.getTime())?'—':`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`};
-function load(){try{records=JSON.parse(localStorage.getItem(key)||'[]')}catch(_){records=[]}}function save(){localStorage.setItem(key,JSON.stringify(records))}function toast(t){$('toast').textContent=t;clearTimeout(toast.t);toast.t=setTimeout(()=>{$('toast').textContent=''},2600)}
+async function load(){try{records=await window.NativeStore.getViewingRecords()}catch(_){records=[]}}function save(){void window.NativeStore.saveViewingRecords(records)}function toast(t){$('toast').textContent=t;clearTimeout(toast.t);toast.t=setTimeout(()=>{$('toast').textContent=''},2600)}
 function unit(r){return r.totalPrice&&r.area?`${wan(r.totalPrice/r.area)} 万/㎡`:''}function priority(v){return v==='focus'?['重点关注','focus']:v==='excluded'?['已排除','excluded']:['普通','normal']}
 function renderHistory(){const names=[...new Set(records.map(r=>r.community).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'zh-CN'));$('communityHistory').innerHTML=names.map(name=>`<option value="${esc(name)}"></option>`).join('')}function render(){const choice=$('filter').value;const list=records.filter(r=>choice==='all'||r.priority===choice).sort((a,b)=>(b.createdAt||b.updatedAt||0)-(a.createdAt||a.updatedAt||0));$('records').innerHTML=list.length?list.map(r=>{const [name,kind]=priority(r.priority),floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFloor}层`:r.floor?`${r.floor}层`:r.totalFloor?`总${r.totalFloor}层`:'' ,detail=[r.area&&`${wan(r.area)}㎡`,r.layout,r.orientation,floor,r.builtYear&&`${r.builtYear}年`,r.totalPrice&&`${wan(r.totalPrice)}万`,unit(r)].filter(Boolean).join(' · ');return `<article class="record"><div class="record-top"><div><h2>${esc(r.community)}</h2><p class="meta">${esc(detail||'暂未填写价格与面积')} ${r.viewedAt?`· 看房：${esc(r.viewedAt)}`:''}</p><p class="meta">最后编辑：${time(r.updatedAt||r.createdAt)}</p></div><span class="badge ${kind}">${name}</span></div><p class="schools">学区：请点击下方“查学区”获取当前官方匹配结果。</p>${r.pros||r.cons||r.notes?`<p class="notes">${r.pros?`优点：${esc(r.pros)}\n`:''}${r.cons?`缺点 / 风险：${esc(r.cons)}\n`:''}${r.notes?`备注：${esc(r.notes)}`:''}</p>`:''}<div class="record-actions"><a class="button" href="../school/index.html?mode=community&q=${encodeURIComponent(r.community)}">查学区</a>${r.sourceLink?`<a class="button" href="${esc(r.sourceLink)}" target="_blank" rel="noreferrer">房源链接 ↗</a>`:''}<a class="button" href="../calculator/index.html?c=${encodeURIComponent(btoa(JSON.stringify({type:'commercial',amountMode:'auto',housePrice:r.totalPrice||'',downPaymentRate:'15'})))}">算月供</a><button data-copy="${r.id}" type="button">复制信息</button><button data-edit="${r.id}" type="button">编辑</button><button class="danger" data-delete="${r.id}" type="button">删除</button></div></article>`}).join(''):'<div class="card empty">还没有看房记录。点击“新增房源”开始记录。</div>';renderHistory();document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copySavedRecord(b.dataset.copy));document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>edit(b.dataset.edit));document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>remove(b.dataset.delete));}
 function updateUnit(){const price=+$('totalPrice').value,area=+$('area').value;$('unitPrice').textContent=price&&area?`单价约 ${wan(price/area)} 万/㎡`:'填写总价和面积后自动计算单价'}function openEditor(r={priority:'focus',viewedAt:new Date().toISOString().slice(0,10)}){$('editor').classList.remove('hidden');$('editorTitle').textContent=r.id?'编辑房源':'新增房源';['recordId','community','priority','totalPrice','area','layout','orientation','floor','totalFloor','builtYear','targetPrice','viewedAt','sourceLink','pros','cons','notes'].forEach(id=>$(id).value=r[id]??'');updateUnit();window.scrollTo({top:$('editor').offsetTop-12,behavior:'smooth'})}function edit(id){openEditor(records.find(r=>String(r.id)===id))}function remove(id){if(!confirm('删除这条看房记录？'))return;records=records.filter(r=>String(r.id)!==id);save();render();toast('记录已删除。')}
 function download(text,name){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
-function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFloor}层`:r.floor?`${r.floor}层`:r.totalFloor?`总${r.totalFloor}层`:'';return [['小区',r.community],['关注等级',priority(r.priority)[0]],['当前报价',r.totalPrice&&`${r.totalPrice} 万元`],['面积',r.area&&`${r.area} ㎡`],['单价',r.totalPrice&&r.area&&`${wan(+r.totalPrice/+r.area)} 万/㎡`],['户型',r.layout],['朝向',r.orientation],['楼层',floor],['建成年份',r.builtYear&&`${r.builtYear} 年`],['预期成交价',r.targetPrice&&`${r.targetPrice} 万元`],['看房日期',r.viewedAt],['房源链接',r.sourceLink],['优点',r.pros],['缺点 / 风险',r.cons],['个人备注',r.notes]].filter(([,value])=>value).map(([label,value])=>`${label}：${value}`).join('\n')}async function copyText(text,message){if(!text){toast('请先填写至少一项信息。');return}try{await navigator.clipboard.writeText(text)}catch(_){const area=document.createElement('textarea');area.value=text;document.body.append(area);area.select();document.execCommand('copy');area.remove()}toast(message)}async function copyRecord(){const values=id=>$(id).value.trim(),data={community:values('community'),priority:$('priority').value,totalPrice:values('totalPrice'),area:values('area'),layout:values('layout'),orientation:values('orientation'),floor:values('floor'),totalFloor:values('totalFloor'),builtYear:values('builtYear'),targetPrice:values('targetPrice'),viewedAt:values('viewedAt'),sourceLink:values('sourceLink'),pros:values('pros'),cons:values('cons'),notes:values('notes')};copyText(recordText(data),'当前编辑信息已复制。')}async function copySavedRecord(id){const record=records.find(r=>String(r.id)===id);if(record)copyText(recordText(record),'当前记录信息已复制。')}function populateBuiltYears(){const select=$('builtYear'),current=new Date().getFullYear();for(let year=current;year>=1950;year--)select.add(new Option(`${year}年`,year))}function populateFloors(){const select=$('floor');for(let floor=1;floor<=40;floor++)select.add(new Option(`${floor}层`,floor))}$('add').onclick=()=>openEditor();$('cancel').onclick=()=>{$('editor').classList.add('hidden')};$('copyRecord').onclick=copyRecord;$('totalPrice').oninput=updateUnit;$('area').oninput=updateUnit;$('filter').onchange=render;$('recordForm').onsubmit=e=>{e.preventDefault();const r=Object.fromEntries(new FormData(e.target)),now=Date.now();r.id=r.recordId||now.toString();delete r.recordId;const i=records.findIndex(x=>x.id===r.id);r.createdAt=i>=0?(records[i].createdAt||records[i].updatedAt||now):now;r.updatedAt=now;if(i>=0)records[i]=r;else records.push(r);save();$('editor').classList.add('hidden');render();toast('记录已保存。')};$('export').onclick=()=>{download(JSON.stringify(records,null,2),'shenzhen-viewing-records.json');toast('备份文件已导出。')};$('importButton').onclick=()=>$('importFile').click();$('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!Array.isArray(data))throw Error();records=data.filter(x=>x&&x.community);save();render();toast(`已导入 ${records.length} 条记录。`)}catch(_){alert('导入失败：请选择本工具导出的 JSON 文件。')}e.target.value=''};populateBuiltYears();populateFloors();load();render();
+function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFloor}层`:r.floor?`${r.floor}层`:r.totalFloor?`总${r.totalFloor}层`:'';return [['小区',r.community],['关注等级',priority(r.priority)[0]],['当前报价',r.totalPrice&&`${r.totalPrice} 万元`],['面积',r.area&&`${r.area} ㎡`],['单价',r.totalPrice&&r.area&&`${wan(+r.totalPrice/+r.area)} 万/㎡`],['户型',r.layout],['朝向',r.orientation],['楼层',floor],['建成年份',r.builtYear&&`${r.builtYear} 年`],['预期成交价',r.targetPrice&&`${r.targetPrice} 万元`],['看房日期',r.viewedAt],['房源链接',r.sourceLink],['优点',r.pros],['缺点 / 风险',r.cons],['个人备注',r.notes]].filter(([,value])=>value).map(([label,value])=>`${label}：${value}`).join('\n')}async function copyText(text,message){if(!text){toast('请先填写至少一项信息。');return}try{await navigator.clipboard.writeText(text)}catch(_){const area=document.createElement('textarea');area.value=text;document.body.append(area);area.select();document.execCommand('copy');area.remove()}toast(message)}async function copyRecord(){const values=id=>$(id).value.trim(),data={community:values('community'),priority:$('priority').value,totalPrice:values('totalPrice'),area:values('area'),layout:values('layout'),orientation:values('orientation'),floor:values('floor'),totalFloor:values('totalFloor'),builtYear:values('builtYear'),targetPrice:values('targetPrice'),viewedAt:values('viewedAt'),sourceLink:values('sourceLink'),pros:values('pros'),cons:values('cons'),notes:values('notes')};copyText(recordText(data),'当前编辑信息已复制。')}async function copySavedRecord(id){const record=records.find(r=>String(r.id)===id);if(record)copyText(recordText(record),'当前记录信息已复制。')}function populateBuiltYears(){const select=$('builtYear'),current=new Date().getFullYear();for(let year=current;year>=1950;year--)select.add(new Option(`${year}年`,year))}function populateFloors(){const select=$('floor');for(let floor=1;floor<=40;floor++)select.add(new Option(`${floor}层`,floor))}$('add').onclick=()=>openEditor();$('cancel').onclick=()=>{$('editor').classList.add('hidden')};$('copyRecord').onclick=copyRecord;$('totalPrice').oninput=updateUnit;$('area').oninput=updateUnit;$('filter').onchange=render;$('recordForm').onsubmit=e=>{e.preventDefault();const r=Object.fromEntries(new FormData(e.target)),now=Date.now();r.id=r.recordId||now.toString();delete r.recordId;const i=records.findIndex(x=>x.id===r.id);r.createdAt=i>=0?(records[i].createdAt||records[i].updatedAt||now):now;r.updatedAt=now;if(i>=0)records[i]=r;else records.push(r);save();$('editor').classList.add('hidden');render();toast('记录已保存。')};$('export').onclick=()=>{download(JSON.stringify(records,null,2),'shenzhen-viewing-records.json');toast('备份文件已导出。')};$('importButton').onclick=()=>$('importFile').click();$('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(!Array.isArray(data))throw Error();records=data.filter(x=>x&&x.community);save();render();toast(`已导入 ${records.length} 条记录。`)}catch(_){alert('导入失败：请选择本工具导出的 JSON 文件。')}e.target.value=''};populateBuiltYears();populateFloors();await window.NativeStore.ready();await load();render();
 })();
 </script>
 <script>document.querySelector('[data-back]')?.addEventListener('click', event => { if (history.length > 1) { event.preventDefault(); history.back(); } });</script>
@@ -545,7 +546,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     community.addEventListener('input', updateSchools);
     const restoreSavedSchools = () => {
       const id = document.getElementById('recordId')?.value;
-      const saved = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]')
+      const saved = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]')
         .find(record => String(record.id) === String(id));
       if (!saved) return updateSchools();
       const matched = schoolNames(community.value);
@@ -660,7 +661,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     };
     const currentRecord = () => {
       const id = document.getElementById('recordId')?.value;
-      return JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]')
+      return JSON.parse(window.NativeStore.viewingRecordsJson() || '[]')
         .find(record => String(record.id) === String(id));
     };
     [targetPrice, downPaymentRate, commercialRate].forEach(input => input.addEventListener('input', calculate));
@@ -699,7 +700,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       }
       const now = Date.now();
       try {
-        const records = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        const records = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]');
         if (!data.recordId) data.recordId = String(now);
         const index = records.findIndex(record => String(record.id) === String(data.recordId));
         const record = { ...data, id: data.recordId, updatedAt: now };
@@ -709,7 +710,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
           : now;
         if (index >= 0) records[index] = record;
         else records.push(record);
-        localStorage.setItem(storageKey, JSON.stringify(records));
+        void window.NativeStore.saveViewingRecords(records);
         document.getElementById('recordId').value = record.id;
         status.textContent = `已自动保存 · ${formatTime(now)}`;
       } catch (_) {
@@ -748,7 +749,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       event.preventDefault();
       event.stopImmediatePropagation();
 
-      const records = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]');
+      const records = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]');
       const record = records.find(item => String(item.id) === String(button.dataset.edit));
       if (!record) return;
       [
@@ -798,7 +799,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       details.append(summary, content);
     };
     const updateCards = () => {
-      const records = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]');
+      const records = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]');
       recordsNode.querySelectorAll('.record').forEach(card => {
         const id = card.querySelector('[data-edit]')?.dataset.edit;
         const record = records.find(item => String(item.id) === String(id));
@@ -861,7 +862,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     const storageKey = 'shenzhen-viewing-records-v1';
     const toast = document.getElementById('toast');
     const loadRecords = () => {
-      try { return JSON.parse(localStorage.getItem(storageKey) || '[]'); }
+      try { return JSON.parse(window.NativeStore.viewingRecordsJson() || '[]'); }
       catch (_) { return []; }
     };
     const showToast = text => {
@@ -945,7 +946,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
         return;
       }
       if (!confirm(`删除“${record.community}”这条看房记录？`)) return;
-      localStorage.setItem(storageKey, JSON.stringify(records.filter(item => String(item.id) !== String(id))));
+      void window.NativeStore.saveViewingRecords(records.filter(item => String(item.id) !== String(id)));
       showToast('记录已删除。');
       setTimeout(() => location.reload(), 180);
     }, true);
@@ -977,7 +978,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     empty.textContent = '没有匹配的看房记录。';
     recordsNode.before(empty);
     const loadRecords = () => {
-      try { return JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]'); }
+      try { return JSON.parse(window.NativeStore.viewingRecordsJson() || '[]'); }
       catch (_) { return []; }
     };
     const refresh = () => {
@@ -1204,7 +1205,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     const restore = () => {
       const id = document.getElementById('recordId')?.value;
       if (!id) return;
-      const record = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]')
+      const record = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]')
         .find(item => String(item.id) === String(id));
       company.value = record?.propertyCompany || '';
       fee.value = record?.propertyFee || '';
@@ -1288,7 +1289,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     if (!recordsNode) return;
     const updateIndices = () => {
       let records = [];
-      try { records = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]'); }
+      try { records = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]'); }
       catch (_) { return; }
       const ids = new Map(
         records.slice().sort((a, b) => {
@@ -1405,7 +1406,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     const restore = () => {
       const id = document.getElementById('recordId')?.value;
       if (!id) return;
-      const record = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]')
+      const record = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]')
         .find(item => String(item.id) === String(id));
       const ratio = record?.elevatorRatio || '';
       const ratioSelect = document.getElementById('elevatorRatio');
@@ -1453,7 +1454,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
         let id = idBeforeSave;
         if (!id) {
           try {
-            const records = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]');
+            const records = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]');
             id = records
               .filter(record => record.community === community)
               .sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0))[0]?.id;
@@ -1482,7 +1483,8 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
-    const database = openDatabase();
+    const nativeImages = window.NativeStore.isNative();
+    const database = nativeImages ? null : openDatabase();
     const run = async (mode, action) => new Promise(async (resolve, reject) => {
       try {
         const db = await database;
@@ -1492,9 +1494,18 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
         request.onerror = () => reject(request.error);
       } catch (error) { reject(error); }
     });
-    const putImage = (id, blob) => run('readwrite', store => store.put(blob, id));
-    const getImage = id => run('readonly', store => store.get(id));
-    const deleteImage = id => run('readwrite', store => store.delete(id));
+    const putImage = (recordId, id, blob) => nativeImages
+      ? window.NativeStore.storeViewingImage(recordId, id, blob)
+      : run('readwrite', store => store.put(blob, id));
+    const getImage = ref => nativeImages
+      ? window.NativeStore.getViewingImage(ref, true)
+      : run('readonly', store => store.get(ref.id));
+    const getFullImage = ref => nativeImages
+      ? window.NativeStore.getViewingImage(ref, false)
+      : run('readonly', store => store.get(ref.id));
+    const deleteImage = ref => nativeImages
+      ? window.NativeStore.deleteViewingImage(ref)
+      : run('readwrite', store => store.delete(ref.id));
     const parseRefs = value => {
       try {
         const refs = JSON.parse(value || '[]');
@@ -1513,18 +1524,28 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     picker.accept = 'image/*';
     picker.multiple = true;
     picker.hidden = true;
+    const camera = document.createElement('input');
+    camera.id = 'imageCamera';
+    camera.type = 'file';
+    camera.accept = 'image/*';
+    camera.setAttribute('capture', 'environment');
+    camera.hidden = true;
     const chooseImages = document.createElement('button');
     chooseImages.type = 'button';
     chooseImages.textContent = '选择图片';
     chooseImages.addEventListener('click', () => picker.click());
+    const takePhoto = document.createElement('button');
+    takePhoto.type = 'button';
+    takePhoto.textContent = '拍照';
+    takePhoto.addEventListener('click', () => camera.click());
     const refsInput = document.createElement('input');
     refsInput.id = 'imageRefs';
     refsInput.name = 'imageRefs';
     refsInput.type = 'hidden';
     const preview = document.createElement('div');
     preview.className = 'image-preview';
-    field.append(picker, refsInput);
-    imageSection.append(field, chooseImages, preview);
+    field.append(picker, camera, refsInput);
+    imageSection.append(field, chooseImages, takePhoto, preview);
     prosLabel.before(imageSection);
 
     const lightbox = document.createElement('div');
@@ -1562,7 +1583,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       form.dispatchEvent(new Event('input', { bubbles: true }));
     };
     const thumbnail = async (ref, removable, target) => {
-      const blob = await getImage(ref.id);
+      const blob = await getImage(ref);
       if (!blob) return;
       const item = document.createElement('div');
       item.className = 'image-item';
@@ -1571,7 +1592,9 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       image.src = url;
       image.alt = ref.name || '房源图片';
       image.onload = () => URL.revokeObjectURL(url);
-      image.addEventListener('click', () => showLightbox(blob, ref.name));
+      image.addEventListener('click', async () => {
+        showLightbox(await getFullImage(ref) || blob, ref.name);
+      });
       item.append(image);
       if (removable) {
         const remove = document.createElement('button');
@@ -1580,7 +1603,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
         remove.title = '删除图片';
         remove.addEventListener('click', async () => {
           refs = refs.filter(item => item.id !== ref.id);
-          await deleteImage(ref.id);
+          await deleteImage(ref);
           sync();
           renderEditor();
         });
@@ -1597,21 +1620,28 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
       refsInput.value = JSON.stringify(refs);
       await renderEditor();
     };
-    picker.addEventListener('change', async () => {
-      const files = [...picker.files || []].filter(file => file.type.startsWith('image/'));
+    const addFiles = async input => {
+      const files = [...input.files || []].filter(file => file.type.startsWith('image/'));
+      let recordId = document.getElementById('recordId')?.value;
+      if (nativeImages && !recordId) {
+        recordId = createId();
+        document.getElementById('recordId').value = recordId;
+      }
       for (const file of files) {
         const id = createId();
-        await putImage(id, file);
-        refs.push({ id, name: file.name, type: file.type, createdAt: Date.now() });
+        const stored = await putImage(recordId, id, file);
+        refs.push(nativeImages ? stored : { id, name: file.name, type: file.type, createdAt: Date.now() });
       }
-      picker.value = '';
+      input.value = '';
       sync();
       await renderEditor();
-    });
+    };
+    picker.addEventListener('change', () => addFiles(picker));
+    camera.addEventListener('change', () => addFiles(camera));
     new MutationObserver(() => {
       if (editor.classList.contains('hidden')) return;
       const id = document.getElementById('recordId')?.value;
-      const record = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]')
+      const record = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]')
         .find(item => String(item.id) === String(id));
       setRefs(record?.imageRefs);
     }).observe(editor, { attributes: true, attributeFilter: ['class'] });
@@ -1622,7 +1652,7 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     }, true);
 
     const renderRecordImages = async () => {
-      const records = JSON.parse(localStorage.getItem('shenzhen-viewing-records-v1') || '[]');
+      const records = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]');
       for (const card of recordsNode.querySelectorAll('.record')) {
         const id = card.querySelector('[data-edit]')?.dataset.edit;
         const record = records.find(item => String(item.id) === String(id));
@@ -1651,5 +1681,6 @@ function recordText(r){const floor=r.floor&&r.totalFloor?`${r.floor}/${r.totalFl
     renderRecordImages();
   })();
 </script>
+<script src="../app/dist/backup-page.js"></script>
 </body>
 </html>

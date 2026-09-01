@@ -38,7 +38,12 @@ case "${1:-sync}" in
     ;;
   android-debug)
     sync_web
-    (cd android && ./gradlew assembleDebug)
+    jdk21_home='/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home'
+    if [[ ! -x "$jdk21_home/bin/java" ]]; then
+      print -u2 "未找到 JDK 21：$jdk21_home"
+      exit 1
+    fi
+    (cd android && JAVA_HOME="$jdk21_home" PATH="$jdk21_home/bin:$PATH" ./gradlew assembleDebug)
     print "调试 APK：$app_dir/android/app/build/outputs/apk/debug/app-debug.apk"
     ;;
   help|-h|--help)

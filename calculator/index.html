@@ -85,6 +85,7 @@
       </aside>
     </div>
   </main>
+  <script src="../app/dist/native-store.js"></script>
   <script>
     const $ = id => document.getElementById(id);
     let type = 'commercial', amountMode = 'auto', lastPolicyDownPayment = 15, scheduleAll = false;
@@ -187,7 +188,7 @@
     function getState() {
       return { type, amountMode, method:$('method').value, years:years.value, housePrice:$('housePrice').value, downPaymentRate:$('downPaymentRate').value, singleAmount:$('singleAmount').value, singleRate:$('singleRate').value, commercialAmount:$('commercialAmount').value, commercialRate:$('commercialRate').value, fundAmount:$('fundAmount').value, fundRate:$('fundRate').value };
     }
-    function saveState() { try { localStorage.setItem('sz-mortgage-calculator-state', JSON.stringify(getState())); } catch (_) {} }
+    function saveState() { window.NativeStore.saveMortgageCurrent(getState()).catch(() => {}); }
     function showToast(message) { $('resultToast').textContent = message; window.clearTimeout(showToast.timer); showToast.timer = window.setTimeout(() => { $('resultToast').textContent = ''; }, 3000); }
     function setType(nextType, resetPolicy = true) {
       type = nextType; document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.type === type));
@@ -197,9 +198,9 @@
       if (resetPolicy) { applyPolicyDownPayment(); applyPolicyRates(); }
     }
     function setAmountMode(nextMode) { amountMode = nextMode; document.querySelectorAll('.amount-mode button').forEach(b=>b.classList.toggle('active',b.dataset.amountMode === amountMode)); }
-    function restoreState() {
+    async function restoreState() {
       let state = null;
-      try { const encoded = new URLSearchParams(location.search).get('c'); state = encoded ? JSON.parse(atob(encoded)) : JSON.parse(localStorage.getItem('sz-mortgage-calculator-state') || 'null'); } catch (_) {}
+      try { const encoded = new URLSearchParams(location.search).get('c'); state = encoded ? JSON.parse(atob(encoded)) : await window.NativeStore.getMortgageCurrent(); } catch (_) {}
       if (!state) return;
       ['method','years','housePrice','downPaymentRate','singleAmount','singleRate','commercialAmount','commercialRate','fundAmount','fundRate'].forEach(id => { if (state[id] !== undefined) $(id).value = state[id]; });
       if (state.type) setType(state.type, false); if (state.amountMode && state.type !== 'fund') setAmountMode(state.amountMode);
@@ -246,7 +247,7 @@
     $('allYearsButton').addEventListener('click', () => { scheduleAll = true; renderSchedule(); });
     $('saveScheme').addEventListener('click', () => { saveState(); showToast('已保存到本机，下次打开会自动恢复。'); });
     $('shareScheme').addEventListener('click', async () => { const link = `${location.href.split('?')[0]}?c=${encodeURIComponent(btoa(JSON.stringify(getState())))}`; try { await navigator.clipboard.writeText(link); } catch (_) { const area=document.createElement('textarea'); area.value=link; document.body.append(area); area.select(); document.execCommand('copy'); area.remove(); } showToast('分享链接已复制。'); });
-    applyPolicyRates(); restoreState(); updateLoanDisplay(); calculate();
+    (async () => { applyPolicyRates(); await window.NativeStore.ready(); await restoreState(); updateLoanDisplay(); calculate(); })();
   </script>
   <script>document.querySelector('[data-back]')?.addEventListener('click', event => { if (history.length > 1) { event.preventDefault(); history.back(); } });</script>
 </body>

@@ -84,24 +84,17 @@ CREATE INDEX IF NOT EXISTS idx_school_saved_queries_list
 
 `viewing_records.data_json` 和 `mortgage_schemes.data_json` 用于保留网页未来新增字段，避免每次加一个表单字段都必须立即升级列；可检索、排序的字段仍保留为明确列。
 
-## 首次迁移
+## 首次启动：不迁移旧 localStorage
 
-1. 原生 App 启动时打开 SQLite、建表并开启外键。
-2. 读取上述 7 个 legacy key；解析失败的单个 key 记录迁移错误，不覆盖有效数据。
-3. 在一个 SQLite transaction 中写入看房记录、清单、房贷方案和学区查询。
-4. 写入 `app_meta`：`legacy_localstorage_migrated_v1 = <timestamp>`，只有整个事务成功后才写入。
-5. 成功后删除已迁移的 legacy localStorage key；失败则保留原值，下一次启动重试。
-6. 后续启动只检查 `app_meta` 标记，绝不重复导入。
-
-迁移是幂等的：看房记录和房贷方案按 id/upsert 写入；清单按任务 id upsert；学区查询按 `(list_type, mode, value)` 去重。
+本期按确认后的范围执行：原生 App 首次启动只打开 SQLite、建表并开启外键，**不读取、不导入、也不删除**网页旧 localStorage。也就是说，新安装的 App 从空的本地数据开始；网页数据如需保留，应在后续完整备份 / 恢复功能完成后通过备份文件导入。
 
 ## 图片与备份
 
-- 原图和缩略图写入 Capacitor Filesystem 的 `Directory.Data`，路径形如 `viewings/{recordId}/{photoId}.jpg` 与 `viewings/{recordId}/{photoId}.thumb.jpg`。
+- 原图和缩略图写入 Capacitor Filesystem 的 `Directory.Data`，路径形如 `viewings/{recordId}/{photoId}.original` 与 `viewings/{recordId}/{photoId}.thumb.jpg`。
 - SQLite 只保存路径、媒体类型、尺寸、排序和时间；列表只读取缩略图。
-- ZIP 根目录包含 `manifest.json`、`data/viewing-records.json`、`data/viewing-photos.json`、`data/checklist.json`、`data/mortgage-schemes.json`、`data/school-saved-queries.json`，以及 `images/` 下的原图和缩略图。
-- 导出先生成到 App 私有临时目录，再通过 Capacitor Share 调用 iOS 系统分享或 Android 分享；导入通过原生文件选择器选择 ZIP，校验 manifest/schema 后在事务中恢复数据，再写图片文件。
-- 导入采用临时文件名和路径校验，避免 ZIP 路径穿越；图片写入失败时整次恢复失败并保留现有数据。
+- 当前实现的 ZIP 根目录包含 `manifest.json`、`data/data.json` 和 `images/` 下的原图与缩略图；`data.json` 覆盖看房记录、清单、房贷方案及学区收藏。
+- 导出先生成到 App 私有缓存目录，再通过 Capacitor Share 调用 iOS 系统分享或 Android 分享；导入通过原生系统文件选择器选择 ZIP，校验 manifest/schema 后恢复数据和图片。
+- 导入采用受限的归档路径和新的私有图片目录，避免 ZIP 路径穿越。恢复是“完整替换”：成功后以备份内容替换当前 App 数据；图片写入或 SQLite 事务失败时不会提交数据库替换。
 
 ## 后续网页迭代流程
 

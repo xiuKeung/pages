@@ -1,4 +1,5 @@
-globalThis.SchoolDistrictDataReady.then(() => {
+globalThis.SchoolDistrictDataReady.then(async () => {
+  await window.NativeStore.ready();
   const input = document.querySelector('#community');
   const searchButton = document.querySelector('#search');
   const result = document.querySelector('#result');
@@ -35,13 +36,23 @@ globalThis.SchoolDistrictDataReady.then(() => {
   let activeResultQuery = null;
   let installPrompt = null;
   const storageKey = (type, queryMode = mode) => `sz-school-district-${type}-${queryMode}-v1`;
+  const savedCache = new Map();
+
+  for (const type of ['recent', 'favorite']) {
+    for (const queryMode of ['community', 'school']) {
+      savedCache.set(storageKey(type, queryMode), await window.NativeStore.getSchoolSaved(type, queryMode));
+    }
+  }
 
   function readSaved(type, queryMode = mode) {
-    try { return JSON.parse(localStorage.getItem(storageKey(type, queryMode)) || '[]'); } catch { return []; }
+    return [...(savedCache.get(storageKey(type, queryMode)) || [])];
   }
 
   function writeSaved(type, rows, queryMode = mode) {
-    try { localStorage.setItem(storageKey(type, queryMode), JSON.stringify(rows)); } catch { /* 浏览器禁用本地存储时静默降级 */ }
+    savedCache.set(storageKey(type, queryMode), [...rows]);
+    window.NativeStore.saveSchoolSaved(type, queryMode, rows).catch(error => {
+      console.error('保存学区查询记录失败', error);
+    });
   }
 
   function queryKey(query) {
