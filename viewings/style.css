@@ -237,6 +237,15 @@
     }
     .record-actions::-webkit-scrollbar { display: none; }
     .record-actions > * { flex: 0 0 auto; }
+    .record-actions > button,
+    .record-actions > .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 36px;
+      min-height: 36px;
+      line-height: 20px;
+    }
     .image-preview {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
@@ -372,3 +381,23 @@
     }
     .lightbox-actions { position:absolute; right:16px; bottom:18px; left:16px; display:flex; justify-content:center; gap:10px; }.lightbox-actions button { min-height:38px; padding:8px 12px; border:1px solid rgba(255,255,255,.45); border-radius:9px; color:#fff; background:rgba(27,41,66,.72); font:inherit; font-size:13px; font-weight:650; }.lightbox-actions button:disabled { opacity:.55; }.lightbox-message { position:absolute; right:20px; bottom:66px; left:20px; min-height:18px; color:#fff; font-size:13px; text-align:center; text-shadow:0 1px 3px rgba(0,0,0,.45); }
     .image-item img { cursor: zoom-in; }
+
+    /* 备份记录选择弹窗：内容滚动时不带动底层页面。 */
+    .backup-mode-dialog {
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+    .backup-record-dialog {
+      align-items: start;
+      overflow-y: auto;
+    }
+    .backup-record-dialog .backup-record-picker {
+      width: min(100%, 390px);
+      max-height: calc(100dvh - 40px);
+      overflow: hidden;
+    }
+    .backup-record-picker .backup-record-list {
+      flex: 1 1 auto;
+      min-height: 0;
+      align-content: start;
+    }

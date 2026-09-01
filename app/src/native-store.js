@@ -12,6 +12,8 @@ let readyPromise;
 let viewingCache;
 const BackupFile = registerPlugin('BackupFile');
 const PhotoLibrary = registerPlugin('PhotoLibrary');
+const BROWSER_IMAGE_DATABASE = 'shenzhen-viewing-images-v1';
+const BROWSER_IMAGE_STORE = 'images';
 
 function dataUrlPayload(dataUrl) {
   return dataUrl.split(',', 2)[1] || '';
@@ -24,6 +26,32 @@ function blobToDataUrl(blob) {
     reader.onerror = () => reject(reader.error || new Error('无法读取图片'));
     reader.readAsDataURL(blob);
   });
+}
+
+function browserImageStore(mode, action) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(BROWSER_IMAGE_DATABASE, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(BROWSER_IMAGE_STORE);
+    request.onerror = () => reject(request.error || new Error('无法打开浏览器图片库'));
+    request.onsuccess = () => {
+      const database = request.result;
+      const transaction = database.transaction(BROWSER_IMAGE_STORE, mode);
+      try { action(transaction.objectStore(BROWSER_IMAGE_STORE)); }
+      catch (error) { database.close(); reject(error); return; }
+      transaction.oncomplete = () => { database.close(); resolve(); };
+      transaction.onerror = () => { database.close(); reject(transaction.error || new Error('浏览器图片库操作失败')); };
+      transaction.onabort = () => { database.close(); reject(transaction.error || new Error('浏览器图片库操作失败')); };
+    };
+  });
+}
+
+function imageRefsForRecord(record) {
+  try {
+    const refs = JSON.parse(record?.imageRefs || '[]');
+    return Array.isArray(refs) ? refs : [];
+  } catch {
+    return [];
+  }
 }
 
 async function makeThumbnail(blob) {
@@ -392,6 +420,19 @@ async function saveViewingRecords(records) {
   await Promise.all(filesToRemove.map(removePrivateFile));
 }
 
+async function deleteViewingRecord(recordId) {
+  const records = await getViewingRecords();
+  const record = records.find(item => String(item.id) === String(recordId));
+  if (!record) return false;
+  const remaining = records.filter(item => String(item.id) !== String(recordId));
+  if (!isNative()) {
+    const ids = imageRefsForRecord(record).map(ref => ref?.id).filter(Boolean);
+    if (ids.length) await browserImageStore('readwrite', store => ids.forEach(id => store.delete(id)));
+  }
+  await saveViewingRecords(remaining);
+  return true;
+}
+
 function setViewingRecordsJson(serialized) {
   try {
     const records = JSON.parse(serialized);
@@ -707,6 +748,7 @@ window.NativeStore = {
   saveSchoolSaved,
   getViewingRecords,
   saveViewingRecords,
+  deleteViewingRecord,
   viewingRecordsJson,
   setViewingRecordsJson,
   storeViewingImage,

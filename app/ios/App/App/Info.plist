@@ -26,6 +26,8 @@
 	<true/>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>允许安家笔记将房源图片保存到你的照片库。</string>
+	<key>NSCameraUsageDescription</key>
+	<string>允许安家笔记使用相机拍摄房源图片。</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

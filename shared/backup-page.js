@@ -3760,6 +3760,8 @@
   var VERSION = 1;
   var BackupFile = registerPlugin("BackupFile");
   var validPath = (path) => typeof path === "string" && path && !path.startsWith("/") && !path.includes("..") && !path.includes("\\");
+  var BROWSER_IMAGE_DATABASE = "shenzhen-viewing-images-v1";
+  var BROWSER_IMAGE_STORE = "images";
   var toast = (text) => {
     const node = document.getElementById("toast");
     if (!node) return;
@@ -3769,6 +3771,44 @@
       node.textContent = "";
     }, 3e3);
   };
+  var pageScrollLock;
+  function lockPageScroll() {
+    if (pageScrollLock) {
+      pageScrollLock.count += 1;
+      return;
+    }
+    const body = document.body;
+    const root = document.documentElement;
+    pageScrollLock = {
+      count: 1,
+      top: window.scrollY,
+      body: { position: body.style.position, top: body.style.top, left: body.style.left, right: body.style.right, width: body.style.width, overflow: body.style.overflow },
+      rootOverflow: root.style.overflow
+    };
+    body.style.position = "fixed";
+    body.style.top = `-${pageScrollLock.top}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    root.style.overflow = "hidden";
+  }
+  function unlockPageScroll() {
+    if (!pageScrollLock || --pageScrollLock.count > 0) return;
+    const { body, rootOverflow, top } = pageScrollLock;
+    Object.assign(document.body.style, body);
+    document.documentElement.style.overflow = rootOverflow;
+    pageScrollLock = null;
+    window.scrollTo(0, top);
+  }
+  function openDialog(dialog) {
+    lockPageScroll();
+    document.body.append(dialog);
+  }
+  function closeDialog(dialog) {
+    dialog.remove();
+    unlockPageScroll();
+  }
   function fileName() {
     const time = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
     return `\u5B89\u5BB6\u7B14\u8BB0\u5907\u4EFD-${time}.zip`;
@@ -3784,22 +3824,95 @@
       link.remove();
     }, 500);
   }
+  function browserImageStore(mode, action) {
+    return new Promise((resolve2, reject) => {
+      const request = indexedDB.open(BROWSER_IMAGE_DATABASE, 1);
+      request.onupgradeneeded = () => request.result.createObjectStore(BROWSER_IMAGE_STORE);
+      request.onerror = () => reject(request.error || new Error("\u65E0\u6CD5\u6253\u5F00\u6D4F\u89C8\u5668\u56FE\u7247\u5E93"));
+      request.onsuccess = () => {
+        const database = request.result;
+        const transaction = database.transaction(BROWSER_IMAGE_STORE, mode);
+        const store = transaction.objectStore(BROWSER_IMAGE_STORE);
+        let result;
+        try {
+          result = action(store);
+        } catch (error) {
+          database.close();
+          reject(error);
+          return;
+        }
+        transaction.oncomplete = () => {
+          database.close();
+          resolve2(result?.result);
+        };
+        transaction.onerror = () => {
+          database.close();
+          reject(transaction.error || result?.error);
+        };
+        transaction.onabort = () => {
+          database.close();
+          reject(transaction.error || new Error("\u6D4F\u89C8\u5668\u56FE\u7247\u5E93\u64CD\u4F5C\u5931\u8D25"));
+        };
+      };
+    });
+  }
+  var getBrowserImage = (id) => browserImageStore("readonly", (store) => store.get(id));
+  var putBrowserImage = (id, blob) => browserImageStore("readwrite", (store) => store.put(blob, id));
+  var clearBrowserImages = () => browserImageStore("readwrite", (store) => store.clear());
+  var parseImageRefs = (value) => {
+    try {
+      const refs = JSON.parse(value || "[]");
+      return Array.isArray(refs) ? refs : [];
+    } catch (_) {
+      return [];
+    }
+  };
+  async function browserPhotosForRecords(records) {
+    const photos = [];
+    for (const record of records || []) {
+      for (const [sortOrder, ref] of parseImageRefs(record.imageRefs).entries()) {
+        if (!ref?.id) continue;
+        const blob = await getBrowserImage(ref.id);
+        if (!blob) continue;
+        photos.push({
+          id: String(ref.id),
+          recordId: String(record.id),
+          name: ref.name || "\u623F\u6E90\u56FE\u7247",
+          type: ref.type || blob.type || "image/jpeg",
+          width: ref.width || null,
+          height: ref.height || null,
+          sortOrder,
+          createdAt: Number(ref.createdAt || record.updatedAt || Date.now()),
+          updatedAt: Number(record.updatedAt || Date.now()),
+          blob
+        });
+      }
+    }
+    return photos;
+  }
   async function createBackup(dataOverride = null) {
     const native = window.NativeStore.isNative();
     const data = dataOverride || await window.NativeStore.getBackupData();
     const zip = new import_jszip.default();
     const portablePhotos = [];
-    for (const photo of data.photos) {
+    const photos = native ? data.photos || [] : await browserPhotosForRecords(data.records);
+    for (const photo of photos) {
       const originalPath = `images/${photo.id}.original`;
       const thumbnailPath = `images/${photo.id}.thumb.jpg`;
-      const [original, thumbnail] = await Promise.all([
-        window.NativeStore.readPrivateFile(photo.filePath),
-        window.NativeStore.readPrivateFile(photo.thumbnailPath)
-      ]);
-      zip.file(originalPath, original.data, { base64: true });
-      zip.file(thumbnailPath, thumbnail.data, { base64: true });
+      if (native) {
+        const [original, thumbnail] = await Promise.all([
+          window.NativeStore.readPrivateFile(photo.filePath),
+          window.NativeStore.readPrivateFile(photo.thumbnailPath)
+        ]);
+        zip.file(originalPath, original.data, { base64: true });
+        zip.file(thumbnailPath, thumbnail.data, { base64: true });
+      } else {
+        zip.file(originalPath, photo.blob);
+        zip.file(thumbnailPath, photo.blob);
+      }
       portablePhotos.push({
         ...photo,
+        blob: void 0,
         filePath: void 0,
         thumbnailPath: void 0,
         archiveOriginalPath: originalPath,
@@ -3861,7 +3974,7 @@
       dialog.className = "backup-mode-dialog";
       dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="\u9009\u62E9\u5BFC\u5165\u65B9\u5F0F"><h3>\u9009\u62E9\u5BFC\u5165\u65B9\u5F0F</h3><p><strong>\u589E\u91CF\u5BFC\u5165</strong>\u4F1A\u4FDD\u7559\u672C\u673A\u5DF2\u6709\u6570\u636E\uFF0C\u4EC5\u8865\u5145\u65B0\u8BB0\u5F55\uFF0C\u5E76\u4EE5\u6700\u540E\u7F16\u8F91\u65F6\u95F4\u8F83\u65B0\u7684\u8BB0\u5F55\u4E3A\u51C6\u3002</p><p><strong>\u8986\u76D6\u5BFC\u5165</strong>\u4F1A\u6E05\u7A7A\u672C\u673A\u73B0\u6709\u6570\u636E\uFF0C\u518D\u5B8C\u6574\u6062\u590D\u5907\u4EFD\u3002</p><div><button type="button" data-mode="merge">\u589E\u91CF\u5BFC\u5165</button><button type="button" class="danger" data-mode="replace">\u8986\u76D6\u5BFC\u5165</button></div><button type="button" class="cancel" data-mode="cancel">\u53D6\u6D88</button></div>';
       const finish = (mode) => {
-        dialog.remove();
+        closeDialog(dialog);
         resolve2(mode === "cancel" ? null : mode);
       };
       dialog.addEventListener("click", (event) => {
@@ -3869,7 +3982,7 @@
         const button = event.target.closest("[data-mode]");
         if (button) finish(button.dataset.mode);
       });
-      document.body.append(dialog);
+      openDialog(dialog);
     });
   }
   function chooseExportMode() {
@@ -3878,7 +3991,7 @@
       dialog.className = "backup-mode-dialog";
       dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="\u9009\u62E9\u5BFC\u51FA\u65B9\u5F0F"><h3>\u9009\u62E9\u5BFC\u51FA\u65B9\u5F0F</h3><p><strong>\u5168\u91CF\u5BFC\u51FA</strong>\u4F1A\u5BFC\u51FA\u5168\u90E8\u770B\u623F\u8BB0\u5F55\u3001\u56FE\u7247\u3001\u8D2D\u623F\u6E05\u5355\u3001\u8D37\u6B3E\u65B9\u6848\u548C\u5B66\u533A\u6536\u85CF\u3002</p><p><strong>\u624B\u52A8\u9009\u62E9\u8BB0\u5F55\u5BFC\u51FA</strong>\u4EC5\u5BFC\u51FA\u4F60\u52FE\u9009\u7684\u770B\u623F\u8BB0\u5F55\u53CA\u5176\u56FE\u7247\u3002</p><div><button type="button" data-mode="full">\u5168\u91CF\u5BFC\u51FA</button><button type="button" data-mode="records">\u9009\u62E9\u8BB0\u5F55</button></div><button type="button" class="cancel" data-mode="cancel">\u53D6\u6D88</button></div>';
       const finish = (mode) => {
-        dialog.remove();
+        closeDialog(dialog);
         resolve2(mode === "cancel" ? null : mode);
       };
       dialog.addEventListener("click", (event) => {
@@ -3886,7 +3999,7 @@
         const button = event.target.closest("[data-mode]");
         if (button) finish(button.dataset.mode);
       });
-      document.body.append(dialog);
+      openDialog(dialog);
     });
   }
   async function chooseRecordsForExport() {
@@ -3898,7 +4011,7 @@
     const priority = (value) => ({ focus: ["\u91CD\u70B9\u5173\u6CE8", "focus"], excluded: ["\u5DF2\u6392\u9664", "excluded"], normal: ["\u666E\u901A", ""] })[value] || ["\u666E\u901A", ""];
     return new Promise((resolve2) => {
       const dialog = document.createElement("div");
-      dialog.className = "backup-mode-dialog";
+      dialog.className = "backup-mode-dialog backup-record-dialog";
       dialog.innerHTML = `<div class="backup-mode-panel backup-record-picker" role="dialog" aria-modal="true" aria-label="\u9009\u62E9\u8981\u5BFC\u51FA\u7684\u8BB0\u5F55"><h3>\u9009\u62E9\u8981\u5BFC\u51FA\u7684\u8BB0\u5F55</h3><p>\u4EC5\u5BFC\u51FA\u6240\u9009\u8BB0\u5F55\u53CA\u5176\u56FE\u7247\u3002</p><div class="backup-record-list">${records.map((record) => {
         const [label, kind] = priority(record.priority);
         return `<label><input type="checkbox" value="${String(record.id).replace(/&/g, "&amp;").replace(/"/g, "&quot;")}"><span class="backup-record-info"><b>${String(record.community || "\u672A\u547D\u540D\u5C0F\u533A").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</b><span><i class="badge ${kind}">${label}</i><small>\u770B\u623F\uFF1A${String(record.viewedAt || "\u672A\u586B\u5199").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</small></span></span></label>`;
@@ -3912,15 +4025,15 @@
       dialog.addEventListener("change", update);
       dialog.addEventListener("click", (event) => {
         if (event.target === dialog || event.target.closest("[data-cancel]")) {
-          dialog.remove();
+          closeDialog(dialog);
           return resolve2(null);
         }
         if (!event.target.closest("[data-export-selected]")) return;
         const ids = new Set([...dialog.querySelectorAll("input:checked")].map((input) => input.value));
-        dialog.remove();
+        closeDialog(dialog);
         resolve2(records.filter((record) => ids.has(String(record.id))));
       });
-      document.body.append(dialog);
+      openDialog(dialog);
     });
   }
   async function prepareIncrementalRecords(data) {
@@ -3941,6 +4054,58 @@
       }))
     };
   }
+  async function restoreBrowserBackup(data, zip, mode) {
+    const photosByRecord = /* @__PURE__ */ new Map();
+    const images = [];
+    for (const photo of data.photos) {
+      if (!photo?.id || !photo?.recordId || !validPath(photo.archiveOriginalPath)) {
+        throw new Error("\u5907\u4EFD\u56FE\u7247\u7D22\u5F15\u4E0D\u6B63\u786E");
+      }
+      const entry = zip.file(photo.archiveOriginalPath);
+      if (!entry) throw new Error("\u5907\u4EFD\u56FE\u7247\u6587\u4EF6\u7F3A\u5931");
+      const blob = await entry.async("blob");
+      images.push({ id: String(photo.id), blob });
+      const refs = photosByRecord.get(String(photo.recordId)) || [];
+      refs.push({
+        id: String(photo.id),
+        name: photo.name || "\u623F\u6E90\u56FE\u7247",
+        type: photo.type || blob.type || "image/jpeg",
+        width: photo.width || null,
+        height: photo.height || null,
+        createdAt: Number(photo.createdAt || Date.now()),
+        sortOrder: Number(photo.sortOrder || 0)
+      });
+      photosByRecord.set(String(photo.recordId), refs);
+    }
+    const records = data.records.map((record) => ({
+      ...record,
+      imageRefs: JSON.stringify((photosByRecord.get(String(record.id)) || []).sort(
+        (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
+      ))
+    }));
+    if (mode === "replace") await clearBrowserImages();
+    for (const image of images) await putBrowserImage(image.id, image.blob);
+    const existing = await window.NativeStore.getViewingRecords();
+    await window.NativeStore.saveViewingRecords(mode === "merge" ? [...existing, ...records] : records);
+    if (mode === "replace") {
+      await window.NativeStore.saveChecklistState(data.checklist && typeof data.checklist === "object" ? data.checklist : {});
+      const mortgage = Array.isArray(data.mortgage) ? data.mortgage.find((item) => item.id === "current")?.data || null : data.mortgage || null;
+      await window.NativeStore.saveMortgageCurrent(mortgage);
+      const school = Array.isArray(data.school) ? {
+        recentCommunity: data.school.filter((item) => item.list_type === "recent" && item.mode === "community"),
+        recentSchool: data.school.filter((item) => item.list_type === "recent" && item.mode === "school"),
+        favoriteCommunity: data.school.filter((item) => item.list_type === "favorite" && item.mode === "community"),
+        favoriteSchool: data.school.filter((item) => item.list_type === "favorite" && item.mode === "school")
+      } : data.school || {};
+      await Promise.all([
+        window.NativeStore.saveSchoolSaved("recent", "community", school.recentCommunity || []),
+        window.NativeStore.saveSchoolSaved("recent", "school", school.recentSchool || []),
+        window.NativeStore.saveSchoolSaved("favorite", "community", school.favoriteCommunity || []),
+        window.NativeStore.saveSchoolSaved("favorite", "school", school.favoriteSchool || [])
+      ]);
+    }
+    return { records: records.length };
+  }
   async function restoreBackup(mode) {
     const selected = await chooseBackup();
     if (!selected) return;
@@ -3952,9 +4117,14 @@
     if (manifest.format !== FORMAT || manifest.version !== VERSION) throw new Error("\u4E0D\u662F\u53EF\u8BC6\u522B\u7684\u5B8C\u6574\u5907\u4EFD\u6587\u4EF6");
     let data = JSON.parse(await dataEntry.async("text"));
     if (!Array.isArray(data.records) || !Array.isArray(data.photos)) throw new Error("\u5907\u4EFD\u6570\u636E\u683C\u5F0F\u4E0D\u6B63\u786E");
-    if (!window.NativeStore.isNative()) throw new Error("\u6D4F\u89C8\u5668\u4EC5\u652F\u6301\u5BFC\u51FA\uFF1B\u5B8C\u6574\u6062\u590D\u8BF7\u5728 App \u4E2D\u8FDB\u884C");
-    if (mode === "replace" && !confirm("\u8986\u76D6\u5BFC\u5165\u4F1A\u6E05\u7A7A\u5F53\u524D App \u5185\u7684\u6240\u6709\u672C\u5730\u6570\u636E\uFF0C\u786E\u8BA4\u7EE7\u7EED\u5417\uFF1F")) return;
+    if (mode === "replace" && !confirm("\u8986\u76D6\u5BFC\u5165\u4F1A\u6E05\u7A7A\u5F53\u524D\u8BBE\u5907\u5185\u7684\u6240\u6709\u672C\u5730\u6570\u636E\uFF0C\u786E\u8BA4\u7EE7\u7EED\u5417\uFF1F")) return;
     if (mode === "merge") data = await prepareIncrementalRecords(data);
+    if (!window.NativeStore.isNative()) {
+      const result = await restoreBrowserBackup(data, zip, mode);
+      toast(mode === "merge" ? `\u5DF2\u589E\u91CF\u5BFC\u5165 ${result.records} \u6761\u770B\u623F\u8BB0\u5F55\uFF0C\u9875\u9762\u5373\u5C06\u5237\u65B0\u3002` : `\u5DF2\u6062\u590D ${result.records} \u6761\u770B\u623F\u8BB0\u5F55\uFF0C\u9875\u9762\u5373\u5C06\u5237\u65B0\u3002`);
+      setTimeout(() => location.reload(), 700);
+      return;
+    }
     const prefix = `viewings/restored-${Date.now()}`;
     const written = [];
     try {

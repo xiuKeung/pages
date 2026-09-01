@@ -77,6 +77,7 @@
 /* 模块 11：由原 index.html 内联脚本迁移。 */
 (() => {
     const storageKey = 'shenzhen-viewing-records-v1';
+    const deletePositionKey = 'anjia-viewing-delete-position';
     const toast = document.getElementById('toast');
     const loadRecords = () => {
       try { return JSON.parse(window.NativeStore.viewingRecordsJson() || '[]'); }
@@ -141,6 +142,28 @@
         ['最后编辑', editedAt && new Date(Number(editedAt)).toLocaleString('zh-CN', { hour12: false })]
       ].filter(([, value]) => value).map(([label, value]) => `${label}：${value}`).join('\n');
     };
+    const rememberDeletePosition = button => {
+      const cards = [...document.querySelectorAll('#records .record')];
+      const current = button.closest('.record');
+      const index = cards.indexOf(current);
+      const nearby = index >= 0 ? (cards[index + 1] || cards[index - 1]) : null;
+      const targetId = nearby?.querySelector('[data-edit]')?.dataset.edit || '';
+      sessionStorage.setItem(deletePositionKey, JSON.stringify({ targetId }));
+    };
+    const restoreDeletePosition = () => {
+      let position;
+      try { position = JSON.parse(sessionStorage.getItem(deletePositionKey) || 'null'); }
+      catch (_) { position = null; }
+      if (!position) return;
+      sessionStorage.removeItem(deletePositionKey);
+      const target = [...document.querySelectorAll('#records .record')].find(card =>
+        String(card.querySelector('[data-edit]')?.dataset.edit) === String(position.targetId)
+      );
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      else window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    new MutationObserver(restoreDeletePosition).observe(document.getElementById('records'), { childList: true });
+    window.addEventListener('load', restoreDeletePosition);
 
     document.addEventListener('click', async event => {
       const copyButton = event.target.closest('[data-copy]');
@@ -163,7 +186,8 @@
         return;
       }
       if (!confirm(`删除“${record.community}”这条看房记录？`)) return;
-      void window.NativeStore.saveViewingRecords(records.filter(item => String(item.id) !== String(id)));
+      rememberDeletePosition(button);
+      await window.NativeStore.deleteViewingRecord(id);
       showToast('记录已删除。');
       setTimeout(() => location.reload(), 180);
     }, true);
