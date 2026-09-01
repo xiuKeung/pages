@@ -1,5 +1,76 @@
 import UIKit
 import Capacitor
+import Photos
+
+@objc(PhotoLibraryPlugin)
+class PhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
+    let identifier = "PhotoLibraryPlugin"
+    let jsName = "PhotoLibrary"
+    let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "saveImages", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func saveImages(_ call: CAPPluginCall) {
+        guard let images = call.getArray("images"), !images.isEmpty else {
+            call.reject("没有可保存的图片")
+            return
+        }
+        let imageData = images.compactMap { item -> Data? in
+            guard let image = item as? [String: Any],
+                  let encoded = image["data"] as? String else { return nil }
+            return Data(base64Encoded: encoded)
+        }
+        guard imageData.count == images.count else {
+            call.reject("图片内容不完整")
+            return
+        }
+        save(imageData, call: call)
+    }
+
+    private func save(_ images: [Data], call: CAPPluginCall) {
+        let status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+        if status == .notDetermined {
+            PHPhotoLibrary.requestAuthorization(for: .addOnly) { [weak self] result in
+                DispatchQueue.main.async {
+                    guard result == .authorized || result == .limited else {
+                        call.reject("未获得添加到照片库的权限")
+                        return
+                    }
+                    self?.write(images, call: call)
+                }
+            }
+            return
+        }
+        guard status == .authorized || status == .limited else {
+            call.reject("未获得添加到照片库的权限")
+            return
+        }
+        write(images, call: call)
+    }
+
+    private func write(_ images: [Data], call: CAPPluginCall) {
+        PHPhotoLibrary.shared().performChanges({
+            for image in images {
+                let request = PHAssetCreationRequest.forAsset()
+                request.addResource(with: .photo, data: image, options: nil)
+            }
+        }) { success, error in
+            DispatchQueue.main.async {
+                if success {
+                    call.resolve(["count": images.count])
+                } else {
+                    call.reject("保存到照片库失败", nil, error)
+                }
+            }
+        }
+    }
+}
+
+class MainViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        bridge?.registerPluginInstance(PhotoLibraryPlugin())
+    }
+}
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {

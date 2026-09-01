@@ -1,4 +1,4 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 
@@ -10,6 +10,8 @@ let db;
 let sqlite;
 let readyPromise;
 let viewingCache;
+const BackupFile = registerPlugin('BackupFile');
+const PhotoLibrary = registerPlugin('PhotoLibrary');
 
 function dataUrlPayload(dataUrl) {
   return dataUrl.split(',', 2)[1] || '';
@@ -445,6 +447,19 @@ async function deleteViewingImage(ref) {
   await Promise.all([removePrivateFile(ref?.filePath), removePrivateFile(ref?.thumbnailPath)]);
 }
 
+async function saveViewingImagesToDevice(images) {
+  if (!isNative()) return false;
+  const payload = await Promise.all(images.map(async image => ({
+    filename: image.name || `房源图片-${Date.now()}.jpg`,
+    mimeType: image.type || image.blob?.type || 'image/jpeg',
+    data: dataUrlPayload(await blobToDataUrl(image.blob))
+  })));
+  if (Capacitor.getPlatform() === 'android') await BackupFile.saveImages({ images: payload });
+  else if (Capacitor.getPlatform() === 'ios') await PhotoLibrary.saveImages({ images: payload });
+  else return false;
+  return true;
+}
+
 async function readPrivateFile(path) {
   if (!isNative() || !path) throw new Error('无法读取备份文件');
   return Filesystem.readFile({ path, directory: Directory.Data });
@@ -697,6 +712,7 @@ window.NativeStore = {
   storeViewingImage,
   getViewingImage,
   deleteViewingImage,
+  saveViewingImagesToDevice,
   readPrivateFile,
   writePrivateFile,
   getBackupData,

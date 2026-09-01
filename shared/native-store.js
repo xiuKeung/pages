@@ -2500,6 +2500,8 @@
   var sqlite;
   var readyPromise;
   var viewingCache;
+  var BackupFile = registerPlugin("BackupFile");
+  var PhotoLibrary = registerPlugin("PhotoLibrary");
   function dataUrlPayload(dataUrl) {
     return dataUrl.split(",", 2)[1] || "";
   }
@@ -2920,6 +2922,18 @@
     if (!isNative()) return;
     await Promise.all([removePrivateFile(ref?.filePath), removePrivateFile(ref?.thumbnailPath)]);
   }
+  async function saveViewingImagesToDevice(images) {
+    if (!isNative()) return false;
+    const payload = await Promise.all(images.map(async (image) => ({
+      filename: image.name || `\u623F\u6E90\u56FE\u7247-${Date.now()}.jpg`,
+      mimeType: image.type || image.blob?.type || "image/jpeg",
+      data: dataUrlPayload(await blobToDataUrl(image.blob))
+    })));
+    if (Capacitor.getPlatform() === "android") await BackupFile.saveImages({ images: payload });
+    else if (Capacitor.getPlatform() === "ios") await PhotoLibrary.saveImages({ images: payload });
+    else return false;
+    return true;
+  }
   async function readPrivateFile(path) {
     if (!isNative() || !path) throw new Error("\u65E0\u6CD5\u8BFB\u53D6\u5907\u4EFD\u6587\u4EF6");
     return Filesystem.readFile({ path, directory: Directory.Data });
@@ -3230,6 +3244,7 @@
     storeViewingImage,
     getViewingImage,
     deleteViewingImage,
+    saveViewingImagesToDevice,
     readPrivateFile,
     writePrivateFile,
     getBackupData,
