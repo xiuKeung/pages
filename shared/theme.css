@@ -16,7 +16,7 @@ input[readonly] { color:var(--muted); background:var(--theme-subtle); }
 button:not(.primary):not(.calculate),a.button,.all-years,.schedule-details>summary { color:var(--blue); background:var(--theme-action); border-color:var(--line); }
 .back,.hero-back { color:var(--blue); background:var(--theme-back); border-color:var(--line); box-shadow:0 3px 10px rgba(25,59,110,.1); }
 .settings-button,.theme-options button { color:var(--muted); background:var(--theme-surface); border-color:var(--line); }
-.community-suggestions,.community-suggestion,.suggestions,.suggestion-item,.share-toggle,.copy-homes { color:var(--ink); background:var(--theme-surface); border-color:var(--line); }
+.community-suggestions,.community-suggestion,.suggestions,.suggestion-item,.copy-homes { color:var(--ink); background:var(--theme-surface); border-color:var(--line); }
 .community-suggestion:active,.community-suggestion:hover { background:var(--theme-subtle); }
 .loan-preview strong,.monthly strong { color:var(--blue); }.loan-parts,.loan-parts span,.monthly small { color:var(--muted); border-top-color:var(--line); }
 .image-section,.image-item,.image-caption,.stage h2,.task,.schedule-wrap { border-color:var(--line); }.image-item { background:var(--theme-subtle); }.bar { background:var(--theme-subtle); } th { background:var(--theme-subtle); }

@@ -147,7 +147,7 @@ globalThis.SchoolDistrictDataReady.then(async () => {
 
   function resultHeader(label, query) {
     const favorite = isFavorite(query);
-    return `<div class="result-title-row"><p class="community-name">${escape(label)}</p><button class="share-toggle" type="button">分享</button><button class="favorite-toggle ${favorite ? 'is-favorite' : ''}" type="button">${favorite ? '★ 已收藏' : '☆ 收藏'}</button></div>`;
+    return `<div class="result-title-row"><p class="community-name">${escape(label)}</p><button class="favorite-toggle ${favorite ? 'is-favorite' : ''}" type="button">${favorite ? '★ 已收藏' : '☆ 收藏'}</button></div>`;
   }
 
   function showToast(message) {
@@ -178,14 +178,6 @@ globalThis.SchoolDistrictDataReady.then(async () => {
   }
 
   function bindResultControls(query) {
-    result.querySelector('.share-toggle')?.addEventListener('click', async event => {
-      const url = new URL(location.href);
-      url.search = new URLSearchParams({ mode: query.mode, q: query.value }).toString();
-      const copied = await copyText(url.href);
-      event.currentTarget.textContent = copied ? '链接已复制' : '复制失败';
-      showToast(copied ? '链接已复制' : '复制失败，请长按地址栏复制当前链接');
-      setTimeout(() => { event.currentTarget.textContent = '分享'; }, 1500);
-    });
     result.querySelector('.favorite-toggle')?.addEventListener('click', event => {
       const favorite = toggleFavorite(query);
       event.currentTarget.classList.toggle('is-favorite', favorite);
@@ -511,12 +503,4 @@ globalThis.SchoolDistrictDataReady.then(async () => {
     installButton.hidden = true;
   });
   renderSaved();
-  const shared = new URLSearchParams(location.search);
-  const sharedMode = shared.get('mode');
-  const sharedQuery = shared.get('q');
-  if (sharedQuery && (sharedMode === 'community' || sharedMode === 'school')) {
-    setMode(sharedMode, false);
-    input.value = sharedQuery;
-    search();
-  }
 });
