@@ -53,6 +53,34 @@ function closeDialog(dialog) {
   unlockPageScroll();
 }
 
+function showImportProgress() {
+  const dialog = document.createElement('div');
+  dialog.className = 'import-progress-dialog';
+  dialog.innerHTML = '<div class="import-progress-panel" role="status" aria-live="polite" aria-label="正在导入备份"><div class="import-progress-ring"><span>0%</span></div><h3>正在导入备份</h3><p class="import-progress-status">正在准备导入…</p><p class="import-progress-detail">请勿关闭页面或切换应用</p></div>';
+  const ring = dialog.querySelector('.import-progress-ring');
+  const percent = ring.querySelector('span');
+  const status = dialog.querySelector('.import-progress-status');
+  const detail = dialog.querySelector('.import-progress-detail');
+  openDialog(dialog);
+  return {
+    update(value, message, hint) {
+      const progress = Math.max(0, Math.min(100, Math.round(value)));
+      ring.style.setProperty('--progress', `${progress * 3.6}deg`);
+      percent.textContent = `${progress}%`;
+      if (message) status.textContent = message;
+      if (hint) detail.textContent = hint;
+    },
+    complete(message) {
+      ring.classList.add('is-complete');
+      ring.style.setProperty('--progress', '360deg');
+      percent.textContent = '✓';
+      status.textContent = message || '导入完成';
+      detail.textContent = '正在刷新数据…';
+    },
+    close() { if (dialog.isConnected) closeDialog(dialog); }
+  };
+}
+
 function fileName() {
   const time = new Date().toISOString().replace(/[:.]/g, '-');
   return `安家笔记备份-${time}.zip`;
@@ -282,10 +310,11 @@ async function prepareIncrementalRecords(data) {
   };
 }
 
-async function restoreBrowserBackup(data, zip, mode) {
+async function restoreBrowserBackup(data, zip, mode, progress) {
   const photosByRecord = new Map();
   const images = [];
-  for (const photo of data.photos) {
+  const photoCount = Math.max(data.photos.length, 1);
+  for (const [index, photo] of data.photos.entries()) {
     if (!photo?.id || !photo?.recordId || !validPath(photo.archiveOriginalPath)) {
       throw new Error('备份图片索引不正确');
     }
@@ -300,6 +329,7 @@ async function restoreBrowserBackup(data, zip, mode) {
       sortOrder: Number(photo.sortOrder || 0)
     });
     photosByRecord.set(String(photo.recordId), refs);
+    progress.update(14 + ((index + 1) / photoCount) * 42, '正在读取备份图片', `已读取 ${index + 1} / ${data.photos.length} 张图片`);
   }
   const records = data.records.map(record => ({
     ...record,
@@ -307,8 +337,15 @@ async function restoreBrowserBackup(data, zip, mode) {
       (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
     ))
   }));
-  if (mode === 'replace') await clearBrowserImages();
-  for (const image of images) await putBrowserImage(image.id, image.blob);
+  if (mode === 'replace') {
+    progress.update(58, '正在清理旧数据', '正在准备恢复备份');
+    await clearBrowserImages();
+  }
+  for (const [index, image] of images.entries()) {
+    await putBrowserImage(image.id, image.blob);
+    progress.update(58 + ((index + 1) / photoCount) * 27, '正在保存图片', `已保存 ${index + 1} / ${images.length} 张图片`);
+  }
+  progress.update(88, '正在保存看房记录', `正在写入 ${records.length} 条记录`);
   const existing = await window.NativeStore.getViewingRecords();
   await window.NativeStore.saveViewingRecords(mode === 'merge' ? [...existing, ...records] : records);
   if (mode === 'replace') {
@@ -332,35 +369,47 @@ async function restoreBrowserBackup(data, zip, mode) {
       window.NativeStore.saveSchoolSaved('favorite', 'school', school.favoriteSchool || [])
     ]);
   }
+  progress.update(97, '正在整理数据', '即将完成');
   return { records: records.length };
 }
 
 async function restoreBackup(mode) {
   const selected = await chooseBackup();
   if (!selected) return;
-  const zip = await JSZip.loadAsync(selected.base64, { base64: true });
-  const manifestEntry = zip.file('manifest.json');
-  const dataEntry = zip.file('data/data.json');
-  if (!manifestEntry || !dataEntry) throw new Error('备份文件缺少必要数据');
-  const manifest = JSON.parse(await manifestEntry.async('text'));
-  if (manifest.format !== FORMAT || manifest.version !== VERSION) throw new Error('不是可识别的完整备份文件');
-  let data = JSON.parse(await dataEntry.async('text'));
-  if (!Array.isArray(data.records) || !Array.isArray(data.photos)) throw new Error('备份数据格式不正确');
-  if (mode === 'replace' && !confirm('覆盖导入会清空当前设备内的所有本地数据，确认继续吗？')) return;
-  if (mode === 'merge') data = await prepareIncrementalRecords(data);
-
-  if (!window.NativeStore.isNative()) {
-    const result = await restoreBrowserBackup(data, zip, mode);
-    toast(mode === 'merge'
-      ? `已增量导入 ${result.records} 条看房记录，页面即将刷新。`
-      : `已恢复 ${result.records} 条看房记录，页面即将刷新。`);
-    setTimeout(() => location.reload(), 700);
-    return;
-  }
-
-  const prefix = `viewings/restored-${Date.now()}`;
-  const written = [];
+  let progress;
+  let written = [];
   try {
+    progress = showImportProgress();
+    progress.update(4, '正在读取备份', '正在打开备份文件');
+    const zip = await JSZip.loadAsync(selected.base64, { base64: true });
+    progress.update(9, '正在校验备份', '正在检查备份内容');
+    const manifestEntry = zip.file('manifest.json');
+    const dataEntry = zip.file('data/data.json');
+    if (!manifestEntry || !dataEntry) throw new Error('备份文件缺少必要数据');
+    const manifest = JSON.parse(await manifestEntry.async('text'));
+    if (manifest.format !== FORMAT || manifest.version !== VERSION) throw new Error('不是可识别的完整备份文件');
+    let data = JSON.parse(await dataEntry.async('text'));
+    if (!Array.isArray(data.records) || !Array.isArray(data.photos)) throw new Error('备份数据格式不正确');
+    if (mode === 'replace' && !confirm('覆盖导入会清空当前设备内的所有本地数据，确认继续吗？')) {
+      progress.close();
+      return;
+    }
+    progress.update(12, '正在准备导入', `共 ${data.records.length} 条记录、${data.photos.length} 张图片`);
+    if (mode === 'merge') {
+      data = await prepareIncrementalRecords(data);
+      progress.update(14, '正在准备增量导入', `共 ${data.records.length} 条记录、${data.photos.length} 张图片`);
+    }
+
+    if (!window.NativeStore.isNative()) {
+      const result = await restoreBrowserBackup(data, zip, mode, progress);
+      progress.complete(mode === 'merge' ? `已增量导入 ${result.records} 条看房记录` : `已恢复 ${result.records} 条看房记录`);
+      setTimeout(() => location.reload(), 700);
+      return;
+    }
+
+    const prefix = `viewings/restored-${Date.now()}`;
+    const totalWrites = Math.max(data.photos.length * 2, 1);
+    let completedWrites = 0;
     for (const photo of data.photos) {
       if (!photo?.id || !photo?.recordId || !validPath(photo.archiveOriginalPath) || !validPath(photo.archiveThumbnailPath)) {
         throw new Error('备份图片索引不正确');
@@ -371,19 +420,23 @@ async function restoreBackup(mode) {
       const base = `${prefix}/${photo.recordId}/${photo.id}`;
       photo.filePath = `${base}.original`;
       photo.thumbnailPath = `${base}.thumb.jpg`;
+      written.push({ filePath: photo.filePath, thumbnailPath: photo.thumbnailPath });
       await window.NativeStore.writePrivateFile(photo.filePath, await originalEntry.async('base64'));
+      completedWrites += 1;
+      progress.update(14 + (completedWrites / totalWrites) * 74, '正在保存图片', `已保存 ${Math.ceil(completedWrites / 2)} / ${data.photos.length} 张图片`);
       await window.NativeStore.writePrivateFile(photo.thumbnailPath, await thumbnailEntry.async('base64'));
+      completedWrites += 1;
+      progress.update(14 + (completedWrites / totalWrites) * 74, '正在保存图片', `已保存 ${Math.ceil(completedWrites / 2)} / ${data.photos.length} 张图片`);
       written.push(photo.filePath, photo.thumbnailPath);
     }
+    progress.update(90, '正在保存看房记录', `正在写入 ${data.records.length} 条记录`);
     const result = mode === 'merge'
       ? await window.NativeStore.mergeBackupData(data)
       : await window.NativeStore.restoreBackupData(data);
-    const message = mode === 'merge'
-      ? `已增量导入 ${result.records} 条看房记录，页面即将刷新。`
-      : `已恢复 ${data.records.length} 条看房记录，页面即将刷新。`;
-    toast(message);
+    progress.complete(mode === 'merge' ? `已增量导入 ${result.records} 条看房记录` : `已恢复 ${data.records.length} 条看房记录`);
   } catch (error) {
-    await Promise.all(written.map(path => window.NativeStore.deleteViewingImage({ filePath: path, thumbnailPath: path })));
+    await Promise.all(written.map(image => window.NativeStore.deleteViewingImage(image).catch(() => {})));
+    progress?.close();
     throw error;
   }
   setTimeout(() => location.reload(), 700);

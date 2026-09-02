@@ -66,9 +66,38 @@ class PhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
+@objc(ThemeBridgePlugin)
+class ThemeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
+    let identifier = "ThemeBridgePlugin"
+    let jsName = "ThemeBridge"
+    let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "setTheme", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func setTheme(_ call: CAPPluginCall) {
+        let preference = call.getString("theme") ?? "system"
+        let selected = ["system", "dark", "light"].contains(preference) ? preference : "system"
+        DispatchQueue.main.async { [weak self] in
+            (self?.bridge?.viewController as? MainViewController)?.applyNativeTheme(selected)
+            call.resolve()
+        }
+    }
+}
+
 class MainViewController: CAPBridgeViewController {
-    private let pageBackground = UIColor { traits in
-        if traits.userInterfaceStyle == .dark {
+    private let themePreferenceKey = "anjia_theme_preference"
+
+    private var pageBackground: UIColor {
+        let preference = UserDefaults.standard.string(forKey: themePreferenceKey) ?? "system"
+        let isDark: Bool
+        if preference == "dark" {
+            isDark = true
+        } else if preference == "light" {
+            isDark = false
+        } else {
+            isDark = traitCollection.userInterfaceStyle == .dark
+        }
+        if isDark {
             return UIColor(red: 16.0 / 255.0,
                            green: 24.0 / 255.0,
                            blue: 40.0 / 255.0,
@@ -80,17 +109,33 @@ class MainViewController: CAPBridgeViewController {
                        alpha: 1.0)
     }
 
+    func applyNativeTheme(_ preference: String) {
+        UserDefaults.standard.set(preference, forKey: themePreferenceKey)
+        let background = pageBackground
+        view.backgroundColor = background
+        bridge?.webView?.backgroundColor = background
+        bridge?.webView?.scrollView.backgroundColor = background
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        // 页面切换的短暂空档使用应用底色，避免 WKWebView 露出黑屏。
+        // 页面切换的短暂空档使用已保存的外观底色，避免露出相反颜色。
         view.backgroundColor = pageBackground
     }
 
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(PhotoLibraryPlugin())
+        bridge?.registerPluginInstance(ThemeBridgePlugin())
         bridge?.webView?.isOpaque = false
         bridge?.webView?.backgroundColor = pageBackground
         bridge?.webView?.scrollView.backgroundColor = pageBackground
+    }
+
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        if UserDefaults.standard.string(forKey: themePreferenceKey) ?? "system" == "system" {
+            applyNativeTheme("system")
+        }
     }
 }
 

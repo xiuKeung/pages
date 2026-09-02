@@ -493,3 +493,55 @@
       min-height: 0;
       align-content: start;
     }
+
+    /* 导入过程必须独占页面，防止误触或关闭。 */
+    .import-progress-dialog {
+      position: fixed;
+      z-index: 1200;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(20, 32, 52, .5);
+    }
+    .import-progress-panel {
+      width: min(100%, 320px);
+      padding: 28px 22px 24px;
+      border-radius: 18px;
+      color: var(--ink);
+      background: #fff;
+      box-shadow: 0 20px 54px rgba(16, 35, 65, .3);
+      text-align: center;
+    }
+    .import-progress-ring {
+      --progress: 0deg;
+      position: relative;
+      display: grid;
+      width: 104px;
+      height: 104px;
+      margin: 0 auto 18px;
+      place-items: center;
+      border-radius: 50%;
+      background: conic-gradient(var(--blue) var(--progress), #e7edf7 0);
+      transition: background .24s ease;
+    }
+    .import-progress-ring::before {
+      position: absolute;
+      inset: 9px;
+      border-radius: inherit;
+      background: #fff;
+      content: '';
+    }
+    .import-progress-ring span { position: relative; color: var(--blue); font-size:21px; font-weight:750; }
+    .import-progress-ring.is-complete { background: #12b76a; }
+    .import-progress-ring.is-complete span { color: #12b76a; font-size:32px; }
+    .import-progress-panel h3 { margin: 0; font-size: 18px; }
+    .import-progress-panel p { margin: 7px 0 0; }
+    .import-progress-status { color: var(--ink); font-size: 14px; font-weight: 650; }
+    .import-progress-detail { color: var(--muted); font-size: 12px; }
+    html[data-theme="dark"] .import-progress-panel { background: #1d2939; }
+    html[data-theme="dark"] .import-progress-ring { background: conic-gradient(#84adff var(--progress), #344054 0); }
+    html[data-theme="dark"] .import-progress-ring::before { background: #1d2939; }
+    html[data-theme="dark"] .import-progress-ring.is-complete { background: #32d583; }
+    html[data-theme="dark"] .import-progress-ring span { color: #84adff; }
+    html[data-theme="dark"] .import-progress-ring.is-complete span { color: #32d583; }

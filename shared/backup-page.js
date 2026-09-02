@@ -3809,6 +3809,35 @@
     dialog.remove();
     unlockPageScroll();
   }
+  function showImportProgress() {
+    const dialog = document.createElement("div");
+    dialog.className = "import-progress-dialog";
+    dialog.innerHTML = '<div class="import-progress-panel" role="status" aria-live="polite" aria-label="\u6B63\u5728\u5BFC\u5165\u5907\u4EFD"><div class="import-progress-ring"><span>0%</span></div><h3>\u6B63\u5728\u5BFC\u5165\u5907\u4EFD</h3><p class="import-progress-status">\u6B63\u5728\u51C6\u5907\u5BFC\u5165\u2026</p><p class="import-progress-detail">\u8BF7\u52FF\u5173\u95ED\u9875\u9762\u6216\u5207\u6362\u5E94\u7528</p></div>';
+    const ring = dialog.querySelector(".import-progress-ring");
+    const percent = ring.querySelector("span");
+    const status = dialog.querySelector(".import-progress-status");
+    const detail = dialog.querySelector(".import-progress-detail");
+    openDialog(dialog);
+    return {
+      update(value, message, hint) {
+        const progress = Math.max(0, Math.min(100, Math.round(value)));
+        ring.style.setProperty("--progress", `${progress * 3.6}deg`);
+        percent.textContent = `${progress}%`;
+        if (message) status.textContent = message;
+        if (hint) detail.textContent = hint;
+      },
+      complete(message) {
+        ring.classList.add("is-complete");
+        ring.style.setProperty("--progress", "360deg");
+        percent.textContent = "\u2713";
+        status.textContent = message || "\u5BFC\u5165\u5B8C\u6210";
+        detail.textContent = "\u6B63\u5728\u5237\u65B0\u6570\u636E\u2026";
+      },
+      close() {
+        if (dialog.isConnected) closeDialog(dialog);
+      }
+    };
+  }
   function fileName() {
     const time = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
     return `\u5B89\u5BB6\u7B14\u8BB0\u5907\u4EFD-${time}.zip`;
@@ -4068,10 +4097,11 @@
       }))
     };
   }
-  async function restoreBrowserBackup(data, zip, mode) {
+  async function restoreBrowserBackup(data, zip, mode, progress) {
     const photosByRecord = /* @__PURE__ */ new Map();
     const images = [];
-    for (const photo of data.photos) {
+    const photoCount = Math.max(data.photos.length, 1);
+    for (const [index, photo] of data.photos.entries()) {
       if (!photo?.id || !photo?.recordId || !validPath(photo.archiveOriginalPath)) {
         throw new Error("\u5907\u4EFD\u56FE\u7247\u7D22\u5F15\u4E0D\u6B63\u786E");
       }
@@ -4090,6 +4120,7 @@
         sortOrder: Number(photo.sortOrder || 0)
       });
       photosByRecord.set(String(photo.recordId), refs);
+      progress.update(14 + (index + 1) / photoCount * 42, "\u6B63\u5728\u8BFB\u53D6\u5907\u4EFD\u56FE\u7247", `\u5DF2\u8BFB\u53D6 ${index + 1} / ${data.photos.length} \u5F20\u56FE\u7247`);
     }
     const records = data.records.map((record) => ({
       ...record,
@@ -4097,8 +4128,15 @@
         (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
       ))
     }));
-    if (mode === "replace") await clearBrowserImages();
-    for (const image of images) await putBrowserImage(image.id, image.blob);
+    if (mode === "replace") {
+      progress.update(58, "\u6B63\u5728\u6E05\u7406\u65E7\u6570\u636E", "\u6B63\u5728\u51C6\u5907\u6062\u590D\u5907\u4EFD");
+      await clearBrowserImages();
+    }
+    for (const [index, image] of images.entries()) {
+      await putBrowserImage(image.id, image.blob);
+      progress.update(58 + (index + 1) / photoCount * 27, "\u6B63\u5728\u4FDD\u5B58\u56FE\u7247", `\u5DF2\u4FDD\u5B58 ${index + 1} / ${images.length} \u5F20\u56FE\u7247`);
+    }
+    progress.update(88, "\u6B63\u5728\u4FDD\u5B58\u770B\u623F\u8BB0\u5F55", `\u6B63\u5728\u5199\u5165 ${records.length} \u6761\u8BB0\u5F55`);
     const existing = await window.NativeStore.getViewingRecords();
     await window.NativeStore.saveViewingRecords(mode === "merge" ? [...existing, ...records] : records);
     if (mode === "replace") {
@@ -4118,30 +4156,44 @@
         window.NativeStore.saveSchoolSaved("favorite", "school", school.favoriteSchool || [])
       ]);
     }
+    progress.update(97, "\u6B63\u5728\u6574\u7406\u6570\u636E", "\u5373\u5C06\u5B8C\u6210");
     return { records: records.length };
   }
   async function restoreBackup(mode) {
     const selected = await chooseBackup();
     if (!selected) return;
-    const zip = await import_jszip.default.loadAsync(selected.base64, { base64: true });
-    const manifestEntry = zip.file("manifest.json");
-    const dataEntry = zip.file("data/data.json");
-    if (!manifestEntry || !dataEntry) throw new Error("\u5907\u4EFD\u6587\u4EF6\u7F3A\u5C11\u5FC5\u8981\u6570\u636E");
-    const manifest = JSON.parse(await manifestEntry.async("text"));
-    if (manifest.format !== FORMAT || manifest.version !== VERSION) throw new Error("\u4E0D\u662F\u53EF\u8BC6\u522B\u7684\u5B8C\u6574\u5907\u4EFD\u6587\u4EF6");
-    let data = JSON.parse(await dataEntry.async("text"));
-    if (!Array.isArray(data.records) || !Array.isArray(data.photos)) throw new Error("\u5907\u4EFD\u6570\u636E\u683C\u5F0F\u4E0D\u6B63\u786E");
-    if (mode === "replace" && !confirm("\u8986\u76D6\u5BFC\u5165\u4F1A\u6E05\u7A7A\u5F53\u524D\u8BBE\u5907\u5185\u7684\u6240\u6709\u672C\u5730\u6570\u636E\uFF0C\u786E\u8BA4\u7EE7\u7EED\u5417\uFF1F")) return;
-    if (mode === "merge") data = await prepareIncrementalRecords(data);
-    if (!window.NativeStore.isNative()) {
-      const result = await restoreBrowserBackup(data, zip, mode);
-      toast(mode === "merge" ? `\u5DF2\u589E\u91CF\u5BFC\u5165 ${result.records} \u6761\u770B\u623F\u8BB0\u5F55\uFF0C\u9875\u9762\u5373\u5C06\u5237\u65B0\u3002` : `\u5DF2\u6062\u590D ${result.records} \u6761\u770B\u623F\u8BB0\u5F55\uFF0C\u9875\u9762\u5373\u5C06\u5237\u65B0\u3002`);
-      setTimeout(() => location.reload(), 700);
-      return;
-    }
-    const prefix = `viewings/restored-${Date.now()}`;
-    const written = [];
+    let progress;
+    let written = [];
     try {
+      progress = showImportProgress();
+      progress.update(4, "\u6B63\u5728\u8BFB\u53D6\u5907\u4EFD", "\u6B63\u5728\u6253\u5F00\u5907\u4EFD\u6587\u4EF6");
+      const zip = await import_jszip.default.loadAsync(selected.base64, { base64: true });
+      progress.update(9, "\u6B63\u5728\u6821\u9A8C\u5907\u4EFD", "\u6B63\u5728\u68C0\u67E5\u5907\u4EFD\u5185\u5BB9");
+      const manifestEntry = zip.file("manifest.json");
+      const dataEntry = zip.file("data/data.json");
+      if (!manifestEntry || !dataEntry) throw new Error("\u5907\u4EFD\u6587\u4EF6\u7F3A\u5C11\u5FC5\u8981\u6570\u636E");
+      const manifest = JSON.parse(await manifestEntry.async("text"));
+      if (manifest.format !== FORMAT || manifest.version !== VERSION) throw new Error("\u4E0D\u662F\u53EF\u8BC6\u522B\u7684\u5B8C\u6574\u5907\u4EFD\u6587\u4EF6");
+      let data = JSON.parse(await dataEntry.async("text"));
+      if (!Array.isArray(data.records) || !Array.isArray(data.photos)) throw new Error("\u5907\u4EFD\u6570\u636E\u683C\u5F0F\u4E0D\u6B63\u786E");
+      if (mode === "replace" && !confirm("\u8986\u76D6\u5BFC\u5165\u4F1A\u6E05\u7A7A\u5F53\u524D\u8BBE\u5907\u5185\u7684\u6240\u6709\u672C\u5730\u6570\u636E\uFF0C\u786E\u8BA4\u7EE7\u7EED\u5417\uFF1F")) {
+        progress.close();
+        return;
+      }
+      progress.update(12, "\u6B63\u5728\u51C6\u5907\u5BFC\u5165", `\u5171 ${data.records.length} \u6761\u8BB0\u5F55\u3001${data.photos.length} \u5F20\u56FE\u7247`);
+      if (mode === "merge") {
+        data = await prepareIncrementalRecords(data);
+        progress.update(14, "\u6B63\u5728\u51C6\u5907\u589E\u91CF\u5BFC\u5165", `\u5171 ${data.records.length} \u6761\u8BB0\u5F55\u3001${data.photos.length} \u5F20\u56FE\u7247`);
+      }
+      if (!window.NativeStore.isNative()) {
+        const result2 = await restoreBrowserBackup(data, zip, mode, progress);
+        progress.complete(mode === "merge" ? `\u5DF2\u589E\u91CF\u5BFC\u5165 ${result2.records} \u6761\u770B\u623F\u8BB0\u5F55` : `\u5DF2\u6062\u590D ${result2.records} \u6761\u770B\u623F\u8BB0\u5F55`);
+        setTimeout(() => location.reload(), 700);
+        return;
+      }
+      const prefix = `viewings/restored-${Date.now()}`;
+      const totalWrites = Math.max(data.photos.length * 2, 1);
+      let completedWrites = 0;
       for (const photo of data.photos) {
         if (!photo?.id || !photo?.recordId || !validPath(photo.archiveOriginalPath) || !validPath(photo.archiveThumbnailPath)) {
           throw new Error("\u5907\u4EFD\u56FE\u7247\u7D22\u5F15\u4E0D\u6B63\u786E");
@@ -4152,15 +4204,22 @@
         const base = `${prefix}/${photo.recordId}/${photo.id}`;
         photo.filePath = `${base}.original`;
         photo.thumbnailPath = `${base}.thumb.jpg`;
+        written.push({ filePath: photo.filePath, thumbnailPath: photo.thumbnailPath });
         await window.NativeStore.writePrivateFile(photo.filePath, await originalEntry.async("base64"));
+        completedWrites += 1;
+        progress.update(14 + completedWrites / totalWrites * 74, "\u6B63\u5728\u4FDD\u5B58\u56FE\u7247", `\u5DF2\u4FDD\u5B58 ${Math.ceil(completedWrites / 2)} / ${data.photos.length} \u5F20\u56FE\u7247`);
         await window.NativeStore.writePrivateFile(photo.thumbnailPath, await thumbnailEntry.async("base64"));
+        completedWrites += 1;
+        progress.update(14 + completedWrites / totalWrites * 74, "\u6B63\u5728\u4FDD\u5B58\u56FE\u7247", `\u5DF2\u4FDD\u5B58 ${Math.ceil(completedWrites / 2)} / ${data.photos.length} \u5F20\u56FE\u7247`);
         written.push(photo.filePath, photo.thumbnailPath);
       }
+      progress.update(90, "\u6B63\u5728\u4FDD\u5B58\u770B\u623F\u8BB0\u5F55", `\u6B63\u5728\u5199\u5165 ${data.records.length} \u6761\u8BB0\u5F55`);
       const result = mode === "merge" ? await window.NativeStore.mergeBackupData(data) : await window.NativeStore.restoreBackupData(data);
-      const message = mode === "merge" ? `\u5DF2\u589E\u91CF\u5BFC\u5165 ${result.records} \u6761\u770B\u623F\u8BB0\u5F55\uFF0C\u9875\u9762\u5373\u5C06\u5237\u65B0\u3002` : `\u5DF2\u6062\u590D ${data.records.length} \u6761\u770B\u623F\u8BB0\u5F55\uFF0C\u9875\u9762\u5373\u5C06\u5237\u65B0\u3002`;
-      toast(message);
+      progress.complete(mode === "merge" ? `\u5DF2\u589E\u91CF\u5BFC\u5165 ${result.records} \u6761\u770B\u623F\u8BB0\u5F55` : `\u5DF2\u6062\u590D ${data.records.length} \u6761\u770B\u623F\u8BB0\u5F55`);
     } catch (error) {
-      await Promise.all(written.map((path) => window.NativeStore.deleteViewingImage({ filePath: path, thumbnailPath: path })));
+      await Promise.all(written.map((image) => window.NativeStore.deleteViewingImage(image).catch(() => {
+      })));
+      progress?.close();
       throw error;
     }
     setTimeout(() => location.reload(), 700);
