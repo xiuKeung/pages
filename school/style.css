@@ -36,6 +36,7 @@ h1 { margin:0; font-size:30px; line-height:1.25; letter-spacing:.01em; }
 .school-group.middle .result-link { color:#c43225; }
 .search-row { display:flex; gap:8px; }
 input { min-width:0; flex:1; padding:12px; color:var(--ink); border:1px solid #bfc7d5; border-radius:9px; font:inherit; outline:none; }
+.search-row input[type="search"] { -webkit-appearance:none; appearance:none; background:#fff; }
 input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(21,94,239,.13); }
 button { padding:0 17px; color:#fff; background:var(--blue); border:0; border-radius:9px; font:inherit; font-weight:700; cursor:pointer; }
 .hint { margin:8px 0 0; color:var(--muted); font-size:13px; }

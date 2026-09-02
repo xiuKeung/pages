@@ -133,6 +133,11 @@
       $('priceFields').classList.toggle('hidden', !isAuto);
       if (type !== 'combined') {
         $('singleAmount').readOnly = isAuto;
+        const singleAmountClear = document.querySelector('[data-clear="singleAmount"]');
+        if (singleAmountClear) {
+          singleAmountClear.hidden = isAuto;
+          singleAmountClear.disabled = isAuto;
+        }
         $('singleLabel').textContent = isAuto ? '自动计算贷款金额' : (type === 'fund' ? '公积金贷款金额' : '贷款金额');
         if (isAuto) $('singleAmount').value = autoLoan;
       }
