@@ -6,7 +6,10 @@
     'https://zs.szft.gov.cn/visitftgbxyxqdt',
     'https://zs.szft.gov.cn/visitftgbcyxqdt'
   ]);
-  const defaultRemoteBase = 'https://xiukeung.github.io/school/';
+  // GitHub Pages is published from the repository's /pages directory, rather
+  // than from the domain root. Keep this explicit for native App WebViews,
+  // whose local capacitor:// origin cannot infer the public path.
+  const defaultRemoteBase = 'https://xiukeung.github.io/pages/school/';
   const rawGitHubDataUrl = 'https://raw.githubusercontent.com/xiuKeung/Pages/main/school/school-districts-official.json';
   const remoteBase = /^https?:$/.test(location.protocol)
     ? new URL('./', location.href).href
