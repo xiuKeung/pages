@@ -16,10 +16,8 @@
     const root = document.documentElement;
     root.dataset.theme = selected;
     root.style.colorScheme = selected === 'system' ? 'light dark' : selected;
-    const systemTheme = document.querySelector('link[data-theme-system]');
-    const darkTheme = document.querySelector('link[data-theme-dark]');
-    if (systemTheme) systemTheme.disabled = selected !== 'system';
-    if (darkTheme) darkTheme.disabled = selected !== 'dark';
+    // 主题样式始终加载；这里只设置状态，不再通过禁用整份 CSS 来切换主题。
+    // 这样输入尺寸、弹窗层级等基础规则不会因为用户选择浅色/深色而失效。
     syncNativeTheme(selected);
     document.dispatchEvent(new CustomEvent('anjia-theme-change', { detail: selected }));
     return selected;
