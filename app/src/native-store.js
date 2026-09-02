@@ -157,6 +157,25 @@ function browserJson(key, fallback) {
   }
 }
 
+function browserSchoolDatasetStore(mode, action) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('anjia-school-district-data-v1', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('dataset');
+    request.onerror = () => reject(request.error || new Error('无法打开学区数据缓存'));
+    request.onsuccess = () => {
+      const database = request.result;
+      const transaction = database.transaction('dataset', mode);
+      const store = transaction.objectStore('dataset');
+      let result;
+      try { result = action(store); }
+      catch (error) { database.close(); reject(error); return; }
+      transaction.oncomplete = () => { database.close(); resolve(result?.result); };
+      transaction.onerror = () => { database.close(); reject(transaction.error || result?.error); };
+      transaction.onabort = () => { database.close(); reject(transaction.error || new Error('学区数据缓存失败')); };
+    };
+  });
+}
+
 function isNative() {
   return Capacitor.isNativePlatform();
 }
@@ -299,6 +318,33 @@ async function saveSchoolSaved(type, mode, rows) {
     await connection.rollbackTransaction();
     throw error;
   }
+}
+
+async function getSchoolDistrictDataset() {
+  if (!isNative()) {
+    try { return await browserSchoolDatasetStore('readonly', store => store.get('current')); }
+    catch (_) { return null; }
+  }
+  const connection = await ready();
+  const result = await connection.query('SELECT value FROM app_json WHERE key = ?', ['school_district_dataset']);
+  try { return result.values?.[0]?.value ? JSON.parse(result.values[0].value) : null; }
+  catch (_) { return null; }
+}
+
+async function saveSchoolDistrictDataset(dataset) {
+  if (!dataset || !Array.isArray(dataset.schools)) throw new Error('学区数据格式不正确');
+  if (!isNative()) {
+    await browserSchoolDatasetStore('readwrite', store => store.put(dataset, 'current'));
+    return;
+  }
+  const connection = await ready();
+  const now = Date.now();
+  await connection.run(
+    `INSERT INTO app_json (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    ['school_district_dataset', JSON.stringify(dataset), now],
+    false
+  );
 }
 
 function clone(value) {
@@ -759,6 +805,8 @@ window.NativeStore = {
   saveMortgageCurrent,
   getSchoolSaved,
   saveSchoolSaved,
+  getSchoolDistrictDataset,
+  saveSchoolDistrictDataset,
   getViewingRecords,
   saveViewingRecords,
   deleteViewingRecord,

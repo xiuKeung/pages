@@ -2651,6 +2651,38 @@
       return fallback;
     }
   }
+  function browserSchoolDatasetStore(mode, action) {
+    return new Promise((resolve2, reject) => {
+      const request = indexedDB.open("anjia-school-district-data-v1", 1);
+      request.onupgradeneeded = () => request.result.createObjectStore("dataset");
+      request.onerror = () => reject(request.error || new Error("\u65E0\u6CD5\u6253\u5F00\u5B66\u533A\u6570\u636E\u7F13\u5B58"));
+      request.onsuccess = () => {
+        const database = request.result;
+        const transaction = database.transaction("dataset", mode);
+        const store = transaction.objectStore("dataset");
+        let result;
+        try {
+          result = action(store);
+        } catch (error) {
+          database.close();
+          reject(error);
+          return;
+        }
+        transaction.oncomplete = () => {
+          database.close();
+          resolve2(result?.result);
+        };
+        transaction.onerror = () => {
+          database.close();
+          reject(transaction.error || result?.error);
+        };
+        transaction.onabort = () => {
+          database.close();
+          reject(transaction.error || new Error("\u5B66\u533A\u6570\u636E\u7F13\u5B58\u5931\u8D25"));
+        };
+      };
+    });
+  }
   function isNative() {
     return Capacitor.isNativePlatform();
   }
@@ -2783,6 +2815,37 @@
       await connection.rollbackTransaction();
       throw error;
     }
+  }
+  async function getSchoolDistrictDataset() {
+    if (!isNative()) {
+      try {
+        return await browserSchoolDatasetStore("readonly", (store) => store.get("current"));
+      } catch (_) {
+        return null;
+      }
+    }
+    const connection = await ready();
+    const result = await connection.query("SELECT value FROM app_json WHERE key = ?", ["school_district_dataset"]);
+    try {
+      return result.values?.[0]?.value ? JSON.parse(result.values[0].value) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+  async function saveSchoolDistrictDataset(dataset) {
+    if (!dataset || !Array.isArray(dataset.schools)) throw new Error("\u5B66\u533A\u6570\u636E\u683C\u5F0F\u4E0D\u6B63\u786E");
+    if (!isNative()) {
+      await browserSchoolDatasetStore("readwrite", (store) => store.put(dataset, "current"));
+      return;
+    }
+    const connection = await ready();
+    const now = Date.now();
+    await connection.run(
+      `INSERT INTO app_json (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      ["school_district_dataset", JSON.stringify(dataset), now],
+      false
+    );
   }
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -3301,6 +3364,8 @@
     saveMortgageCurrent,
     getSchoolSaved,
     saveSchoolSaved,
+    getSchoolDistrictDataset,
+    saveSchoolDistrictDataset,
     getViewingRecords,
     saveViewingRecords,
     deleteViewingRecord,

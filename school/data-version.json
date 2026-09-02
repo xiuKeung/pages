@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": 1787567061568,
+  "exportedAt": "2026-08-24T10:24:21.565Z",
+  "dataUrl": "school-districts-official.json",
+  "sources": [
+    "https://nszs.szns.gov.cn/visitnsgbxyxqdt",
+    "https://nszs.szns.gov.cn/visitnsgbcyxqdt",
+    "https://zs.szft.gov.cn/visitftgbxyxqdt",
+    "https://zs.szft.gov.cn/visitftgbcyxqdt"
+  ]
+}

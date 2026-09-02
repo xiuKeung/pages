@@ -101,6 +101,7 @@ function writeOutputs(schools) {
   };
   const jsonPath = path.join(directory, 'school-districts-official.json');
   const jsPath = path.join(directory, 'official-district-data.js');
+  const versionPath = path.join(directory, 'data-version.json');
   const js = [
     '/* 由 sync-official-data.js 自动生成；来源仅限四张官方学区图。 */',
     'globalThis.NanshanDistrictData = ' + JSON.stringify(mobile) + ';',
@@ -110,8 +111,16 @@ function writeOutputs(schools) {
 
   fs.writeFileSync(jsonPath + '.tmp', JSON.stringify(raw), 'utf8');
   fs.writeFileSync(jsPath + '.tmp', js, 'utf8');
+  fs.writeFileSync(versionPath + '.tmp', JSON.stringify({
+    schemaVersion: 1,
+    updatedAt: raw.updatedAt,
+    exportedAt: raw.exportedAt,
+    dataUrl: 'school-districts-official.json',
+    sources: raw.sources
+  }, null, 2), 'utf8');
   fs.renameSync(jsonPath + '.tmp', jsonPath);
   fs.renameSync(jsPath + '.tmp', jsPath);
+  fs.renameSync(versionPath + '.tmp', versionPath);
 
   const links = schools.reduce((count, school) => count + school.homes.length, 0);
   console.log('\n同步完成。');
@@ -119,6 +128,7 @@ function writeOutputs(schools) {
   console.log('学校—小区关联：' + links + ' 条');
   console.log('已更新：school-districts-official.json');
   console.log('已更新：official-district-data.js');
+  console.log('已更新：data-version.json');
 }
 
 (async () => {

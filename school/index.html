@@ -76,6 +76,7 @@
       <p id="data-summary">正在读取官方数据快照…</p>
       <p id="snapshot-time">更新时间加载中</p>
       <p id="data-stale" hidden></p>
+      <button id="check-data-update" class="install-app" type="button">检查数据更新</button>
       <p>数据来源见下方四张官方学区图。</p>
       <button id="install-app" class="install-app" type="button" hidden>添加到主屏幕</button>
     </section>
@@ -90,6 +91,7 @@
   </main>
   <script src="official-district-data.js"></script>
   <script src="../shared/native-store.js"></script>
+  <script src="data-loader.js"></script>
   <script src="app.js"></script>
   <script>document.querySelector('[data-back]')?.addEventListener('click', event => { if (history.length > 1) { event.preventDefault(); history.back(); } });</script>
 </body>

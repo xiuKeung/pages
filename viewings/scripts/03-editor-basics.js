@@ -47,9 +47,11 @@
     panel.hidden = true;
     field.append(panel);
 
-    const officialNames = [...new Set(
-      (globalThis.NanshanDistrictData?.schools || []).flatMap(school => school.homes || [])
-    )].filter(Boolean);
+    let officialNames = [];
+    const refreshOfficialNames = data => {
+      officialNames = [...new Set((data?.schools || []).flatMap(school => school.homes || []))].filter(Boolean);
+    };
+    refreshOfficialNames(globalThis.NanshanDistrictData);
     const normalize = value => String(value).replace(/[\s（）()]/g, '').toLowerCase();
     const names = () => [...new Set([
       ...officialNames,
@@ -83,6 +85,8 @@
     input.addEventListener('input', show);
     input.addEventListener('focus', show);
     input.addEventListener('blur', () => setTimeout(hide, 160));
+    globalThis.SchoolDistrictDataReady?.then(refreshOfficialNames);
+    window.addEventListener('schooldistrictdataupdated', event => refreshOfficialNames(event.detail));
   })();
 
 /* 模块 6：由原 index.html 内联脚本迁移。 */
@@ -119,8 +123,13 @@
     const primaryInput = addSchoolField('primarySchools', '小学（自动匹配，可修改）');
     const middleInput = addSchoolField('middleSchools', '中学（自动匹配，可修改）');
     const normalize = value => String(value || '').replace(/[\s（）()]/g, '').toLowerCase();
-    const schools = globalThis.NanshanDistrictData?.schools || [];
-    const homes = [...new Set(schools.flatMap(school => school.homes || []).filter(Boolean))];
+    let schools = [];
+    let homes = [];
+    const refreshDataset = data => {
+      schools = data?.schools || [];
+      homes = [...new Set(schools.flatMap(school => school.homes || []).filter(Boolean))];
+    };
+    refreshDataset(globalThis.NanshanDistrictData);
 
     const relatedHomes = query => {
       const key = normalize(query);
@@ -211,6 +220,14 @@
       if (event.target.closest('.community-suggestion')) setTimeout(updateSchools, 0);
     });
     new MutationObserver(updateRecordCards).observe(document.getElementById('records'), { childList: true });
+    globalThis.SchoolDistrictDataReady?.then(data => {
+      refreshDataset(data);
+      updateRecordCards();
+    });
+    window.addEventListener('schooldistrictdataupdated', event => {
+      refreshDataset(event.detail);
+      updateRecordCards();
+    });
     updateSchools();
     updateRecordCards();
   })();

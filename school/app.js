@@ -11,6 +11,7 @@ globalThis.SchoolDistrictDataReady.then(async () => {
   const snapshotTime = document.querySelector('#snapshot-time');
   const dataSummary = document.querySelector('#data-summary');
   const staleMessage = document.querySelector('#data-stale');
+  const dataUpdateButton = document.querySelector('#check-data-update');
   const districtFilter = document.querySelector('#filter-district');
   const levelFilter = document.querySelector('#filter-level');
   const installButton = document.querySelector('#install-app');
@@ -18,18 +19,25 @@ globalThis.SchoolDistrictDataReady.then(async () => {
   const savedFavoriteButton = document.querySelector('#saved-favorite');
   const clearSavedButton = document.querySelector('#clear-saved');
   const savedList = document.querySelector('#saved-list');
-  const schools = globalThis.NanshanDistrictData?.schools || [];
+  let schools = [];
   const loadError = globalThis.NanshanDistrictData?.loadError;
   const normalize = value => String(value || '').replace(/[\s（）()·、，,.-]/g, '').replace(/(小区|花园|广场|名苑|住宅楼)$/g, '').toLowerCase();
   const escape = value => String(value || '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char]);
 
-  const allHomes = [...new Set(schools.flatMap(school => school.homes || []))];
-  const allSchools = [...new Map(schools.map(school => [
-    `${school.district}|${school.level}|${school.name}`, school
-  ])).values()];
-  const schoolByKey = new Map(allSchools.map(school => [
-    `${school.district}|${school.level}|${school.name}`, school
-  ]));
+  let allHomes = [];
+  let allSchools = [];
+  let schoolByKey = new Map();
+  function applyDataset(data) {
+    schools = data?.schools || [];
+    allHomes = [...new Set(schools.flatMap(school => school.homes || []))];
+    allSchools = [...new Map(schools.map(school => [
+      `${school.district}|${school.level}|${school.name}`, school
+    ])).values()];
+    schoolByKey = new Map(allSchools.map(school => [
+      `${school.district}|${school.level}|${school.name}`, school
+    ]));
+  }
+  applyDataset(globalThis.NanshanDistrictData);
   let mode = 'community';
   const modeState = { community: { value: '' }, school: { value: '' } };
   let savedPanel = 'recent';
@@ -439,21 +447,56 @@ globalThis.SchoolDistrictDataReady.then(async () => {
     renderSuggestions();
   });
   input.addEventListener('blur', () => setTimeout(hideSuggestions, 160));
-  const officialData = globalThis.NanshanDistrictData || {};
-  const timestamp = officialData.exportedAt || officialData.updatedAt;
-  if (timestamp) {
+  function refreshDataInfo(data = globalThis.NanshanDistrictData || {}) {
+    const timestamp = data.exportedAt || data.updatedAt;
+    staleMessage.hidden = true;
     const date = new Date(timestamp);
-    snapshotTime.textContent = '更新时间：' + date.getFullYear() + ' 年 ' + (date.getMonth() + 1) + ' 月 ' + date.getDate() + ' 日';
-    const ageDays = Math.floor((Date.now() - date.getTime()) / 86_400_000);
-    if (ageDays > 90) {
-      staleMessage.hidden = false;
-      staleMessage.textContent = '该快照已超过 ' + ageDays + ' 天，建议重新同步官方数据。';
+    if (!Number.isNaN(date.getTime())) {
+      snapshotTime.textContent = '更新时间：' + date.getFullYear() + ' 年 ' + (date.getMonth() + 1) + ' 月 ' + date.getDate() + ' 日';
+      const ageDays = Math.floor((Date.now() - date.getTime()) / 86_400_000);
+      if (ageDays > 90) {
+        staleMessage.hidden = false;
+        staleMessage.textContent = '该快照已超过 ' + ageDays + ' 天，建议检查数据更新。';
+      }
     }
+    const associationCount = schools.reduce((count, school) => count + (school.homes || []).length, 0);
+    dataSummary.textContent = '当前快照包含 ' + schools.length + ' 所学校、' + associationCount + ' 条学校—小区官方关联。';
   }
-  const associationCount = schools.reduce((count, school) => count + (school.homes || []).length, 0);
-  dataSummary.textContent = '当前快照包含 ' + schools.length + ' 所学校、' + associationCount + ' 条学校—小区官方关联。';
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    navigator.serviceWorker.register('./sw.js').catch(error => console.warn('离线缓存注册失败：', error));
+  refreshDataInfo();
+  window.addEventListener('schooldistrictdataupdated', event => {
+    applyDataset(event.detail);
+    refreshDataInfo(event.detail);
+    renderSuggestions();
+    if (input.value.trim()) search();
+  });
+  window.addEventListener('schooldistrictdatastatus', event => {
+    if (!dataUpdateButton) return;
+    const { state, manual } = event.detail || {};
+    if (state === 'checking') {
+      dataUpdateButton.disabled = true;
+      dataUpdateButton.textContent = '正在检查更新…';
+    } else if (state === 'updated') {
+      dataUpdateButton.disabled = false;
+      dataUpdateButton.textContent = '数据已更新';
+      if (manual) setTimeout(() => { dataUpdateButton.textContent = '检查数据更新'; }, 2400);
+    } else if (state === 'current') {
+      dataUpdateButton.disabled = false;
+      dataUpdateButton.textContent = '已是最新数据';
+      if (manual) setTimeout(() => { dataUpdateButton.textContent = '检查数据更新'; }, 2400);
+    } else if (state === 'failed') {
+      dataUpdateButton.disabled = false;
+      dataUpdateButton.textContent = '检查更新失败';
+      if (manual) setTimeout(() => { dataUpdateButton.textContent = '检查数据更新'; }, 2400);
+    }
+  });
+  dataUpdateButton?.addEventListener('click', () => globalThis.SchoolDistrictData?.checkForUpdate({ manual: true }));
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(registrations => Promise.all(registrations
+      .filter(registration => new URL(registration.scope).pathname.includes('/school/'))
+      .map(registration => registration.unregister())))
+      .then(() => globalThis.caches?.keys?.())
+      .then(keys => Promise.all((keys || []).filter(key => key.startsWith('sz-school-district-')).map(key => globalThis.caches.delete(key))))
+      .catch(error => console.warn('旧学区缓存清理失败：', error));
   }
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
