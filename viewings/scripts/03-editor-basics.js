@@ -189,7 +189,8 @@
     document.addEventListener('click', event => {
       if (event.target.closest('#add')) {
         setTimeout(() => {
-          restoreEditorPosition();
+          // 新增时编辑器仍回到列表前，但保留由下面编辑状态逻辑设置的灰显效果。
+          editorAnchor.after(editor);
           primaryInput.value = '';
           middleInput.value = '';
         }, 0);
@@ -377,6 +378,15 @@
       if (field) field.value = value ?? '';
     };
     document.addEventListener('click', event => {
+      if (event.target.closest('#add')) {
+        const recordsNode = document.getElementById('records');
+        recordsNode?.classList.add('is-editing-active');
+        document.querySelectorAll('#records .record').forEach(card => {
+          card.classList.remove('is-editing');
+          card.classList.add('is-muted');
+        });
+        return;
+      }
       const button = event.target.closest('[data-edit]');
       if (!button) return;
       event.preventDefault();

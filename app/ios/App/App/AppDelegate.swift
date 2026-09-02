@@ -67,8 +67,30 @@ class PhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
 }
 
 class MainViewController: CAPBridgeViewController {
+    private let pageBackground = UIColor { traits in
+        if traits.userInterfaceStyle == .dark {
+            return UIColor(red: 16.0 / 255.0,
+                           green: 24.0 / 255.0,
+                           blue: 40.0 / 255.0,
+                           alpha: 1.0)
+        }
+        return UIColor(red: 245.0 / 255.0,
+                       green: 248.0 / 255.0,
+                       blue: 252.0 / 255.0,
+                       alpha: 1.0)
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // 页面切换的短暂空档使用应用底色，避免 WKWebView 露出黑屏。
+        view.backgroundColor = pageBackground
+    }
+
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(PhotoLibraryPlugin())
+        bridge?.webView?.isOpaque = false
+        bridge?.webView?.backgroundColor = pageBackground
+        bridge?.webView?.scrollView.backgroundColor = pageBackground
     }
 }
 

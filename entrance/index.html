@@ -15,7 +15,8 @@
     :root { color-scheme: light; --blue:#1769e0; --ink:#17233b; --muted:#667085; --line:#e6edf8; }
     * { box-sizing:border-box; }
     body { margin:0; min-height:100vh; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; color:var(--ink); background:linear-gradient(145deg,#eef5ff 0%,#f8fbff 46%,#f1f6ff 100%); }
-    main { width:min(720px,calc(100% - 40px)); margin:0 auto; padding:74px 0 48px; }
+    main { position:relative; width:min(720px,calc(100% - 40px)); margin:0 auto; padding:74px 0 48px; }
+    .settings-button { position:absolute; top:26px; right:0; display:grid; width:38px; height:38px; min-height:0; padding:0; place-items:center; border:1px solid var(--line); border-radius:11px; color:var(--muted); background:rgba(255,255,255,.75); font-size:30px; line-height:1; cursor:pointer; }
     .eyebrow { margin:0 0 12px; color:var(--blue); font-size:14px; font-weight:700; letter-spacing:.08em; }
     h1 { margin:0; font-size:clamp(30px,7vw,44px); line-height:1.18; letter-spacing:-.04em; }
     .intro { margin:18px 0 34px; color:var(--muted); font-size:16px; line-height:1.7; }
@@ -27,11 +28,25 @@
     .tool h2 { margin:0 0 6px; font-size:21px; }
     .tool p { margin:0; color:var(--muted); font-size:14px; line-height:1.55; }
     footer { margin-top:32px; color:#8a96a9; font-size:13px; text-align:center; }
-    @media (max-width:480px) { main{ width:min(100% - 28px,720px); padding-top:48px; } .tool{ padding:18px; gap:14px; } .icon{ flex-basis:54px; width:54px; height:54px; font-size:38px; } .tool:first-child .icon{font-size:46px;} }
+    .settings-dialog { position:fixed; z-index:20; inset:0; display:grid; place-items:center; padding:20px; background:rgba(16,24,40,.42); }
+    .settings-dialog[hidden] { display:none; }
+    .settings-panel { width:min(100%,360px); padding:18px; border:1px solid var(--line); border-radius:18px; color:var(--ink); background:#fff; box-shadow:0 20px 50px rgba(16,24,40,.22); }
+    .settings-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .settings-head h2 { margin:0; font-size:18px; }
+    .settings-head button { width:30px; height:30px; min-height:0; padding:0; border:0; color:var(--muted); background:transparent; font-size:24px; line-height:1; cursor:pointer; }
+    .settings-panel > p { margin:19px 0 9px; color:var(--muted); font-size:14px; }
+    .theme-options { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .theme-options button { min-height:38px; padding:7px 6px; border:1px solid var(--line); border-radius:9px; color:var(--muted); background:#f6f8fc; font:inherit; font-size:14px; cursor:pointer; }
+    .theme-options button.is-active { border-color:#84adff; color:var(--blue); background:#eff6ff; font-weight:700; }
+    @media (max-width:480px) { main{ width:min(100% - 28px,720px); padding-top:48px; } .settings-button{top:14px;} .tool{ padding:18px; gap:14px; } .icon{ flex-basis:54px; width:54px; height:54px; font-size:38px; } .tool:first-child .icon{font-size:46px;} }
   </style>
+  <link rel="stylesheet" href="../shared/theme.css" data-theme-system>
+  <link rel="stylesheet" href="../shared/theme-dark.css" data-theme-dark disabled>
+  <script src="../shared/theme.js"></script>
 </head>
 <body>
   <main>
+    <button class="settings-button" id="themeSettings" type="button" aria-label="外观设置" title="外观设置">⚙</button>
     <p class="eyebrow">ANJIA NOTE</p>
     <h1>安家笔记</h1>
     <p class="intro">把学区、贷款、看房记录与购房流程放在一起。</p>
@@ -55,5 +70,41 @@
     </section>
     <footer>版本 v2026.09.01.3</footer>
   </main>
+  <div class="settings-dialog" id="themeDialog" hidden>
+    <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="themeDialogTitle">
+      <div class="settings-head"><h2 id="themeDialogTitle">外观设置</h2><button id="closeThemeSettings" type="button" aria-label="关闭设置">×</button></div>
+      <p>夜间模式</p>
+      <div class="theme-options" role="radiogroup" aria-label="夜间模式">
+        <button type="button" data-theme-option="system" role="radio">系统</button>
+        <button type="button" data-theme-option="dark" role="radio">深色</button>
+        <button type="button" data-theme-option="light" role="radio">浅色</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    (() => {
+      const dialog = document.getElementById('themeDialog');
+      const open = document.getElementById('themeSettings');
+      const close = document.getElementById('closeThemeSettings');
+      const options = [...document.querySelectorAll('[data-theme-option]')];
+      const render = () => {
+        const selected = window.AnjiaTheme?.get?.() || 'system';
+        options.forEach(option => {
+          const active = option.dataset.themeOption === selected;
+          option.classList.toggle('is-active', active);
+          option.setAttribute('aria-checked', String(active));
+        });
+      };
+      const closeDialog = () => { dialog.hidden = true; };
+      open?.addEventListener('click', () => { render(); dialog.hidden = false; });
+      close?.addEventListener('click', closeDialog);
+      dialog?.addEventListener('click', event => { if (event.target === dialog) closeDialog(); });
+      options.forEach(option => option.addEventListener('click', () => {
+        window.AnjiaTheme?.set(option.dataset.themeOption);
+        render();
+      }));
+      render();
+    })();
+  </script>
 </body>
 </html>

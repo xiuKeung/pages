@@ -1,4 +1,4 @@
-import { cp, mkdir, rm } from 'node:fs/promises';
+import { copyFile, cp, mkdir, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
@@ -10,6 +10,7 @@ const bundleDir = join(appRoot, 'dist');
 const websiteSharedDir = join(webSourceRoot, 'shared');
 const siteDirectories = ['entrance', 'school', 'calculator', 'viewings', 'checklist'];
 const bundles = ['native-store', 'checklist-page', 'backup-page'];
+const sharedStaticFiles = ['theme.css', 'theme-dark.css', 'theme.js'];
 
 await rm(bundleDir, { recursive: true, force: true });
 await mkdir(bundleDir, { recursive: true });
@@ -23,10 +24,12 @@ await build({
 });
 await rm(websiteSharedDir, { recursive: true, force: true });
 await cp(bundleDir, websiteSharedDir, { recursive: true });
+await Promise.all(sharedStaticFiles.map(name => copyFile(join(appRoot, 'src', name), join(websiteSharedDir, name))));
 await rm(outputDir, { recursive: true, force: true });
 await mkdir(outputDir, { recursive: true });
 await cp(join(appRoot, 'index.html'), join(outputDir, 'index.html'));
 await cp(bundleDir, join(outputDir, 'shared'), { recursive: true });
+await Promise.all(sharedStaticFiles.map(name => copyFile(join(appRoot, 'src', name), join(outputDir, 'shared', name))));
 
 for (const directory of siteDirectories) {
   await cp(join(webSourceRoot, directory), join(outputDir, directory), { recursive: true });
