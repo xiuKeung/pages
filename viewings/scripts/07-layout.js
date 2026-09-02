@@ -89,7 +89,6 @@
     const landmarkInput = document.createElement('textarea');
     landmarkInput.id = 'nearbyLandmark';
     landmarkInput.name = 'nearbyLandmark';
-    landmarkInput.placeholder = '如：万象天地步行 8 分钟';
     landmark.append(landmarkInput);
     notesLabel.before(landmark);
 

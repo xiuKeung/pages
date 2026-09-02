@@ -22,7 +22,7 @@
     input.id = 'building';
     input.name = 'building';
     input.type = 'text';
-    input.placeholder = '1栋10A';
+    input.placeholder = '如：1栋10A';
     label.append(input);
     viewedAt.closest('label')?.after(label);
 
