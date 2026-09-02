@@ -3802,6 +3802,7 @@
     window.scrollTo(0, top);
   }
   function openDialog(dialog) {
+    document.activeElement?.blur?.();
     lockPageScroll();
     document.body.append(dialog);
   }
@@ -4057,7 +4058,9 @@
       dialog.className = "backup-mode-dialog backup-record-dialog";
       dialog.innerHTML = `<div class="backup-mode-panel backup-record-picker" role="dialog" aria-modal="true" aria-label="\u9009\u62E9\u8981\u5BFC\u51FA\u7684\u8BB0\u5F55"><h3>\u9009\u62E9\u8981\u5BFC\u51FA\u7684\u8BB0\u5F55</h3><p>\u4EC5\u5BFC\u51FA\u6240\u9009\u8BB0\u5F55\u53CA\u5176\u56FE\u7247\u3002</p><div class="backup-record-list">${records.map((record) => {
         const [label, kind] = priority(record.priority);
-        return `<label><input type="checkbox" value="${String(record.id).replace(/&/g, "&amp;").replace(/"/g, "&quot;")}"><span class="backup-record-info"><b>${String(record.community || "\u672A\u547D\u540D\u5C0F\u533A").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</b><span><i class="badge ${kind}">${label}</i><small>\u770B\u623F\uFF1A${String(record.viewedAt || "\u672A\u586B\u5199").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</small></span></span></label>`;
+        const esc = (value) => String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        const building = record.building ? ` \xB7 ${esc(record.building)}` : "";
+        return `<label><input type="checkbox" value="${esc(record.id)}"><span class="backup-record-info"><b>${esc(record.community || "\u672A\u547D\u540D\u5C0F\u533A")}${building}</b><span><i class="badge ${kind}">${label}</i><small>\u770B\u623F\uFF1A${esc(record.viewedAt || "\u672A\u586B\u5199")}</small></span></span></label>`;
       }).join("")}</div><button type="button" class="primary" data-export-selected disabled>\u5BFC\u51FA 0 \u6761\u8BB0\u5F55</button><button type="button" class="cancel" data-cancel>\u53D6\u6D88</button></div>`;
       const button = dialog.querySelector("[data-export-selected]");
       const update = () => {
@@ -4227,6 +4230,7 @@
   document.getElementById("export")?.addEventListener("click", async (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
+    event.currentTarget?.blur?.();
     try {
       const mode = await chooseExportMode();
       if (!mode) return;
@@ -4258,6 +4262,7 @@
   document.getElementById("importButton")?.addEventListener("click", async (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
+    event.currentTarget?.blur?.();
     try {
       const mode = await chooseImportMode();
       if (!mode) return;

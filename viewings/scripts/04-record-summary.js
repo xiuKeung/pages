@@ -29,7 +29,7 @@
           ? `${format(Number(record.targetPrice) / Number(record.area))} 万/㎡`
           : '';
         const detail = [
-          record.area && `${format(record.area)}㎡`, record.layout, record.orientation, buildingFloor,
+          buildingFloor, record.area && `${format(record.area)}㎡`, record.layout, record.orientation,
           record.targetPrice && `报价 ${format(record.targetPrice)}万`, unit
         ].filter(Boolean);
         const meta = card.querySelector('.record-top .meta');
@@ -146,7 +146,9 @@
       const cards = [...document.querySelectorAll('#records .record')];
       const current = button.closest('.record');
       const index = cards.indexOf(current);
-      const nearby = index >= 0 ? (cards[index + 1] || cards[index - 1]) : null;
+      // 列表由新到旧显示，顶部的序号最大。删除“记录 N”后，
+      // 上一张卡会补位成为新的“记录 N”，因此优先保留该位置。
+      const nearby = index >= 0 ? (cards[index - 1] || cards[index + 1]) : null;
       const targetId = nearby?.querySelector('[data-edit]')?.dataset.edit || '';
       sessionStorage.setItem(deletePositionKey, JSON.stringify({ targetId }));
     };
@@ -155,12 +157,20 @@
       try { position = JSON.parse(sessionStorage.getItem(deletePositionKey) || 'null'); }
       catch (_) { position = null; }
       if (!position) return;
-      sessionStorage.removeItem(deletePositionKey);
       const target = [...document.querySelectorAll('#records .record')].find(card =>
         String(card.querySelector('[data-edit]')?.dataset.edit) === String(position.targetId)
       );
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      else window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (target) {
+        sessionStorage.removeItem(deletePositionKey);
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      // App 重载时会短暂经历空容器；此时不能提前清除目标。
+      // 只有真实渲染出“无记录”状态，才说明没有可保留的位置。
+      if (document.querySelector('#records .empty')) {
+        sessionStorage.removeItem(deletePositionKey);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     };
     new MutationObserver(restoreDeletePosition).observe(document.getElementById('records'), { childList: true });
     window.addEventListener('load', restoreDeletePosition);

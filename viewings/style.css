@@ -545,3 +545,35 @@
     html[data-theme="dark"] .import-progress-ring.is-complete { background: #32d583; }
     html[data-theme="dark"] .import-progress-ring span { color: #84adff; }
     html[data-theme="dark"] .import-progress-ring.is-complete span { color: #32d583; }
+
+    /* 备份弹窗打开时，iOS 不应把触摸高亮透过遮罩显示在触发按钮上。 */
+    .toolbar-actions #export,
+    .toolbar-actions #importButton,
+    .backup-mode-dialog { -webkit-tap-highlight-color: transparent; }
+    .backup-mode-dialog { isolation:isolate; touch-action:none; }
+    .backup-mode-panel,.backup-record-picker .backup-record-list { touch-action:manipulation; }
+
+    /* 备份相关弹窗跟随“系统 / 深色”主题；显式浅色模式不受系统深色影响。 */
+    html[data-theme="dark"] .backup-mode-panel,
+    html[data-theme="dark"] .import-progress-panel { color: #f2f4f7; background: #1d2939; box-shadow: 0 18px 48px rgba(0,0,0,.45); }
+    html[data-theme="dark"] .backup-mode-panel p { color: #b8c4d6; }
+    html[data-theme="dark"] .backup-mode-panel .cancel { color: #b8c4d6; }
+    html[data-theme="dark"] .backup-mode-panel .backup-record-list { border-color: #475467; background: #182536; }
+    html[data-theme="dark"] .backup-record-picker .backup-record-list label { color: #f2f4f7; border-bottom-color: #475467; }
+    html[data-theme="dark"] .backup-record-picker .backup-record-info small { color: #b8c4d6; }
+    html[data-theme="dark"] .backup-mode-panel .danger { color: #fda29b; border-color: #854a54; background: #3a2025; }
+    html[data-theme="dark"] .import-progress-ring { background: conic-gradient(#84adff var(--progress), #344054 0); }
+    html[data-theme="dark"] .import-progress-ring::before { background: #1d2939; }
+
+    @media (prefers-color-scheme: dark) {
+      html[data-theme="system"] .backup-mode-panel,
+      html[data-theme="system"] .import-progress-panel { color: #f2f4f7; background: #1d2939; box-shadow: 0 18px 48px rgba(0,0,0,.45); }
+      html[data-theme="system"] .backup-mode-panel p { color: #b8c4d6; }
+      html[data-theme="system"] .backup-mode-panel .cancel { color: #b8c4d6; }
+      html[data-theme="system"] .backup-mode-panel .backup-record-list { border-color: #475467; background: #182536; }
+      html[data-theme="system"] .backup-record-picker .backup-record-list label { color: #f2f4f7; border-bottom-color: #475467; }
+      html[data-theme="system"] .backup-record-picker .backup-record-info small { color: #b8c4d6; }
+      html[data-theme="system"] .backup-mode-panel .danger { color: #fda29b; border-color: #854a54; background: #3a2025; }
+      html[data-theme="system"] .import-progress-ring { background: conic-gradient(#84adff var(--progress), #344054 0); }
+      html[data-theme="system"] .import-progress-ring::before { background: #1d2939; }
+    }

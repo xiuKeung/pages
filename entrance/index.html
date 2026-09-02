@@ -31,6 +31,8 @@
     footer { margin-top:32px; color:#8a96a9; font-size:13px; text-align:center; }
     .settings-dialog { position:fixed; z-index:20; inset:0; display:grid; place-items:center; padding:20px; background:rgba(16,24,40,.42); }
     .settings-dialog[hidden] { display:none; }
+    .settings-dialog { overscroll-behavior:contain; touch-action:none; }
+    .settings-panel { touch-action:manipulation; }
     .settings-panel { width:min(100%,360px); padding:18px; border:1px solid var(--line); border-radius:18px; color:var(--ink); background:#fff; box-shadow:0 20px 50px rgba(16,24,40,.22); }
     .settings-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .settings-head h2 { margin:0; font-size:18px; }
@@ -87,6 +89,23 @@
       const open = document.getElementById('themeSettings');
       const close = document.getElementById('closeThemeSettings');
       const options = [...document.querySelectorAll('[data-theme-option]')];
+      let scrollLock = null;
+      const lockScroll = () => {
+        if (scrollLock) return;
+        const top = window.scrollY;
+        const body = document.body;
+        scrollLock = { top, position:body.style.position, topStyle:body.style.top, left:body.style.left, right:body.style.right, width:body.style.width, overflow:body.style.overflow, rootOverflow:document.documentElement.style.overflow };
+        Object.assign(body.style, { position:'fixed', top:`-${top}px`, left:'0', right:'0', width:'100%', overflow:'hidden' });
+        document.documentElement.style.overflow = 'hidden';
+      };
+      const unlockScroll = () => {
+        if (!scrollLock) return;
+        const { top, position, topStyle, left, right, width, overflow, rootOverflow } = scrollLock;
+        Object.assign(document.body.style, { position, top:topStyle, left, right, width, overflow });
+        document.documentElement.style.overflow = rootOverflow;
+        scrollLock = null;
+        window.scrollTo(0, top);
+      };
       const render = () => {
         const selected = window.AnjiaTheme?.get?.() || 'system';
         options.forEach(option => {
@@ -95,8 +114,8 @@
           option.setAttribute('aria-checked', String(active));
         });
       };
-      const closeDialog = () => { dialog.hidden = true; };
-      open?.addEventListener('click', () => { render(); dialog.hidden = false; });
+      const closeDialog = () => { dialog.hidden = true; unlockScroll(); };
+      open?.addEventListener('click', () => { render(); lockScroll(); dialog.hidden = false; });
       close?.addEventListener('click', closeDialog);
       dialog?.addEventListener('click', event => { if (event.target === dialog) closeDialog(); });
       options.forEach(option => option.addEventListener('click', () => {

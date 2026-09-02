@@ -45,6 +45,7 @@ function unlockPageScroll() {
   window.scrollTo(0, top);
 }
 function openDialog(dialog) {
+  document.activeElement?.blur?.();
   lockPageScroll();
   document.body.append(dialog);
 }
@@ -274,7 +275,7 @@ async function chooseRecordsForExport() {
   return new Promise(resolve => {
     const dialog = document.createElement('div');
     dialog.className = 'backup-mode-dialog backup-record-dialog';
-    dialog.innerHTML = `<div class="backup-mode-panel backup-record-picker" role="dialog" aria-modal="true" aria-label="选择要导出的记录"><h3>选择要导出的记录</h3><p>仅导出所选记录及其图片。</p><div class="backup-record-list">${records.map(record => { const [label, kind] = priority(record.priority); return `<label><input type="checkbox" value="${String(record.id).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"><span class="backup-record-info"><b>${String(record.community || '未命名小区').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</b><span><i class="badge ${kind}">${label}</i><small>看房：${String(record.viewedAt || '未填写').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</small></span></span></label>`; }).join('')}</div><button type="button" class="primary" data-export-selected disabled>导出 0 条记录</button><button type="button" class="cancel" data-cancel>取消</button></div>`;
+    dialog.innerHTML = `<div class="backup-mode-panel backup-record-picker" role="dialog" aria-modal="true" aria-label="选择要导出的记录"><h3>选择要导出的记录</h3><p>仅导出所选记录及其图片。</p><div class="backup-record-list">${records.map(record => { const [label, kind] = priority(record.priority); const esc = value => String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); const building = record.building ? ` · ${esc(record.building)}` : ''; return `<label><input type="checkbox" value="${esc(record.id)}"><span class="backup-record-info"><b>${esc(record.community || '未命名小区')}${building}</b><span><i class="badge ${kind}">${label}</i><small>看房：${esc(record.viewedAt || '未填写')}</small></span></span></label>`; }).join('')}</div><button type="button" class="primary" data-export-selected disabled>导出 0 条记录</button><button type="button" class="cancel" data-cancel>取消</button></div>`;
     const button = dialog.querySelector('[data-export-selected]');
     const update = () => {
       const count = dialog.querySelectorAll('input:checked').length;
@@ -445,6 +446,7 @@ async function restoreBackup(mode) {
 document.getElementById('export')?.addEventListener('click', async event => {
   event.preventDefault();
   event.stopImmediatePropagation();
+  event.currentTarget?.blur?.();
   try {
     const mode = await chooseExportMode();
     if (!mode) return;
@@ -475,6 +477,7 @@ document.getElementById('export')?.addEventListener('click', async event => {
 document.getElementById('importButton')?.addEventListener('click', async event => {
   event.preventDefault();
   event.stopImmediatePropagation();
+  event.currentTarget?.blur?.();
   try {
     const mode = await chooseImportMode();
     if (!mode) return;
