@@ -10,11 +10,3 @@
   button:not(.primary):not(.calculate),a.button,.all-years,.schedule-details>summary{color:#b2ccff;background:#182b47;border-color:#4773b8}.back{color:#b2ccff;background:rgba(24,43,71,.94);border-color:#4773b8;box-shadow:0 3px 10px rgba(0,0,0,.28)}.danger,.reset{color:#fda29b;background:#3a2025;border-color:#854a54}.loan-preview,.monthly,.record .schools,.record .notes{color:#cbd5e1;background:#182536}.loan-preview strong,.monthly strong{color:#8ab4ff}.loan-parts{color:#cbd5e1;border-top-color:#475467}.loan-parts span,.monthly small{color:#b8c4d6}th{background:#1b2b41}.schedule-wrap{border-color:var(--line)}
   .community-suggestions,.community-suggestion{color:var(--ink);background:#1d2939;border-color:#475467}.community-suggestion:active,.community-suggestion:hover{background:#263b56}.auto-school-field input{color:var(--ink);background:#101c2d}.date-control{background:#101c2d;border-color:#475467}.record-extra{background:#182536}.record-extra summary{color:#b2ccff}.image-section,.image-item,.image-caption{border-color:#475467}.image-item{background:#182536}.stage h2,.task{border-color:var(--line)}.bar{background:#26364d}.note{color:var(--ink);background:#101c2d;border-color:#475467}
 }
-
-/* iOS Safari / WKWebView 会自动放大字号低于 16px 的输入控件。
-   仅在手机宽度统一字号，避免键盘收起后页面仍停留在放大状态。 */
-@media (max-width: 720px) {
-  input,
-  select,
-  textarea { font-size: 16px !important; }
-}

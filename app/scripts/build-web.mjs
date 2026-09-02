@@ -10,7 +10,7 @@ const bundleDir = join(appRoot, 'dist');
 const websiteSharedDir = join(webSourceRoot, 'shared');
 const siteDirectories = ['entrance', 'school', 'calculator', 'viewings', 'checklist'];
 const bundles = ['native-store', 'checklist-page', 'backup-page'];
-const sharedStaticFiles = ['theme.css', 'theme-dark.css', 'theme.js'];
+const sharedStaticFiles = ['theme.css', 'theme-dark.css', 'theme.js', 'mobile-inputs.css'];
 
 await rm(bundleDir, { recursive: true, force: true });
 await mkdir(bundleDir, { recursive: true });

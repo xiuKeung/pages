@@ -1,0 +1,6 @@
+/* 始终加载：避免主题切换禁用该规则后，iOS 放大低于 16px 的输入控件。 */
+@media (max-width: 720px) {
+  input,
+  select,
+  textarea { font-size: 16px !important; }
+}

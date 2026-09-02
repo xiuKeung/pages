@@ -41,6 +41,8 @@
     .theme-options { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
     .theme-options button { min-height:38px; padding:7px 6px; border:1px solid var(--line); border-radius:9px; color:var(--muted); background:#f6f8fc; font:inherit; font-size:14px; cursor:pointer; }
     .theme-options button.is-active { border-color:#84adff; color:var(--blue); background:#eff6ff; font-weight:700; }
+    /* 不依赖可被切换禁用的主题文件，三种模式都清楚标出当前选项。 */
+    html[data-theme] .theme-options button.is-active { color:#fff; background:#1d5fca; border-color:#84adff; box-shadow:0 0 0 1px rgba(132,173,255,.32) inset; }
     @media (max-width:480px) { main{ width:min(100% - 28px,720px); padding-top:48px; } .tool{ padding:18px; gap:14px; } .icon{ flex-basis:54px; width:54px; height:54px; font-size:38px; } .tool:first-child .icon{font-size:46px;} }
   </style>
   <link rel="stylesheet" href="../shared/theme.css" data-theme-system>
@@ -70,7 +72,7 @@
         <span><h2>购房清单</h2><p>按阶段核对看房、贷款、签约、过户与交楼事项。</p></span>
       </a>
     </section>
-    <footer>版本 v2026.09.02.4</footer>
+    <footer>版本 v2026.09.02.5</footer>
   </main>
   <div class="settings-dialog" id="themeDialog" hidden>
     <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="themeDialogTitle">
