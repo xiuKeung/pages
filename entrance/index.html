@@ -15,8 +15,9 @@
     :root { color-scheme: light; --blue:#1769e0; --ink:#17233b; --muted:#667085; --line:#e6edf8; }
     * { box-sizing:border-box; }
     body { margin:0; min-height:100vh; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; color:var(--ink); background:linear-gradient(145deg,#eef5ff 0%,#f8fbff 46%,#f1f6ff 100%); }
-    main { position:relative; width:min(720px,calc(100% - 40px)); margin:0 auto; padding:74px 0 48px; }
-    .settings-button { position:absolute; top:26px; right:0; display:grid; width:38px; height:38px; min-height:0; padding:0; place-items:center; border:1px solid var(--line); border-radius:11px; color:var(--muted); background:rgba(255,255,255,.75); font-size:30px; line-height:1; cursor:pointer; }
+    main { width:min(720px,calc(100% - 40px)); margin:0 auto; padding:74px 0 48px; }
+    .title-row { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .settings-button { display:grid; flex:0 0 auto; width:38px; height:38px; min-height:0; padding:0; place-items:center; border:1px solid var(--line); border-radius:11px; color:var(--muted); background:rgba(255,255,255,.75); font-size:30px; line-height:1; cursor:pointer; }
     .eyebrow { margin:0 0 12px; color:var(--blue); font-size:14px; font-weight:700; letter-spacing:.08em; }
     h1 { margin:0; font-size:clamp(30px,7vw,44px); line-height:1.18; letter-spacing:-.04em; }
     .intro { margin:18px 0 34px; color:var(--muted); font-size:16px; line-height:1.7; }
@@ -38,7 +39,7 @@
     .theme-options { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
     .theme-options button { min-height:38px; padding:7px 6px; border:1px solid var(--line); border-radius:9px; color:var(--muted); background:#f6f8fc; font:inherit; font-size:14px; cursor:pointer; }
     .theme-options button.is-active { border-color:#84adff; color:var(--blue); background:#eff6ff; font-weight:700; }
-    @media (max-width:480px) { main{ width:min(100% - 28px,720px); padding-top:48px; } .settings-button{top:14px;} .tool{ padding:18px; gap:14px; } .icon{ flex-basis:54px; width:54px; height:54px; font-size:38px; } .tool:first-child .icon{font-size:46px;} }
+    @media (max-width:480px) { main{ width:min(100% - 28px,720px); padding-top:48px; } .tool{ padding:18px; gap:14px; } .icon{ flex-basis:54px; width:54px; height:54px; font-size:38px; } .tool:first-child .icon{font-size:46px;} }
   </style>
   <link rel="stylesheet" href="../shared/theme.css" data-theme-system>
   <link rel="stylesheet" href="../shared/theme-dark.css" data-theme-dark disabled>
@@ -46,9 +47,8 @@
 </head>
 <body>
   <main>
-    <button class="settings-button" id="themeSettings" type="button" aria-label="外观设置" title="外观设置">⚙</button>
     <p class="eyebrow">ANJIA NOTE</p>
-    <h1>安家笔记</h1>
+    <div class="title-row"><h1>安家笔记</h1><button class="settings-button" id="themeSettings" type="button" aria-label="外观设置" title="外观设置">⚙</button></div>
     <p class="intro">把学区、贷款、看房记录与购房流程放在一起。</p>
     <section class="tools" aria-label="工具入口">
       <a class="tool" href="../school/index.html">

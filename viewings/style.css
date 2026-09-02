@@ -451,6 +451,29 @@
     .lightbox-actions { position:absolute; right:16px; bottom:18px; left:16px; display:flex; justify-content:center; gap:10px; }.lightbox-actions button { min-height:38px; padding:8px 12px; border:1px solid rgba(255,255,255,.45); border-radius:9px; color:#fff; background:rgba(27,41,66,.72); font:inherit; font-size:13px; font-weight:650; }.lightbox-actions button:disabled { opacity:.55; }.lightbox-message { position:absolute; right:20px; bottom:66px; left:20px; min-height:18px; color:#fff; font-size:13px; text-align:center; text-shadow:0 1px 3px rgba(0,0,0,.45); }
     .image-item img { cursor: zoom-in; }
 
+    /* 返回入口始终保留在视口顶部。 */
+    main { padding-top: 70px; }
+    .back {
+      position: fixed;
+      z-index: 30;
+      top: calc(env(safe-area-inset-top, 0px) + 22px);
+      left: 16px;
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      margin: 0;
+      padding: 6px 10px;
+      border: 1px solid #bfd3f6;
+      border-radius: 9px;
+      color: var(--blue);
+      background: rgba(244, 248, 255, .94);
+      box-shadow: 0 3px 10px rgba(25, 59, 110, .1);
+      font-size: 14px;
+      text-decoration: none;
+      backdrop-filter: blur(8px);
+    }
+    @media (max-width: 600px) { main { padding-top: 64px; } }
+
     /* 备份记录选择弹窗：内容滚动时不带动底层页面。 */
     .backup-mode-dialog {
       overscroll-behavior: contain;
