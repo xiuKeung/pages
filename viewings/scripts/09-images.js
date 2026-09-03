@@ -258,6 +258,7 @@
     viewport.addEventListener('wheel', event => { event.preventDefault(); scale = Math.min(4, Math.max(1, scale + (event.deltaY < 0 ? .2 : -.2))); renderTransform(); }, { passive:false });
 
     let refs = [];
+    const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
     const sync = () => {
       refsInput.value = JSON.stringify(refs);
       form.dispatchEvent(new Event('input', { bubbles: true }));
@@ -298,10 +299,14 @@
     };
     const renderEditor = async () => {
       preview.replaceChildren();
-      for (const ref of refs) await thumbnail(ref, true, preview, refs);
-      imageTitle.textContent = refs.length
-        ? `房源图片（${refs.length} 张 · 共 ${formatBytes(await totalImageSize(refs))}）`
-        : '房源图片（可多选）';
+      imageTitle.textContent = refs.length ? `房源图片（${refs.length} 张 · 正在加载…）` : '房源图片（可多选）';
+      for (const ref of refs) {
+        await thumbnail(ref, true, preview, refs);
+        // 缩略图文件读取与解码会占用 Android WebView 的主线程；逐张让出一帧，
+        // 保持展开详情、滚动和返回操作可响应。
+        await nextFrame();
+      }
+      if (refs.length) imageTitle.textContent = `房源图片（${refs.length} 张 · 共 ${formatBytes(await totalImageSize(refs))}）`;
     };
     const setRefs = async value => {
       refs = parseRefs(value);
@@ -326,12 +331,17 @@
     };
     picker.addEventListener('change', () => addFiles(picker));
     camera.addEventListener('change', () => addFiles(camera));
+    let editorImageLoadToken = 0;
     new MutationObserver(() => {
       if (editor.classList.contains('hidden')) return;
       const id = document.getElementById('recordId')?.value;
       const record = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]')
         .find(item => String(item.id) === String(id));
-      setRefs(record?.imageRefs);
+      const token = ++editorImageLoadToken;
+      // 连续两帧后再读取缩略图，保证编辑器先显示出来。
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (token === editorImageLoadToken && !editor.classList.contains('hidden')) setRefs(record?.imageRefs);
+      }));
     }).observe(editor, { attributes: true, attributeFilter: ['class'] });
     document.addEventListener('click', event => {
       if (event.target.closest('#add')) {

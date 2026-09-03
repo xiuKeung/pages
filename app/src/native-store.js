@@ -6,72 +6,14 @@ const DATABASE = 'shenzhen_home_tools';
 const CHECKLIST_BROWSER_KEY = 'shenzhen-purchase-checklist-v1';
 const MORTGAGE_BROWSER_KEY = 'sz-mortgage-calculator-state';
 const VIEWINGS_BROWSER_KEY = 'shenzhen-viewing-records-v1';
-const VIEWING_DIAGNOSTICS_KEY = 'anjia-viewing-diagnostics-v1';
 let db;
 let sqlite;
 let readyPromise;
 let viewingCache;
-let viewingDiagnostics = (() => {
-  try {
-    const saved = JSON.parse(localStorage.getItem(VIEWING_DIAGNOSTICS_KEY) || '[]');
-    return Array.isArray(saved) ? saved.slice(-30) : [];
-  } catch {
-    return [];
-  }
-})();
 const BackupFile = registerPlugin('BackupFile');
 const PhotoLibrary = registerPlugin('PhotoLibrary');
 const BROWSER_IMAGE_DATABASE = 'shenzhen-viewing-images-v1';
 const BROWSER_IMAGE_STORE = 'images';
-
-function recordViewingDiagnostic(event, details = {}) {
-  viewingDiagnostics.push({
-    at: new Date().toISOString(),
-    event,
-    platform: Capacitor.getPlatform(),
-    ...details
-  });
-  if (viewingDiagnostics.length > 30) viewingDiagnostics.splice(0, viewingDiagnostics.length - 30);
-  try { localStorage.setItem(VIEWING_DIAGNOSTICS_KEY, JSON.stringify(viewingDiagnostics)); }
-  catch (_) { /* Diagnostics must never block the underlying operation. */ }
-}
-
-function viewingDiagnosticsText() {
-  return JSON.stringify(viewingDiagnostics, null, 2);
-}
-
-function clearViewingDiagnostics() {
-  viewingDiagnostics = [];
-  try { localStorage.removeItem(VIEWING_DIAGNOSTICS_KEY); }
-  catch (_) { /* Ignore unavailable storage. */ }
-}
-
-async function resetViewingConnection() {
-  const activeSqlite = sqlite;
-  try {
-    if (activeSqlite) {
-      const state = await activeSqlite.isConnection(DATABASE, false);
-      recordViewingDiagnostic('connection-state-before-reset', { connected: Boolean(state?.result) });
-      if (state?.result) {
-        await activeSqlite.closeConnection(DATABASE, false);
-        recordViewingDiagnostic('connection-closed');
-      }
-    }
-  } catch (error) {
-    recordViewingDiagnostic('connection-close-failed', { message: String(error?.message || error) });
-    try {
-      await activeSqlite?.closeAllConnections();
-      recordViewingDiagnostic('all-connections-closed');
-    } catch (fallbackError) {
-      recordViewingDiagnostic('all-connections-close-failed', { message: String(fallbackError?.message || fallbackError) });
-    }
-  } finally {
-    db = null;
-    sqlite = null;
-    readyPromise = null;
-    viewingCache = null;
-  }
-}
 
 function dataUrlPayload(dataUrl) {
   return dataUrl.split(',', 2)[1] || '';
@@ -420,13 +362,11 @@ function clone(value) {
 async function getViewingRecords(options = {}) {
   const force = options?.force === true;
   if (viewingCache && !force) {
-    recordViewingDiagnostic('records-cache-hit', { count: viewingCache.length });
     return clone(viewingCache);
   }
   if (force) viewingCache = null;
   if (!isNative()) {
     viewingCache = browserJson(VIEWINGS_BROWSER_KEY, []);
-    recordViewingDiagnostic('records-browser-read', { count: viewingCache.length });
     return clone(viewingCache);
   }
   const queryRecords = async () => {
@@ -435,23 +375,7 @@ async function getViewingRecords(options = {}) {
       'SELECT id, created_at, updated_at, data_json FROM viewing_records ORDER BY updated_at DESC'
     );
   };
-  let result;
-  try {
-    result = await queryRecords();
-    recordViewingDiagnostic('records-native-read', { attempt: 1, count: result.values?.length || 0 });
-  } catch (error) {
-    // Android 从详情返回入口再进入时，旧的 SQLite bridge 连接可能仍存在、
-    // 但实际已经失效。必须关闭原生连接，再重新建立连接读取。
-    recordViewingDiagnostic('records-native-read-failed', { attempt: 1, message: String(error?.message || error) });
-    await resetViewingConnection();
-    try {
-      result = await queryRecords();
-      recordViewingDiagnostic('records-native-read', { attempt: 2, count: result.values?.length || 0 });
-    } catch (retryError) {
-      recordViewingDiagnostic('records-native-read-failed', { attempt: 2, message: String(retryError?.message || retryError) });
-      throw retryError;
-    }
-  }
+  const result = await queryRecords();
   viewingCache = (result.values || []).map(row => {
     try {
       return {
@@ -899,9 +823,6 @@ window.NativeStore = {
   getSchoolDistrictDataset,
   saveSchoolDistrictDataset,
   getViewingRecords,
-  addViewingDiagnostic: recordViewingDiagnostic,
-  getViewingDiagnostics: viewingDiagnosticsText,
-  clearViewingDiagnostics,
   saveViewingRecords,
   deleteViewingRecord,
   viewingRecordsJson,

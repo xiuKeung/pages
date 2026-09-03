@@ -41,9 +41,6 @@
     .settings-panel > p { margin:19px 0 9px; color:var(--muted); font-size:14px; }
     .theme-options { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
     .theme-options button { min-height:38px; padding:7px 6px; border:1px solid var(--line); border-radius:9px; color:var(--muted); background:#f6f8fc; font:inherit; font-size:14px; cursor:pointer; }
-    .diagnostics-button { width:100%; min-height:38px; padding:7px 10px; border:1px solid var(--line); border-radius:9px; color:var(--blue); background:#f6f8fc; font:inherit; font-size:14px; cursor:pointer; }
-    .diagnostics-log { max-height:52vh; margin:0; padding:12px; overflow:auto; border:1px solid var(--line); border-radius:10px; color:var(--ink); background:#f6f8fc; font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; word-break:break-word; }
-    .diagnostics-actions { display:flex; gap:8px; margin-top:12px; } .diagnostics-actions button { flex:1; }
     .theme-options button.is-active { border-color:#84adff; color:var(--blue); background:#eff6ff; font-weight:700; }
     /* 不依赖可被切换禁用的主题文件，三种模式都清楚标出当前选项。 */
     html[data-theme] .theme-options button.is-active { color:#fff; background:#1d5fca; border-color:#84adff; box-shadow:0 0 0 1px rgba(132,173,255,.32) inset; }
@@ -75,7 +72,7 @@
         <span><h2>购房清单</h2><p>分阶段核对看房、贷款、签约、过户及交楼</p></span>
       </button>
     </section>
-    <footer>版本 v2026.09.03.3</footer>
+    <footer>版本 v2026.09.03.12</footer>
   </main>
   <div class="settings-dialog" id="themeDialog" hidden>
     <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="themeDialogTitle">
@@ -86,16 +83,6 @@
         <button type="button" data-theme-option="dark" role="radio">深色</button>
         <button type="button" data-theme-option="light" role="radio">浅色</button>
       </div>
-      <p>诊断</p>
-      <button class="diagnostics-button" id="openDiagnostics" type="button">打开诊断控制台</button>
-    </div>
-  </div>
-  <div class="settings-dialog" id="diagnosticsDialog" hidden>
-    <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="diagnosticsTitle">
-      <div class="settings-head"><h2 id="diagnosticsTitle">诊断控制台</h2><button id="closeDiagnostics" type="button" aria-label="关闭诊断控制台">×</button></div>
-      <p>看房记录读取日志</p>
-      <pre class="diagnostics-log" id="diagnosticsLog">暂无诊断日志</pre>
-      <div class="diagnostics-actions"><button class="diagnostics-button" id="copyDiagnostics" type="button">复制日志</button><button class="diagnostics-button" id="clearDiagnostics" type="button">清空日志</button></div>
     </div>
   </div>
   <script>
@@ -103,10 +90,6 @@
       const dialog = document.getElementById('themeDialog');
       const open = document.getElementById('themeSettings');
       const close = document.getElementById('closeThemeSettings');
-      const diagnosticsDialog = document.getElementById('diagnosticsDialog');
-      const openDiagnostics = document.getElementById('openDiagnostics');
-      const closeDiagnostics = document.getElementById('closeDiagnostics');
-      const diagnosticsLog = document.getElementById('diagnosticsLog');
       const options = [...document.querySelectorAll('[data-theme-option]')];
       let scrollLock = null;
       const lockScroll = () => {
@@ -134,26 +117,18 @@
         });
       };
       const closeDialog = () => { dialog.hidden = true; unlockScroll(); };
-      const diagnosticsText = () => localStorage.getItem('anjia-viewing-diagnostics-v1') || '暂无诊断日志';
-      const renderDiagnostics = () => { diagnosticsLog.textContent = diagnosticsText(); };
-      const closeDiagnosticsDialog = () => { diagnosticsDialog.hidden = true; unlockScroll(); };
       open?.addEventListener('click', () => { render(); lockScroll(); dialog.hidden = false; });
       close?.addEventListener('click', closeDialog);
       dialog?.addEventListener('click', event => { if (event.target === dialog) closeDialog(); });
-      openDiagnostics?.addEventListener('click', () => { renderDiagnostics(); dialog.hidden = true; diagnosticsDialog.hidden = false; });
-      closeDiagnostics?.addEventListener('click', closeDiagnosticsDialog);
-      diagnosticsDialog?.addEventListener('click', event => { if (event.target === diagnosticsDialog) closeDiagnosticsDialog(); });
-      document.getElementById('copyDiagnostics')?.addEventListener('click', async () => {
-        const text = diagnosticsText();
-        try { await navigator.clipboard.writeText(text); }
-        catch (_) { const area = document.createElement('textarea'); area.value = text; document.body.append(area); area.select(); document.execCommand('copy'); area.remove(); }
-      });
-      document.getElementById('clearDiagnostics')?.addEventListener('click', () => { localStorage.removeItem('anjia-viewing-diagnostics-v1'); renderDiagnostics(); });
       options.forEach(option => option.addEventListener('click', () => {
         window.AnjiaTheme?.set(option.dataset.themeOption);
         render();
       }));
-      document.querySelectorAll('.tool[data-target]').forEach(tool => tool.addEventListener('click', () => { window.location.href = tool.dataset.target; }));
+      document.querySelectorAll('.tool[data-target]').forEach(tool => {
+        tool.addEventListener('click', () => { window.location.href = tool.dataset.target; });
+        tool.addEventListener('contextmenu', event => event.preventDefault());
+        tool.addEventListener('dragstart', event => event.preventDefault());
+      });
       render();
     })();
   </script>

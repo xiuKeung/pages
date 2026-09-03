@@ -18,6 +18,13 @@
     );
   const wan = (v) =>
     Number(v || 0).toLocaleString("zh-CN", { maximumFractionDigits: 2 });
+  const sourceHref = (value) => {
+    const link = String(value || '').trim();
+    if (!link) return '';
+    // 浏览器会把 www.baidu.com 视作当前页面的相对路径；明确补全 HTTPS。
+    if (/^(?:[a-z0-9-]+\.)+[a-z]{2,}(?:[/?#].*)?$/i.test(link)) return `https://${link}`;
+    return link;
+  };
   const time = (v) => {
     const d = new Date(Number(v));
     return Number.isNaN(d.getTime())
@@ -28,15 +35,11 @@
     let error;
     for (let attempt = 0; attempt <= retries; attempt += 1) {
       try {
-        window.NativeStore.addViewingDiagnostic?.('viewings-page-load-start', { force, attempt: attempt + 1 });
-        await window.NativeStore.ready();
         const stored = await window.NativeStore.getViewingRecords({ force });
         records = Array.isArray(stored) ? stored : [];
-        window.NativeStore.addViewingDiagnostic?.('viewings-page-load-success', { attempt: attempt + 1, count: records.length });
         return true;
       } catch (cause) {
         error = cause;
-        window.NativeStore.addViewingDiagnostic?.('viewings-page-load-failed', { attempt: attempt + 1, message: String(cause?.message || cause) });
         if (attempt < retries)
           await new Promise((resolve) =>
             setTimeout(resolve, 180 * (attempt + 1)),
@@ -47,31 +50,15 @@
     showLoadFailure(error);
     return false;
   }
-  async function copyDiagnostics() {
-    const text = window.NativeStore.getViewingDiagnostics?.() || '[]';
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch (_) {
-      const area = document.createElement('textarea');
-      area.value = text;
-      area.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
-      document.body.append(area);
-      area.select();
-      document.execCommand('copy');
-      area.remove();
-    }
-    toast('诊断信息已复制');
-  }
   function showLoadFailure(error) {
     const recordsNode = $('records');
     if (recordsNode.querySelector('.record')) {
       toast('读取记录失败，已保留当前列表');
       return;
     }
-    recordsNode.innerHTML = `<div class="card empty"><p>看房记录读取失败，请重试</p><div class="record-actions"><button id="retryViewingRecords" type="button">重试读取</button><button id="copyViewingDiagnostics" type="button">复制诊断信息</button></div></div>`;
+    recordsNode.innerHTML = `<div class="card empty"><p>看房记录读取失败，请重试</p><div class="record-actions"><button id="retryViewingRecords" type="button">重试读取</button></div></div>`;
     $('retryViewingRecords')?.addEventListener('click', () => void reloadRecords({ force:true }));
-    $('copyViewingDiagnostics')?.addEventListener('click', () => void copyDiagnostics());
-    console.warn('看房记录诊断：', error, window.NativeStore.getViewingDiagnostics?.());
+    console.warn('看房记录读取失败：', error);
   }
   async function reloadRecords(options = {}) {
     const loaded = await load(options);
@@ -145,7 +132,7 @@
               ]
                 .filter(Boolean)
                 .join(" · ");
-            return `<article class="record" data-record-order="${list.length - index}"><div class="record-top"><div><h2>${esc(r.community)}</h2><p class="meta">${esc(detail || "暂未填写价格与面积")} ${r.viewedAt ? `· 看房：${esc(r.viewedAt)}` : ""}</p><p class="meta">最后编辑：${time(r.updatedAt || r.createdAt)}</p></div><span class="badge ${kind}">${name}</span></div><p class="schools">学区：请点击下方“查学区”获取当前官方匹配结果。</p>${r.pros || r.cons || r.notes || r.nearbyLandmark ? `<p class="notes">${r.pros ? `优点：${esc(r.pros)}\n` : ""}${r.cons ? `缺点 / 风险：${esc(r.cons)}\n` : ""}${r.nearbyLandmark ? `附近地标：${esc(r.nearbyLandmark)}\n` : ""}${r.notes ? `备注：${esc(r.notes)}` : ""}</p>` : ""}<div class="record-actions"><a class="button" href="../school/index.html?mode=community&q=${encodeURIComponent(r.community)}">查学区</a>${r.sourceLink ? `<a class="button" href="${esc(r.sourceLink)}" target="_blank" rel="noreferrer">房源链接 ↗</a>` : ""}<a class="button" href="../calculator/index.html?c=${encodeURIComponent(btoa(JSON.stringify({ type: "commercial", amountMode: "auto", housePrice: r.totalPrice || "", downPaymentRate: "15" })))}">算月供</a><button data-copy="${r.id}" type="button">复制信息</button><button data-edit="${r.id}" type="button">查看</button><button class="danger" data-delete="${r.id}" type="button">删除</button></div></article>`;
+            return `<article class="record" data-record-order="${list.length - index}"><div class="record-top"><div><h2>${esc(r.community)}</h2><p class="meta">${esc(detail || "暂未填写价格与面积")} ${r.viewedAt ? `· 看房：${esc(r.viewedAt)}` : ""}</p><p class="meta">最后编辑：${time(r.updatedAt || r.createdAt)}</p></div><span class="badge ${kind}">${name}</span></div><p class="schools">学区：请点击下方“查学区”获取当前官方匹配结果。</p>${r.pros || r.cons || r.notes || r.nearbyLandmark ? `<p class="notes">${r.pros ? `优点：${esc(r.pros)}\n` : ""}${r.cons ? `缺点 / 风险：${esc(r.cons)}\n` : ""}${r.nearbyLandmark ? `附近地标：${esc(r.nearbyLandmark)}\n` : ""}${r.notes ? `备注：${esc(r.notes)}` : ""}</p>` : ""}<div class="record-actions"><a class="button" href="../school/index.html?mode=community&q=${encodeURIComponent(r.community)}">查学区</a>${sourceHref(r.sourceLink) ? `<a class="button" href="${esc(sourceHref(r.sourceLink))}" target="_blank" rel="noreferrer">房源链接 ↗</a>` : ""}<a class="button" href="../calculator/index.html?c=${encodeURIComponent(btoa(JSON.stringify({ type: "commercial", amountMode: "auto", housePrice: r.totalPrice || "", downPaymentRate: "15" })))}">算月供</a><button data-copy="${r.id}" type="button">复制信息</button><button data-edit="${r.id}" type="button">查看</button><button class="danger" data-delete="${r.id}" type="button">删除</button></div></article>`;
           })
           .join("")
       : '<div class="card empty">还没有看房记录。点击“新增房源”开始记录。</div>';
@@ -376,6 +363,19 @@
 
 /* 模块 3：由原 index.html 内联脚本迁移。 */
 document.querySelector("[data-back]")?.addEventListener("click", (event) => {
+  const editor = document.getElementById("editor");
+  if (editor && !editor.classList.contains("hidden")) {
+    event.preventDefault();
+    const form = document.getElementById("recordForm");
+    const community = document.getElementById("community")?.value.trim();
+    // 查看详情时，返回的第一层含义是结束查看并收起详情；避免直接离开列表。
+    if (community) form?.requestSubmit();
+    else {
+      editor.classList.add("hidden");
+      window.dispatchEvent(new Event('viewing:close-editor'));
+    }
+    return;
+  }
   if (history.length > 1) {
     event.preventDefault();
     history.back();

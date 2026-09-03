@@ -503,4 +503,12 @@ globalThis.SchoolDistrictDataReady.then(async () => {
     installButton.hidden = true;
   });
   renderSaved();
+  const launchParams = new URLSearchParams(window.location.search);
+  const launchQuery = launchParams.get('q')?.trim();
+  if (launchQuery) {
+    setMode(launchParams.get('mode') === 'school' ? 'school' : 'community', false);
+    input.value = launchQuery;
+    modeState[mode].value = launchQuery;
+    search();
+  }
 });

@@ -216,6 +216,7 @@
       if (event.target.closest('#cancel')) setTimeout(restoreEditorPosition, 0);
     });
     form.addEventListener('submit', () => setTimeout(restoreEditorPosition, 0));
+    window.addEventListener('viewing:close-editor', restoreEditorPosition);
     document.addEventListener('pointerdown', event => {
       if (event.target.closest('.community-suggestion')) setTimeout(updateSchools, 0);
     });
@@ -365,7 +366,7 @@
         document.getElementById('recordId').value = record.id;
         status.textContent = `已自动保存 · ${formatTime(now)}`;
       } catch (_) {
-        status.textContent = '自动保存失败，请使用“保存记录”';
+        status.textContent = '自动保存失败，请点击“收起详情”重试';
       }
     };
     const scheduleSave = () => {
@@ -377,7 +378,9 @@
 
     form.addEventListener('input', scheduleSave);
     form.addEventListener('change', scheduleSave);
-    window.addEventListener('pagehide', saveDraft);
+    // 页面退出时不再启动新的 SQLite 写入。已经停止输入超过 650ms 的内容会
+    // 在此前自动保存；仍在防抖等待的最后一次输入则不打断原生桥接生命周期。
+    window.addEventListener('pagehide', () => clearTimeout(timer));
     document.addEventListener('click', event => {
       if (event.target.closest('#add, [data-edit]')) {
         setTimeout(() => { status.textContent = '编辑内容将自动保存'; }, 0);
@@ -421,15 +424,11 @@
 
       editor.classList.remove('hidden');
       document.getElementById('editorTitle').textContent = '编辑房源';
-      document.getElementById('community')?.dispatchEvent(new Event('input', { bubbles: true }));
       const suggestionPanel = document.querySelector('.community-suggestions');
       if (suggestionPanel) {
         suggestionPanel.hidden = true;
         suggestionPanel.replaceChildren();
       }
-      if (record.primarySchools) setValue('primarySchools', record.primarySchools);
-      if (record.middleSchools) setValue('middleSchools', record.middleSchools);
-      document.getElementById('targetPrice')?.dispatchEvent(new Event('input', { bubbles: true }));
       const recordCard = button.closest('.record');
       document.getElementById('records')?.classList.add('is-editing-active');
       document.querySelectorAll('#records .record').forEach(card => {
@@ -438,5 +437,13 @@
       });
       recordCard?.after(editor);
       editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // 学区关联和月供预览需要遍历较多数据；先让详情框完成一次绘制，
+      // 避免 Android WebView 在点击“查看”时主线程卡顿。
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        document.getElementById('community')?.dispatchEvent(new Event('input', { bubbles: true }));
+        if (record.primarySchools) setValue('primarySchools', record.primarySchools);
+        if (record.middleSchools) setValue('middleSchools', record.middleSchools);
+        document.getElementById('targetPrice')?.dispatchEvent(new Event('input', { bubbles: true }));
+      }));
     }, true);
   })();

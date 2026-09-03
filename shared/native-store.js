@@ -2496,72 +2496,14 @@
   var CHECKLIST_BROWSER_KEY = "shenzhen-purchase-checklist-v1";
   var MORTGAGE_BROWSER_KEY = "sz-mortgage-calculator-state";
   var VIEWINGS_BROWSER_KEY = "shenzhen-viewing-records-v1";
-  var VIEWING_DIAGNOSTICS_KEY = "anjia-viewing-diagnostics-v1";
   var db;
   var sqlite;
   var readyPromise;
   var viewingCache;
-  var viewingDiagnostics = (() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(VIEWING_DIAGNOSTICS_KEY) || "[]");
-      return Array.isArray(saved) ? saved.slice(-30) : [];
-    } catch {
-      return [];
-    }
-  })();
   var BackupFile = registerPlugin("BackupFile");
   var PhotoLibrary = registerPlugin("PhotoLibrary");
   var BROWSER_IMAGE_DATABASE = "shenzhen-viewing-images-v1";
   var BROWSER_IMAGE_STORE = "images";
-  function recordViewingDiagnostic(event, details = {}) {
-    viewingDiagnostics.push({
-      at: (/* @__PURE__ */ new Date()).toISOString(),
-      event,
-      platform: Capacitor.getPlatform(),
-      ...details
-    });
-    if (viewingDiagnostics.length > 30) viewingDiagnostics.splice(0, viewingDiagnostics.length - 30);
-    try {
-      localStorage.setItem(VIEWING_DIAGNOSTICS_KEY, JSON.stringify(viewingDiagnostics));
-    } catch (_) {
-    }
-  }
-  function viewingDiagnosticsText() {
-    return JSON.stringify(viewingDiagnostics, null, 2);
-  }
-  function clearViewingDiagnostics() {
-    viewingDiagnostics = [];
-    try {
-      localStorage.removeItem(VIEWING_DIAGNOSTICS_KEY);
-    } catch (_) {
-    }
-  }
-  async function resetViewingConnection() {
-    const activeSqlite = sqlite;
-    try {
-      if (activeSqlite) {
-        const state = await activeSqlite.isConnection(DATABASE, false);
-        recordViewingDiagnostic("connection-state-before-reset", { connected: Boolean(state?.result) });
-        if (state?.result) {
-          await activeSqlite.closeConnection(DATABASE, false);
-          recordViewingDiagnostic("connection-closed");
-        }
-      }
-    } catch (error) {
-      recordViewingDiagnostic("connection-close-failed", { message: String(error?.message || error) });
-      try {
-        await activeSqlite?.closeAllConnections();
-        recordViewingDiagnostic("all-connections-closed");
-      } catch (fallbackError) {
-        recordViewingDiagnostic("all-connections-close-failed", { message: String(fallbackError?.message || fallbackError) });
-      }
-    } finally {
-      db = null;
-      sqlite = null;
-      readyPromise = null;
-      viewingCache = null;
-    }
-  }
   function dataUrlPayload(dataUrl) {
     return dataUrl.split(",", 2)[1] || "";
   }
@@ -2917,13 +2859,11 @@
   async function getViewingRecords(options = {}) {
     const force = options?.force === true;
     if (viewingCache && !force) {
-      recordViewingDiagnostic("records-cache-hit", { count: viewingCache.length });
       return clone(viewingCache);
     }
     if (force) viewingCache = null;
     if (!isNative()) {
       viewingCache = browserJson(VIEWINGS_BROWSER_KEY, []);
-      recordViewingDiagnostic("records-browser-read", { count: viewingCache.length });
       return clone(viewingCache);
     }
     const queryRecords = async () => {
@@ -2932,21 +2872,7 @@
         "SELECT id, created_at, updated_at, data_json FROM viewing_records ORDER BY updated_at DESC"
       );
     };
-    let result;
-    try {
-      result = await queryRecords();
-      recordViewingDiagnostic("records-native-read", { attempt: 1, count: result.values?.length || 0 });
-    } catch (error) {
-      recordViewingDiagnostic("records-native-read-failed", { attempt: 1, message: String(error?.message || error) });
-      await resetViewingConnection();
-      try {
-        result = await queryRecords();
-        recordViewingDiagnostic("records-native-read", { attempt: 2, count: result.values?.length || 0 });
-      } catch (retryError) {
-        recordViewingDiagnostic("records-native-read-failed", { attempt: 2, message: String(retryError?.message || retryError) });
-        throw retryError;
-      }
-    }
+    const result = await queryRecords();
     viewingCache = (result.values || []).map((row) => {
       try {
         return {
@@ -3454,9 +3380,6 @@
     getSchoolDistrictDataset,
     saveSchoolDistrictDataset,
     getViewingRecords,
-    addViewingDiagnostic: recordViewingDiagnostic,
-    getViewingDiagnostics: viewingDiagnosticsText,
-    clearViewingDiagnostics,
     saveViewingRecords,
     deleteViewingRecord,
     viewingRecordsJson,
