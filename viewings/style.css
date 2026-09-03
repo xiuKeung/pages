@@ -223,6 +223,12 @@
       font-size: 13px;
       white-space: nowrap;
     }
+    .records-more {
+      display: flex;
+      justify-content: center;
+      padding: 16px 0 4px;
+    }
+    .records-more[hidden] { display: none; }
     @media (max-width: 600px) {
       .priority-date-field { grid-column: auto; }
       .building-field { grid-column: auto; }

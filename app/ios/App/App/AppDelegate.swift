@@ -126,6 +126,8 @@ class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(PhotoLibraryPlugin())
         bridge?.registerPluginInstance(ThemeBridgePlugin())
+        // 与 Safari 保持一致：有页面历史时允许从屏幕左边缘右滑返回。
+        bridge?.webView?.allowsBackForwardNavigationGestures = true
         bridge?.webView?.isOpaque = false
         bridge?.webView?.backgroundColor = pageBackground
         bridge?.webView?.scrollView.backgroundColor = pageBackground

@@ -2704,7 +2704,13 @@
   }
   async function ready() {
     if (!isNative()) return null;
-    if (!readyPromise) readyPromise = openNativeDatabase();
+    if (!readyPromise) {
+      readyPromise = openNativeDatabase().catch((error) => {
+        readyPromise = null;
+        db = null;
+        throw error;
+      });
+    }
     return readyPromise;
   }
   async function getChecklistState() {
@@ -2850,8 +2856,10 @@
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
   }
-  async function getViewingRecords() {
-    if (viewingCache) return clone(viewingCache);
+  async function getViewingRecords(options = {}) {
+    const force = options?.force === true;
+    if (viewingCache && !force) return clone(viewingCache);
+    if (force) viewingCache = null;
     if (!isNative()) {
       viewingCache = browserJson(VIEWINGS_BROWSER_KEY, []);
       return clone(viewingCache);

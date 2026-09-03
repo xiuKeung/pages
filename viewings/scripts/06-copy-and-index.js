@@ -78,7 +78,8 @@
         }
         // 列表按最近看房记录在前渲染：最上方显示最大的序号，向下递减。
         // 每次导入、删除或筛选后列表都会重绘，因此序号始终以当前列表为准。
-        badge.textContent = '记录 ' + String(cards.length - index);
+        // 编号以当前筛选结果的完整总数为基准，不会因只加载首批卡片而变化。
+        badge.textContent = '记录 ' + String(card.dataset.recordOrder || (cards.length - index));
       });
     };
     new MutationObserver(updateIndices).observe(recordsNode, { childList: true });

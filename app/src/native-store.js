@@ -201,7 +201,15 @@ async function openNativeDatabase() {
 
 async function ready() {
   if (!isNative()) return null;
-  if (!readyPromise) readyPromise = openNativeDatabase();
+  if (!readyPromise) {
+    // Android WebView 在页面返回/重建时，插件连接偶尔会短暂不可用。
+    // 失败后必须释放 rejected Promise，下一次读取才能重新建立连接。
+    readyPromise = openNativeDatabase().catch(error => {
+      readyPromise = null;
+      db = null;
+      throw error;
+    });
+  }
   return readyPromise;
 }
 
@@ -351,8 +359,10 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-async function getViewingRecords() {
-  if (viewingCache) return clone(viewingCache);
+async function getViewingRecords(options = {}) {
+  const force = options?.force === true;
+  if (viewingCache && !force) return clone(viewingCache);
+  if (force) viewingCache = null;
   if (!isNative()) {
     viewingCache = browserJson(VIEWINGS_BROWSER_KEY, []);
     return clone(viewingCache);

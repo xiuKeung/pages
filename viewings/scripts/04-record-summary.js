@@ -247,12 +247,13 @@
         card.hidden = !match;
         if (match) visible += 1;
       });
+      const total = Number(recordsNode.dataset.total || records.length);
       count.textContent = !query && !hasStatusFilter
-        ? `共 ${visible} 条记录`
-        : `当前 ${visible} 条 / 共 ${records.length} 条`;
-      empty.hidden = !query || visible > 0;
+        ? `共 ${total} 条记录`
+        : `当前 ${total} 条 / 共 ${records.length} 条`;
+      empty.hidden = !query || total > 0;
     };
-    input.addEventListener('input', refresh);
+    input.addEventListener('input', () => window.dispatchEvent(new Event('viewing:query-change')));
     new MutationObserver(refresh).observe(recordsNode, { childList: true });
     refresh();
   })();
