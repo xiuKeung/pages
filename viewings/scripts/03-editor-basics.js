@@ -82,7 +82,11 @@
       panel.hidden = matches.length === 0;
     };
 
-    input.addEventListener('input', show);
+    // 程序刷新学区时也会触发 input；只有用户正实际编辑该输入框才展示联想。
+    input.addEventListener('input', () => {
+      if (document.activeElement === input) show();
+      else hide();
+    });
     input.addEventListener('focus', show);
     input.addEventListener('blur', () => setTimeout(hide, 160));
     globalThis.SchoolDistrictDataReady?.then(refreshOfficialNames);
@@ -98,11 +102,18 @@
     const editorAnchor = document.createComment('看房记录编辑器原始位置');
     editor.before(editorAnchor);
     const restoreEditorPosition = () => {
+      const recordId = editor.dataset.returnRecordId;
       editorAnchor.after(editor);
       document.querySelectorAll('#records .record').forEach(record => {
         record.classList.remove('is-editing', 'is-muted');
       });
       document.getElementById('records')?.classList.remove('is-editing-active');
+      if (recordId) {
+        const record = [...document.querySelectorAll('#records .record')]
+          .find(item => item.dataset.recordId === recordId);
+        record?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      delete editor.dataset.returnRecordId;
     };
 
     const communityLabel = community.closest('label');
@@ -202,6 +213,7 @@
           editorAnchor.after(editor);
           primaryInput.value = '';
           middleInput.value = '';
+          delete editor.dataset.returnRecordId;
         }, 0);
       }
       const editButton = event.target.closest('[data-edit]');
@@ -430,6 +442,7 @@
         suggestionPanel.replaceChildren();
       }
       const recordCard = button.closest('.record');
+      editor.dataset.returnRecordId = String(record.id);
       document.getElementById('records')?.classList.add('is-editing-active');
       document.querySelectorAll('#records .record').forEach(card => {
         card.classList.toggle('is-editing', card === recordCard);

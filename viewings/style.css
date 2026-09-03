@@ -466,7 +466,8 @@
       position: fixed;
       z-index: 30;
       top: calc(env(safe-area-inset-top, 0px) + 22px);
-      left: 16px;
+      /* 宽屏时贴齐应用内容区左缘，窄屏仍保留安全边距。 */
+      left: max(16px, calc(50% - 430px));
       display: inline-flex;
       align-items: center;
       min-height: 34px;

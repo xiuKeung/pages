@@ -3,7 +3,7 @@
 body { margin:0; color:var(--ink); background:#f3f6fb; font:16px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; }
 .page { max-width:680px; min-height:calc(100vh - 42px); margin:auto; padding:calc(env(safe-area-inset-top, 0px) + 76px) 16px 28px; }
 .hero { padding:0 8px 8px; color:var(--ink); background:transparent; margin:0 0 16px; }
-.hero-back { position:fixed; z-index:30; top:calc(env(safe-area-inset-top,0px) + 22px); left:16px; display:inline-flex; align-items:center; min-height:34px; margin:0; padding:6px 10px; color:var(--blue); background:rgba(245,249,255,.94); border:1px solid #b9d1fb; border-radius:9px; box-shadow:0 3px 10px rgba(25,59,110,.1); text-decoration:none; font-size:14px; backdrop-filter:blur(8px); }
+.hero-back { position:fixed; z-index:30; top:calc(env(safe-area-inset-top,0px) + 22px); left:max(16px,calc(50% - 340px)); display:inline-flex; align-items:center; min-height:34px; margin:0; padding:6px 10px; color:var(--blue); background:rgba(245,249,255,.94); border:1px solid #b9d1fb; border-radius:9px; box-shadow:0 3px 10px rgba(25,59,110,.1); text-decoration:none; font-size:14px; backdrop-filter:blur(8px); }
 .hero-back:hover { text-decoration:none; }
 .eyebrow { margin:0 0 4px; opacity:.82; font-size:13px; }
 h1 { margin:0; font-size:30px; line-height:1.25; letter-spacing:.01em; }
