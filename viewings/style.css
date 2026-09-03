@@ -209,6 +209,20 @@
     #copyRecord,
     #cancel { display: none; }
     #cancel.is-visible { display: inline-flex; }
+    .source-link-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 6px;
+    }
+    .source-link-actions input { flex: 1; min-width: 0; margin-top: 0; }
+    .source-link-actions button {
+      flex: 0 0 auto;
+      min-height: 40px;
+      padding: 7px 10px;
+      font-size: 13px;
+    }
+    .source-link-actions button:disabled { cursor: not-allowed; opacity: .5; }
     .search-empty {
       margin: 14px 0 0;
       color: var(--muted);
@@ -375,7 +389,8 @@
     }
     .image-lightbox {
       position: fixed;
-      z-index: 20;
+      /* 必须覆盖固定在顶部的返回按钮（z-index:30）。 */
+      z-index: 100;
       inset: 0;
       display: flex;
       align-items: center;

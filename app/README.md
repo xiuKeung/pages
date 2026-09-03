@@ -13,7 +13,7 @@ Pages/
 └── app/           本目录：iOS / Android 原生壳和构建工具
 ```
 
-不要维护两套网页。日常先修改上一级网页目录并在浏览器验证；打包脚本会将最新网页复制到原生工程。
+不要维护两套网页。日常先修改上一级网页目录并在浏览器验证；`cap:sync` 和打包脚本会把最新网页复制到原生工程。`app/www/`、Android 和 iOS 的 `public/` 资源均为构建产物，不应手改。
 
 ## 最常用命令
 
@@ -22,6 +22,9 @@ Pages/
 ```bash
 # 生成 Android 调试 APK（推荐的日常打包命令）
 ./generate-apk.sh
+
+# 只同步网页源码到 Android / iOS 原生工程，不生成 APK
+./build-app.sh sync
 
 # 将当前 APK 通过同一 Wi-Fi 的二维码/链接分享给手机
 ./share-apk.sh
@@ -33,19 +36,25 @@ Pages/
 上级网页源码 → app/www → Capacitor 同步 Android / iOS → Gradle 生成 APK
 ```
 
-APK 输出位置：
+Gradle 原始 APK 输出位置：
 
 ```text
 app/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-APK 是构建产物，不提交 Git。`share-apk.sh` 保持运行期间，同一个二维码会一直指向这个路径；每次重新打包后再次扫码下载即可获得最新 APK。若 Mac 更换 Wi-Fi、IP 变化或脚本重启，需要重新扫码。
+`generate-apk.sh` 还会将该文件复制到项目根目录，便于直接安装和发送：
+
+```text
+Pages/安家笔记-debug.apk
+```
+
+两处 APK 都是构建产物，不提交 Git。`share-apk.sh` 保持运行期间，同一个二维码会一直指向原始 Gradle 输出；每次重新打包后再次扫码下载即可获得最新 APK。若 Mac 更换 Wi-Fi、IP 变化或脚本重启，需要重新扫码。
 
 ## 脚本说明
 
 | 文件 | 用途 |
 | --- | --- |
-| `generate-apk.sh` | 一键调用 `build-app.sh android-debug`，同步网页并生成调试 APK。 |
+| `generate-apk.sh` | 一键调用 `build-app.sh android-debug`，同步网页并生成调试 APK，再复制为项目根目录的 `安家笔记-debug.apk`。 |
 | `build-app.sh` | App 的统一入口：`sync`、`open-ios`、`open-android`、`android-debug`。执行 `./build-app.sh help` 查看说明。 |
 | `share-apk.sh` | 在 Mac 当前局域网地址启动临时 HTTP 下载服务，显示 APK 下载链接和二维码；按 `Ctrl+C` 停止。手机与 Mac 必须连接同一 Wi-Fi。 |
 | `scripts/build-web.mjs` | 将网页页面复制到 `www/`，并打包 App 所需的共享脚本。通常由打包脚本自动调用，不需单独运行。 |
@@ -125,7 +134,7 @@ npm ci
 
 应提交：网页源码、`app/src/`、`app/assets/`、脚本、`package.json`、`package-lock.json`、Android/iOS 原生工程配置和原生资源。
 
-不提交：`node_modules/`、`www/`、`dist/`、Android/iOS 构建目录、`local.properties`、`Pods/`、`.DS_Store`、APK/AAB。
+不提交：`node_modules/`、`www/`、`dist/`、Android/iOS 构建目录、`local.properties`、`Pods/`、`.DS_Store`、APK/AAB（包括根目录的 `安家笔记-debug.apk`）。
 
 打包完成后，建议检查：
 

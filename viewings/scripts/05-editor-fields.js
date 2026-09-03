@@ -163,9 +163,68 @@
 /* 模块 21：由原 index.html 内联脚本迁移。 */
 (() => {
     const sourceLink = document.getElementById('sourceLink');
-    if (!sourceLink) return;
+    const field = sourceLink?.closest('label');
+    if (!sourceLink || !field || field.querySelector('.source-link-actions')) return;
     sourceLink.type = 'text';
     sourceLink.placeholder = '可选：网址或小程序口令';
+
+    const actions = document.createElement('div');
+    actions.className = 'source-link-actions';
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.textContent = '打开';
+    open.dataset.openSourceLink = '';
+    const copy = document.createElement('button');
+    copy.type = 'button';
+    copy.textContent = '复制';
+    copy.dataset.copySourceLink = '';
+    sourceLink.before(actions);
+    actions.append(sourceLink, open, copy);
+
+    const toast = message => {
+      const node = document.getElementById('toast');
+      if (!node) return;
+      node.textContent = message;
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => { node.textContent = ''; }, 2200);
+    };
+    const value = () => sourceLink.value.trim();
+    const openableUrl = link => /^(?:[a-z0-9-]+\.)+[a-z]{2,}(?:[/?#].*)?$/i.test(link)
+      ? `https://${link}` : link;
+    const refresh = () => {
+      const hasValue = Boolean(value());
+      open.disabled = !hasValue;
+      copy.disabled = !hasValue;
+    };
+    const copyText = async text => {
+      try { await navigator.clipboard.writeText(text); }
+      catch (_) {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+        document.body.append(area);
+        area.select();
+        document.execCommand('copy');
+        area.remove();
+      }
+    };
+    sourceLink.addEventListener('input', refresh);
+    open.addEventListener('click', () => {
+      const link = value();
+      if (!link) return;
+      window.open(openableUrl(link), '_blank', 'noopener');
+    });
+    copy.addEventListener('click', async () => {
+      const link = value();
+      if (!link) return;
+      await copyText(link);
+      toast('房源链接已复制');
+    });
+    new MutationObserver(() => setTimeout(refresh, 0)).observe(document.getElementById('editor'), {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    refresh();
   })();
 
 /* 模块 22：由原 index.html 内联脚本迁移。 */
