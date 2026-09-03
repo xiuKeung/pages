@@ -14,6 +14,7 @@
   <style>
     :root { color-scheme: light; --blue:#1769e0; --ink:#17233b; --muted:#667085; --line:#e6edf8; }
     * { box-sizing:border-box; }
+    html, body { -webkit-tap-highlight-color:transparent; }
     body { margin:0; min-height:100vh; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; color:var(--ink); background:linear-gradient(145deg,#eef5ff 0%,#f8fbff 46%,#f1f6ff 100%); }
     main { width:min(720px,calc(100% - 40px)); margin:0 auto; padding:74px 0 48px; }
     .title-row { position:relative; display:flex; align-items:center; min-height:52px; padding-right:54px; }
@@ -22,10 +23,10 @@
     h1 { margin:0; font-size:clamp(30px,7vw,44px); line-height:1.18; letter-spacing:-.04em; }
     .intro { margin:18px 0 34px; color:var(--muted); font-size:16px; line-height:1.7; }
     .tools { display:grid; gap:16px; }
-    .tool { display:flex; align-items:center; gap:16px; min-height:112px; padding:18px; border:1px solid var(--line); border-radius:20px; background:rgba(255,255,255,.92); color:inherit; text-decoration:none; box-shadow:0 12px 32px rgba(37,93,177,.08); transition:transform .18s,box-shadow .18s,border-color .18s; }
+    .tool { display:flex; width:100%; align-items:center; gap:16px; min-height:112px; padding:18px; border:1px solid var(--line); border-radius:20px; background:rgba(255,255,255,.92); color:inherit; font:inherit; text-align:left; box-shadow:0 12px 32px rgba(37,93,177,.08); transition:transform .18s,box-shadow .18s,border-color .18s; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:manipulation; cursor:pointer; }
     .tool:hover { transform:translateY(-3px); border-color:#a9cbff; box-shadow:0 18px 38px rgba(37,93,177,.14); }
     .icon { display:grid; place-items:center; align-self:center; flex:0 0 62px; width:62px; height:62px; border-radius:18px; background:#e8f1ff; font-size:44px; line-height:1; text-align:center; }
-    .icon .emoji { display:block; line-height:1; } .tool:first-child .icon { font-size:53px; } .tool:first-child .emoji { transform:translateY(-5px); } .tool:nth-child(2) .icon { background:#e9f8f0; } .tool:nth-child(3) .icon { background:#fff4e6; } .tool:nth-child(4) .icon { background:#f1ebff; }
+    .icon .emoji { display:block; line-height:1; } .tool:nth-child(1) .icon { background:#fff4e6; } .tool:nth-child(2) .icon { background:#e8f1ff; font-size:53px; } .tool:nth-child(2) .emoji { transform:translateY(-5px); } .tool:nth-child(3) .icon { background:#e9f8f0; } .tool:nth-child(4) .icon { background:#f1ebff; }
     .tool h2 { margin:0 0 6px; font-size:21px; }
     .tool p { margin:0; color:var(--muted); font-size:14px; line-height:1.55; }
     footer { margin-top:32px; color:#8a96a9; font-size:13px; text-align:center; }
@@ -40,10 +41,13 @@
     .settings-panel > p { margin:19px 0 9px; color:var(--muted); font-size:14px; }
     .theme-options { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
     .theme-options button { min-height:38px; padding:7px 6px; border:1px solid var(--line); border-radius:9px; color:var(--muted); background:#f6f8fc; font:inherit; font-size:14px; cursor:pointer; }
+    .diagnostics-button { width:100%; min-height:38px; padding:7px 10px; border:1px solid var(--line); border-radius:9px; color:var(--blue); background:#f6f8fc; font:inherit; font-size:14px; cursor:pointer; }
+    .diagnostics-log { max-height:52vh; margin:0; padding:12px; overflow:auto; border:1px solid var(--line); border-radius:10px; color:var(--ink); background:#f6f8fc; font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; word-break:break-word; }
+    .diagnostics-actions { display:flex; gap:8px; margin-top:12px; } .diagnostics-actions button { flex:1; }
     .theme-options button.is-active { border-color:#84adff; color:var(--blue); background:#eff6ff; font-weight:700; }
     /* 不依赖可被切换禁用的主题文件，三种模式都清楚标出当前选项。 */
     html[data-theme] .theme-options button.is-active { color:#fff; background:#1d5fca; border-color:#84adff; box-shadow:0 0 0 1px rgba(132,173,255,.32) inset; }
-    @media (max-width:480px) { main{ width:min(100% - 28px,720px); padding-top:48px; } .title-row{min-height:46px;padding-right:50px;} .tool{ min-height:102px; padding:16px; gap:14px; } .icon{ flex-basis:54px; width:54px; height:54px; font-size:38px; } .tool:first-child .icon{font-size:46px;} }
+    @media (max-width:480px) { main{ width:min(100% - 28px,720px); padding-top:48px; } .title-row{min-height:46px;padding-right:50px;} .tool{ min-height:102px; padding:16px; gap:14px; } .icon{ flex-basis:54px; width:54px; height:54px; font-size:38px; } .tool:nth-child(2) .icon{font-size:46px;} }
   </style>
   <link rel="stylesheet" href="../shared/theme.css">
   <script src="../shared/theme.js"></script>
@@ -54,24 +58,24 @@
     <div class="title-row"><h1>安家笔记</h1><button class="settings-button" id="themeSettings" type="button" aria-label="外观设置" title="外观设置">⚙</button></div>
     <p class="intro">把学区、贷款、看房记录与购房流程放在一起</p>
     <section class="tools" aria-label="工具入口">
-      <a class="tool" href="../school/index.html">
-        <span class="icon" aria-hidden="true"><span class="emoji">🏫</span></span>
-        <span><h2>学区信息查询</h2><p>小区查学校，学校查官方匹配小区</p></span>
-      </a>
-      <a class="tool" href="../calculator/index.html">
-        <span class="icon" aria-hidden="true"><span class="emoji">🧮</span></span>
-        <span><h2>房贷计算器</h2><p>商贷、公积金、组合贷月供估算</p></span>
-      </a>
-      <a class="tool" href="../viewings/index.html">
+      <button class="tool" type="button" data-target="../viewings/index.html">
         <span class="icon" aria-hidden="true"><span class="emoji">📝</span></span>
         <span><h2>看房记录</h2><p>记录房源、报价、优缺点与看房结论</p></span>
-      </a>
-      <a class="tool" href="../checklist/index.html">
+      </button>
+      <button class="tool" type="button" data-target="../school/index.html">
+        <span class="icon" aria-hidden="true"><span class="emoji">🏫</span></span>
+        <span><h2>学区信息查询</h2><p>小区查学校，学校查官方匹配小区</p></span>
+      </button>
+      <button class="tool" type="button" data-target="../calculator/index.html">
+        <span class="icon" aria-hidden="true"><span class="emoji">🧮</span></span>
+        <span><h2>房贷计算器</h2><p>商贷、公积金、组合贷月供估算</p></span>
+      </button>
+      <button class="tool" type="button" data-target="../checklist/index.html">
         <span class="icon" aria-hidden="true"><span class="emoji">✅</span></span>
         <span><h2>购房清单</h2><p>分阶段核对看房、贷款、签约、过户及交楼</p></span>
-      </a>
+      </button>
     </section>
-    <footer>版本 v2026.09.03.1</footer>
+    <footer>版本 v2026.09.03.3</footer>
   </main>
   <div class="settings-dialog" id="themeDialog" hidden>
     <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="themeDialogTitle">
@@ -82,6 +86,16 @@
         <button type="button" data-theme-option="dark" role="radio">深色</button>
         <button type="button" data-theme-option="light" role="radio">浅色</button>
       </div>
+      <p>诊断</p>
+      <button class="diagnostics-button" id="openDiagnostics" type="button">打开诊断控制台</button>
+    </div>
+  </div>
+  <div class="settings-dialog" id="diagnosticsDialog" hidden>
+    <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="diagnosticsTitle">
+      <div class="settings-head"><h2 id="diagnosticsTitle">诊断控制台</h2><button id="closeDiagnostics" type="button" aria-label="关闭诊断控制台">×</button></div>
+      <p>看房记录读取日志</p>
+      <pre class="diagnostics-log" id="diagnosticsLog">暂无诊断日志</pre>
+      <div class="diagnostics-actions"><button class="diagnostics-button" id="copyDiagnostics" type="button">复制日志</button><button class="diagnostics-button" id="clearDiagnostics" type="button">清空日志</button></div>
     </div>
   </div>
   <script>
@@ -89,6 +103,10 @@
       const dialog = document.getElementById('themeDialog');
       const open = document.getElementById('themeSettings');
       const close = document.getElementById('closeThemeSettings');
+      const diagnosticsDialog = document.getElementById('diagnosticsDialog');
+      const openDiagnostics = document.getElementById('openDiagnostics');
+      const closeDiagnostics = document.getElementById('closeDiagnostics');
+      const diagnosticsLog = document.getElementById('diagnosticsLog');
       const options = [...document.querySelectorAll('[data-theme-option]')];
       let scrollLock = null;
       const lockScroll = () => {
@@ -116,13 +134,26 @@
         });
       };
       const closeDialog = () => { dialog.hidden = true; unlockScroll(); };
+      const diagnosticsText = () => localStorage.getItem('anjia-viewing-diagnostics-v1') || '暂无诊断日志';
+      const renderDiagnostics = () => { diagnosticsLog.textContent = diagnosticsText(); };
+      const closeDiagnosticsDialog = () => { diagnosticsDialog.hidden = true; unlockScroll(); };
       open?.addEventListener('click', () => { render(); lockScroll(); dialog.hidden = false; });
       close?.addEventListener('click', closeDialog);
       dialog?.addEventListener('click', event => { if (event.target === dialog) closeDialog(); });
+      openDiagnostics?.addEventListener('click', () => { renderDiagnostics(); dialog.hidden = true; diagnosticsDialog.hidden = false; });
+      closeDiagnostics?.addEventListener('click', closeDiagnosticsDialog);
+      diagnosticsDialog?.addEventListener('click', event => { if (event.target === diagnosticsDialog) closeDiagnosticsDialog(); });
+      document.getElementById('copyDiagnostics')?.addEventListener('click', async () => {
+        const text = diagnosticsText();
+        try { await navigator.clipboard.writeText(text); }
+        catch (_) { const area = document.createElement('textarea'); area.value = text; document.body.append(area); area.select(); document.execCommand('copy'); area.remove(); }
+      });
+      document.getElementById('clearDiagnostics')?.addEventListener('click', () => { localStorage.removeItem('anjia-viewing-diagnostics-v1'); renderDiagnostics(); });
       options.forEach(option => option.addEventListener('click', () => {
         window.AnjiaTheme?.set(option.dataset.themeOption);
         render();
       }));
+      document.querySelectorAll('.tool[data-target]').forEach(tool => tool.addEventListener('click', () => { window.location.href = tool.dataset.target; }));
       render();
     })();
   </script>

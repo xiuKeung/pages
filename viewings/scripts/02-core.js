@@ -28,12 +28,15 @@
     let error;
     for (let attempt = 0; attempt <= retries; attempt += 1) {
       try {
+        window.NativeStore.addViewingDiagnostic?.('viewings-page-load-start', { force, attempt: attempt + 1 });
         await window.NativeStore.ready();
         const stored = await window.NativeStore.getViewingRecords({ force });
         records = Array.isArray(stored) ? stored : [];
+        window.NativeStore.addViewingDiagnostic?.('viewings-page-load-success', { attempt: attempt + 1, count: records.length });
         return true;
       } catch (cause) {
         error = cause;
+        window.NativeStore.addViewingDiagnostic?.('viewings-page-load-failed', { attempt: attempt + 1, message: String(cause?.message || cause) });
         if (attempt < retries)
           await new Promise((resolve) =>
             setTimeout(resolve, 180 * (attempt + 1)),
@@ -41,7 +44,34 @@
       }
     }
     console.warn("读取看房记录失败，将在下次进入时重试。", error);
+    showLoadFailure(error);
     return false;
+  }
+  async function copyDiagnostics() {
+    const text = window.NativeStore.getViewingDiagnostics?.() || '[]';
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (_) {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+      document.body.append(area);
+      area.select();
+      document.execCommand('copy');
+      area.remove();
+    }
+    toast('诊断信息已复制');
+  }
+  function showLoadFailure(error) {
+    const recordsNode = $('records');
+    if (recordsNode.querySelector('.record')) {
+      toast('读取记录失败，已保留当前列表');
+      return;
+    }
+    recordsNode.innerHTML = `<div class="card empty"><p>看房记录读取失败，请重试</p><div class="record-actions"><button id="retryViewingRecords" type="button">重试读取</button><button id="copyViewingDiagnostics" type="button">复制诊断信息</button></div></div>`;
+    $('retryViewingRecords')?.addEventListener('click', () => void reloadRecords({ force:true }));
+    $('copyViewingDiagnostics')?.addEventListener('click', () => void copyDiagnostics());
+    console.warn('看房记录诊断：', error, window.NativeStore.getViewingDiagnostics?.());
   }
   async function reloadRecords(options = {}) {
     const loaded = await load(options);
@@ -326,12 +356,14 @@
   populateFloors();
   await reloadRecords({ force: true });
   window.addEventListener("pageshow", (event) => {
-    if (event.persisted) void reloadRecords({ force: true });
+    // Android WebView 返回到入口后再进入时，页面可能来自历史缓存。
+    // 无论是否标记 persisted，都强制从 SQLite 刷新一次。
+    void reloadRecords({ force: true });
   });
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && records.length === 0)
-      void reloadRecords({ force: true });
+    if (!document.hidden) void reloadRecords({ force: true });
   });
+  window.addEventListener("focus", () => void reloadRecords({ force: true }));
   window.addEventListener("viewing:load-more", () => {
     renderLimit += 20;
     render();
