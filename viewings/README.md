@@ -1,18 +1,53 @@
-# 看房记录页面结构
+# 看房记录
 
-`index.html` 只保留页面结构和资源引用。
+“安家笔记”的房源记录页面，用于在当前设备保存看房信息、学校信息、贷款估算和房源图片。
 
-- `style.css`：页面全部样式。
-- `scripts/01-loan.js`：贷款计算。
-- `scripts/02-core.js`：基础记录读取、渲染与返回行为。
-- `scripts/03-editor-basics.js`：编辑器与小区联想等基础交互。
-- `scripts/04-record-summary.js`：列表摘要、筛选与折叠信息。
-- `scripts/05-editor-fields.js`：字段布局、字段迁移和录入体验。
-- `scripts/06-copy-and-index.js`：复制与列表序号。
-- `scripts/07-layout.js`：编辑器布局调整。
-- `scripts/08-save-and-autofill.js`：保存状态和同小区自动带入。
-- `scripts/09-images.js`：图片选择、拍照、预览、缩放、保存与删除。
-- `scripts/10-date-control.js`：日期控件的 iOS 兼容显示。
-- `scripts/11-record-actions.js`：列表操作按钮的最终状态。
+## 主要功能
 
-脚本按 `index.html` 中的顺序加载；现有功能依赖此顺序。App 构建时会直接复制整个 `viewings/` 目录到原生 Web 资源目录。
+- 新增、查看、自动保存、搜索、筛选、复制和删除看房记录；
+- 小区名称联想，并自动匹配小学和中学；学校字段仍可手动修改；
+- 记录报价、户型、建成年份、物业、车位、梯户比、地标、优缺点等信息；
+- 根据报价、首付比例、商贷利率和年限展示等额本息、等额本金月供；
+- 选择图片或直接拍照，支持大图预览、缩放、左右切换、保存与删除；
+- 导出、导入包含文本和图片的 ZIP 备份。导入可选增量导入或覆盖导入；导出可选全部记录或手动选择记录。
+
+## 数据保存与边界
+
+| 运行环境 | 文字记录 | 房源图片 |
+| --- | --- | --- |
+| 浏览器网页 | `localStorage` | `IndexedDB` |
+| iOS / Android App | SQLite | App 私有文件目录，SQLite 仅保存图片元数据和路径 |
+
+- 卸载 App、清除浏览器站点数据都会删除对应设备上的本地记录和图片；
+- 不包含账号、服务端或跨设备自动同步；请定期导出 ZIP 备份；
+- 删除一条记录会一并删除它的图片和其他数据；
+- 房源图片会在保存时生成缩略图，以降低列表与详情页的加载成本。
+
+## 页面结构
+
+`index.html` 只保留页面结构和脚本引用，样式集中在 `style.css`。脚本必须按 `index.html` 的顺序加载：
+
+| 文件 | 职责 |
+| --- | --- |
+| `scripts/01-loan.js` | 看房记录中的贷款计算公式 |
+| `scripts/02-core.js` | 记录读取、基础渲染、保存与返回行为 |
+| `scripts/03-editor-basics.js` | 编辑器、小区联想、学校自动匹配、编辑位置恢复与自动保存 |
+| `scripts/04-record-summary.js` | 列表摘要、学校与备注折叠展示、月供摘要 |
+| `scripts/05-editor-fields.js` | 录入字段、字段排版、房源链接打开与复制 |
+| `scripts/06-copy-and-index.js` | 编辑内容复制和记录编号 |
+| `scripts/07-layout.js` | 看房与贷款信息的可折叠布局 |
+| `scripts/08-save-and-autofill.js` | 保存后定位，以及同小区物业、建成年份、车位信息自动带入 |
+| `scripts/09-images.js` | 图片选择、拍照、缩略图、大图预览、缩放、保存与删除 |
+| `scripts/10-date-control.js` | 日期控件的 iOS 兼容显示 |
+| `scripts/11-record-actions.js` | 复制、删除和删除后的列表定位 |
+| `scripts/12-pagination.js` | 搜索联想、记录数量与分批加载 |
+
+## 与学区、计算器的关系
+
+- “查学区”会带着当前小区名称跳转到学区查询页并自动查询；
+- “算月供”会带着当前报价跳转到房贷计算器；
+- 学区匹配依赖 `../school/official-district-data.js` 和 `../school/data-loader.js`，因此官方数据更新后，看房记录中的自动匹配也会使用新数据。
+
+## App 构建
+
+App 构建会把整个 `viewings/` 目录复制到原生 Web 资源中。只修改本目录源码；不要手动修改 `app/www/`、Android 或 iOS 的 `public/viewings/` 副本。完整构建与备份说明见 [App README](../app/README.md)。
