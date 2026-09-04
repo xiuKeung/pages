@@ -15,6 +15,3 @@ school/test-results/
 
 # Atomic temporary files written while official data is being regenerated.
 school/*.tmp
-
-# Local Android debug package copied by app/generate-apk.sh.
-安家笔记-debug.apk
