@@ -25,3 +25,10 @@ html[data-theme="dark"] .tool,html[data-theme="dark"] .settings-panel,html[data-
 html[data-theme="dark"] .tool:nth-child(1) .icon { background:#1f3d66; } html[data-theme="dark"] .tool:nth-child(2) .icon { background:#1c4a3b; } html[data-theme="dark"] .tool:nth-child(3) .icon { background:#52361e; } html[data-theme="dark"] .tool:nth-child(4) .icon { background:#3c2b62; }
 html[data-theme="dark"] .record-extra summary { color:#b2ccff; }
 @media (prefers-color-scheme:dark) { html[data-theme="system"] .tool:nth-child(1) .icon { background:#1f3d66; } html[data-theme="system"] .tool:nth-child(2) .icon { background:#1c4a3b; } html[data-theme="system"] .tool:nth-child(3) .icon { background:#52361e; } html[data-theme="system"] .tool:nth-child(4) .icon { background:#3c2b62; } html[data-theme="system"] .record-extra summary { color:#b2ccff; } }
+
+.app-dialog { position:fixed; z-index:1400; inset:0; display:grid; place-items:center; padding:20px; background:rgba(16,24,40,.48); }
+.app-dialog-panel { width:min(100%,360px); padding:20px; border:1px solid var(--line); border-radius:16px; color:var(--ink); background:var(--theme-surface); box-shadow:0 18px 48px rgba(16,24,40,.28); }
+.app-dialog-panel h2 { margin:0; font-size:18px; }
+.app-dialog-panel p { margin:10px 0 0; color:var(--muted); font-size:14px; line-height:1.65; }
+.app-dialog-actions { display:flex; gap:10px; margin-top:20px; }
+.app-dialog-actions button { flex:1; min-height:38px; }

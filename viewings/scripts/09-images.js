@@ -287,7 +287,12 @@
         remove.textContent = '×';
         remove.title = '删除图片';
         remove.addEventListener('click', async () => {
-          if (!confirm(`确认删除图片“${ref.name || '未命名图片'}”吗？`)) return;
+          const confirmed = await window.AppDialog.confirm({
+            title: '删除房源图片',
+            message: `确认删除图片“${ref.name || '未命名图片'}”吗？`,
+            confirmText: '删除图片'
+          });
+          if (!confirmed) return;
           refs = refs.filter(item => item.id !== ref.id);
           await deleteImage(ref);
           sync();

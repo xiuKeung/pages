@@ -185,11 +185,17 @@
     openEditor(records.find((r) => String(r.id) === id));
   }
   function remove(id) {
-    if (!confirm("删除这条看房记录？")) return;
-    records = records.filter((r) => String(r.id) !== id);
-    save();
-    render();
-    toast("记录已删除。");
+    void window.AppDialog.confirm({
+      title: '删除看房记录',
+      message: '确认删除这条看房记录及其全部图片吗？',
+      confirmText: '删除记录'
+    }).then(confirmed => {
+      if (!confirmed) return;
+      records = records.filter((r) => String(r.id) !== id);
+      save();
+      render();
+      toast("记录已删除。");
+    });
   }
   function download(text, name) {
     const a = document.createElement("a");
@@ -341,7 +347,7 @@
       render();
       toast(`已导入 ${records.length} 条记录。`);
     } catch (_) {
-      alert("导入失败：请选择本工具导出的 JSON 文件。");
+      toast("导入失败：请选择本工具导出的 JSON 文件。");
     }
     e.target.value = "";
   };

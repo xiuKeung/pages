@@ -74,8 +74,13 @@
     }
   }
 
-  $('reset').onclick = () => {
-    if (!confirm('重置所有勾选和备注？')) return;
+  $('reset').onclick = async () => {
+    const confirmed = await window.AppDialog.confirm({
+      title: '重置购房清单',
+      message: '确认清空全部勾选状态和个人备注吗？',
+      confirmText: '重置清单'
+    });
+    if (!confirmed) return;
     state = {};
     save();
     render();

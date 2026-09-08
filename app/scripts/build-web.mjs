@@ -9,7 +9,7 @@ const outputDir = join(appRoot, 'www');
 const bundleDir = join(appRoot, 'dist');
 const websiteSharedDir = join(webSourceRoot, 'shared');
 const siteDirectories = ['entrance', 'school', 'calculator', 'viewings', 'checklist'];
-const bundles = ['native-store', 'checklist-page', 'backup-page'];
+const bundles = ['native-store', 'ui-dialog', 'checklist-page', 'backup-page'];
 const sharedStaticFiles = ['theme.css', 'theme.js', 'mobile-inputs.css'];
 
 await rm(bundleDir, { recursive: true, force: true });

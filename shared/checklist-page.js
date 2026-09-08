@@ -71,8 +71,13 @@
         toast("\u672C\u5730\u6570\u636E\u5E93\u521D\u59CB\u5316\u5931\u8D25\u3002");
       }
     }
-    $("reset").onclick = () => {
-      if (!confirm("\u91CD\u7F6E\u6240\u6709\u52FE\u9009\u548C\u5907\u6CE8\uFF1F")) return;
+    $("reset").onclick = async () => {
+      const confirmed = await window.AppDialog.confirm({
+        title: "\u91CD\u7F6E\u8D2D\u623F\u6E05\u5355",
+        message: "\u786E\u8BA4\u6E05\u7A7A\u5168\u90E8\u52FE\u9009\u72B6\u6001\u548C\u4E2A\u4EBA\u5907\u6CE8\u5417\uFF1F",
+        confirmText: "\u91CD\u7F6E\u6E05\u5355"
+      });
+      if (!confirmed) return;
       state = {};
       save();
       render();

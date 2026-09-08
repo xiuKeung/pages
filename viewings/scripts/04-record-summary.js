@@ -195,7 +195,12 @@
         showToast('复制成功');
         return;
       }
-      if (!confirm(`删除“${record.community}”这条看房记录？`)) return;
+      const confirmed = await window.AppDialog.confirm({
+        title: '删除看房记录',
+        message: `确认删除“${record.community}”这条看房记录及其全部图片吗？`,
+        confirmText: '删除记录'
+      });
+      if (!confirmed) return;
       rememberDeletePosition(button);
       await window.NativeStore.deleteViewingRecord(id);
       showToast('记录已删除。');
