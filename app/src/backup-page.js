@@ -247,7 +247,7 @@ function chooseImportMode() {
   return new Promise(resolve => {
     const dialog = document.createElement('div');
     dialog.className = 'backup-mode-dialog';
-    dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="选择导入方式"><h3>选择导入方式</h3><p><strong>增量导入</strong>会保留本机已有数据，将备份中的看房记录及图片作为新记录追加导入。</p><p><strong>覆盖导入</strong>会替换本机全部看房记录及图片，不影响购房清单、贷款方案和学区收藏。建议先导出当前看房记录备份。</p><div><button type="button" data-mode="merge">增量导入</button><button type="button" class="danger" data-mode="replace">覆盖导入</button></div><button type="button" class="cancel" data-mode="cancel">取消</button></div>';
+    dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="选择导入方式"><h3>选择导入方式</h3><p><strong>增量导入</strong>会保留本机已有数据，将备份中的看房记录及图片作为新记录追加导入。</p><p><strong>覆盖导入</strong>会替换本机全部看房记录及图片，不影响购房清单、贷款方案和学区收藏。建议先导出当前看房记录备份。</p><div><button type="button" data-mode="merge">增量导入</button><button type="button" data-mode="replace">覆盖导入</button></div><button type="button" class="cancel" data-mode="cancel">取消</button></div>';
     const finish = mode => { closeDialog(dialog); resolve(mode === 'cancel' ? null : mode); };
     dialog.addEventListener('click', event => {
       if (event.target === dialog) return finish('cancel');
@@ -262,7 +262,7 @@ function confirmReplaceImport() {
   return new Promise(resolve => {
     const dialog = document.createElement('div');
     dialog.className = 'backup-mode-dialog';
-    dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="确认覆盖导入"><h3>确认覆盖导入</h3><p>这会删除本机现有的全部看房记录和房源图片，并恢复备份中的看房记录及图片。</p><p>建议你先导出当前看房记录备份。</p><label class="backup-confirm"><input type="checkbox" data-confirm-check> 我已确认要覆盖本机看房记录</label><div><button type="button" class="danger" data-confirm-replace disabled>确认覆盖导入</button></div><button type="button" class="cancel" data-confirm-cancel>取消</button></div>';
+    dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="确认覆盖导入"><h3>确认覆盖导入</h3><p>这会删除本机现有的全部看房记录和房源图片，并恢复备份中的看房记录及图片。</p><p>建议你先导出当前看房记录备份。</p><label class="backup-confirm"><input type="checkbox" data-confirm-check> 我已确认要覆盖本机看房记录</label><div><button type="button" data-confirm-replace disabled>确认覆盖导入</button></div><button type="button" class="cancel" data-confirm-cancel>取消</button></div>';
     const confirmButton = dialog.querySelector('[data-confirm-replace]');
     const finish = value => { closeDialog(dialog); resolve(value); };
     dialog.addEventListener('change', event => {
