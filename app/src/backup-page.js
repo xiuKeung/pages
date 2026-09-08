@@ -129,7 +129,11 @@ function browserImageStore(mode, action) {
 }
 const getBrowserImage = id => browserImageStore('readonly', store => store.get(id));
 const putBrowserImage = (id, blob) => browserImageStore('readwrite', store => store.put(blob, id));
-const clearBrowserImages = () => browserImageStore('readwrite', store => store.clear());
+const deleteBrowserImages = ids => {
+  const uniqueIds = [...new Set((ids || []).filter(Boolean).map(String))];
+  if (!uniqueIds.length) return Promise.resolve();
+  return browserImageStore('readwrite', store => uniqueIds.forEach(id => store.delete(id)));
+};
 const parseImageRefs = value => {
   try { const refs = JSON.parse(value || '[]'); return Array.isArray(refs) ? refs : []; }
   catch (_) { return []; }
@@ -208,6 +212,10 @@ async function createBackup(dataOverride = null) {
   }
 }
 
+function viewingsOnlyBackup(data) {
+  return { ...data, checklist: {}, mortgage: [], school: [] };
+}
+
 async function chooseBackup() {
   if (window.NativeStore.isNative()) {
     const result = await FilePicker.pickFiles({
@@ -239,7 +247,7 @@ function chooseImportMode() {
   return new Promise(resolve => {
     const dialog = document.createElement('div');
     dialog.className = 'backup-mode-dialog';
-    dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="选择导入方式"><h3>选择导入方式</h3><p><strong>增量导入</strong>会保留本机已有数据，将备份中的看房记录及图片作为新记录追加导入。</p><p><strong>覆盖导入</strong>会清空本机现有数据，再完整恢复备份。</p><div><button type="button" data-mode="merge">增量导入</button><button type="button" class="danger" data-mode="replace">覆盖导入</button></div><button type="button" class="cancel" data-mode="cancel">取消</button></div>';
+    dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="选择导入方式"><h3>选择导入方式</h3><p><strong>增量导入</strong>会保留本机已有数据，将备份中的看房记录及图片作为新记录追加导入。</p><p><strong>覆盖导入</strong>会替换本机全部看房记录及图片，不影响购房清单、贷款方案和学区收藏。建议先导出当前看房记录备份。</p><div><button type="button" data-mode="merge">增量导入</button><button type="button" class="danger" data-mode="replace">覆盖导入</button></div><button type="button" class="cancel" data-mode="cancel">取消</button></div>';
     const finish = mode => { closeDialog(dialog); resolve(mode === 'cancel' ? null : mode); };
     dialog.addEventListener('click', event => {
       if (event.target === dialog) return finish('cancel');
@@ -250,11 +258,29 @@ function chooseImportMode() {
   });
 }
 
+function confirmReplaceImport() {
+  return new Promise(resolve => {
+    const dialog = document.createElement('div');
+    dialog.className = 'backup-mode-dialog';
+    dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="确认覆盖导入"><h3>确认覆盖导入</h3><p>这会删除本机现有的全部看房记录和房源图片，并恢复备份中的看房记录及图片。</p><p>建议你先导出当前看房记录备份。</p><label class="backup-confirm"><input type="checkbox" data-confirm-check> 我已确认要覆盖本机看房记录</label><div><button type="button" class="danger" data-confirm-replace disabled>确认覆盖导入</button></div><button type="button" class="cancel" data-confirm-cancel>取消</button></div>';
+    const confirmButton = dialog.querySelector('[data-confirm-replace]');
+    const finish = value => { closeDialog(dialog); resolve(value); };
+    dialog.addEventListener('change', event => {
+      if (event.target.matches('[data-confirm-check]')) confirmButton.disabled = !event.target.checked;
+    });
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog || event.target.closest('[data-confirm-cancel]')) return finish(false);
+      if (event.target.closest('[data-confirm-replace]') && !confirmButton.disabled) finish(true);
+    });
+    openDialog(dialog);
+  });
+}
+
 function chooseExportMode() {
   return new Promise(resolve => {
     const dialog = document.createElement('div');
     dialog.className = 'backup-mode-dialog';
-    dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="选择导出方式"><h3>选择导出方式</h3><p><strong>全量导出</strong>会导出全部看房记录、图片、购房清单、贷款方案和学区收藏。</p><p><strong>手动选择记录导出</strong>仅导出你勾选的看房记录及其图片。</p><div><button type="button" data-mode="full">全量导出</button><button type="button" data-mode="records">选择记录</button></div><button type="button" class="cancel" data-mode="cancel">取消</button></div>';
+    dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="选择导出方式"><h3>选择导出方式</h3><p><strong>全量导出</strong>会导出全部看房记录及其图片。</p><p><strong>手动选择记录导出</strong>仅导出你勾选的看房记录及其图片。</p><div><button type="button" data-mode="full">全量导出</button><button type="button" data-mode="records">选择记录</button></div><button type="button" class="cancel" data-mode="cancel">取消</button></div>';
     const finish = mode => { closeDialog(dialog); resolve(mode === 'cancel' ? null : mode); };
     dialog.addEventListener('click', event => {
       if (event.target === dialog) return finish('cancel');
@@ -314,69 +340,61 @@ async function prepareIncrementalRecords(data) {
 async function restoreBrowserBackup(data, zip, mode, progress) {
   const photosByRecord = new Map();
   const images = [];
+  const importedImageIds = [];
+  const existingRecords = mode === 'replace' ? await window.NativeStore.getViewingRecords() : [];
+  const oldImageIds = existingRecords.flatMap(record => parseImageRefs(record.imageRefs).map(ref => ref?.id));
   const photoCount = Math.max(data.photos.length, 1);
-  for (const [index, photo] of data.photos.entries()) {
-    if (!photo?.id || !photo?.recordId || !validPath(photo.archiveOriginalPath)) {
-      throw new Error('备份图片索引不正确');
+  let recordsSaved = false;
+  try {
+    for (const [index, photo] of data.photos.entries()) {
+      if (!photo?.id || !photo?.recordId || !validPath(photo.archiveOriginalPath)) {
+        throw new Error('备份图片索引不正确');
+      }
+      const entry = zip.file(photo.archiveOriginalPath);
+      if (!entry) throw new Error('备份图片文件缺失');
+      const blob = await entry.async('blob');
+      images.push({ id: String(photo.id), blob });
+      const refs = photosByRecord.get(String(photo.recordId)) || [];
+      refs.push({
+        id: String(photo.id), name: photo.name || '房源图片', type: photo.type || blob.type || 'image/jpeg',
+        width: photo.width || null, height: photo.height || null, createdAt: Number(photo.createdAt || Date.now()),
+        sortOrder: Number(photo.sortOrder || 0)
+      });
+      photosByRecord.set(String(photo.recordId), refs);
+      progress.update(14 + ((index + 1) / photoCount) * 42, '正在读取备份图片', `已读取 ${index + 1} / ${data.photos.length} 张图片`);
     }
-    const entry = zip.file(photo.archiveOriginalPath);
-    if (!entry) throw new Error('备份图片文件缺失');
-    const blob = await entry.async('blob');
-    images.push({ id: String(photo.id), blob });
-    const refs = photosByRecord.get(String(photo.recordId)) || [];
-    refs.push({
-      id: String(photo.id), name: photo.name || '房源图片', type: photo.type || blob.type || 'image/jpeg',
-      width: photo.width || null, height: photo.height || null, createdAt: Number(photo.createdAt || Date.now()),
-      sortOrder: Number(photo.sortOrder || 0)
-    });
-    photosByRecord.set(String(photo.recordId), refs);
-    progress.update(14 + ((index + 1) / photoCount) * 42, '正在读取备份图片', `已读取 ${index + 1} / ${data.photos.length} 张图片`);
+    const records = data.records.map(record => ({
+      ...record,
+      imageRefs: JSON.stringify((photosByRecord.get(String(record.id)) || []).sort(
+        (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
+      ))
+    }));
+    for (const [index, image] of images.entries()) {
+      await putBrowserImage(image.id, image.blob);
+      importedImageIds.push(image.id);
+      progress.update(58 + ((index + 1) / photoCount) * 27, '正在保存图片', `已保存 ${index + 1} / ${images.length} 张图片`);
+    }
+    progress.update(88, '正在保存看房记录', `正在写入 ${records.length} 条记录`);
+    const existing = mode === 'merge' ? await window.NativeStore.getViewingRecords() : [];
+    await window.NativeStore.saveViewingRecords(mode === 'merge' ? [...existing, ...records] : records);
+    recordsSaved = true;
+    if (mode === 'replace') {
+      // 新图片和新记录均已落盘后，才清理旧图片；清理失败最多留下无引用文件，不会损坏备份或新记录。
+      await deleteBrowserImages(oldImageIds).catch(error => console.warn('旧房源图片清理失败，将在后续清理。', error));
+    }
+    progress.update(97, '正在整理数据', '即将完成');
+    return { records: records.length };
+  } catch (error) {
+    if (!recordsSaved) await deleteBrowserImages(importedImageIds).catch(() => {});
+    throw error;
   }
-  const records = data.records.map(record => ({
-    ...record,
-    imageRefs: JSON.stringify((photosByRecord.get(String(record.id)) || []).sort(
-      (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
-    ))
-  }));
-  if (mode === 'replace') {
-    progress.update(58, '正在清理旧数据', '正在准备恢复备份');
-    await clearBrowserImages();
-  }
-  for (const [index, image] of images.entries()) {
-    await putBrowserImage(image.id, image.blob);
-    progress.update(58 + ((index + 1) / photoCount) * 27, '正在保存图片', `已保存 ${index + 1} / ${images.length} 张图片`);
-  }
-  progress.update(88, '正在保存看房记录', `正在写入 ${records.length} 条记录`);
-  const existing = await window.NativeStore.getViewingRecords();
-  await window.NativeStore.saveViewingRecords(mode === 'merge' ? [...existing, ...records] : records);
-  if (mode === 'replace') {
-    await window.NativeStore.saveChecklistState(data.checklist && typeof data.checklist === 'object' ? data.checklist : {});
-    const mortgage = Array.isArray(data.mortgage)
-      ? (data.mortgage.find(item => item.id === 'current')?.data || null)
-      : (data.mortgage || null);
-    await window.NativeStore.saveMortgageCurrent(mortgage);
-    const school = Array.isArray(data.school)
-      ? {
-          recentCommunity: data.school.filter(item => item.list_type === 'recent' && item.mode === 'community'),
-          recentSchool: data.school.filter(item => item.list_type === 'recent' && item.mode === 'school'),
-          favoriteCommunity: data.school.filter(item => item.list_type === 'favorite' && item.mode === 'community'),
-          favoriteSchool: data.school.filter(item => item.list_type === 'favorite' && item.mode === 'school')
-        }
-      : (data.school || {});
-    await Promise.all([
-      window.NativeStore.saveSchoolSaved('recent', 'community', school.recentCommunity || []),
-      window.NativeStore.saveSchoolSaved('recent', 'school', school.recentSchool || []),
-      window.NativeStore.saveSchoolSaved('favorite', 'community', school.favoriteCommunity || []),
-      window.NativeStore.saveSchoolSaved('favorite', 'school', school.favoriteSchool || [])
-    ]);
-  }
-  progress.update(97, '正在整理数据', '即将完成');
-  return { records: records.length };
 }
 
 async function restoreBackup(mode) {
   const selected = await chooseBackup();
   if (!selected) return;
+  // 覆盖确认必须在进度遮罩打开前完成，避免确认弹窗被进度层遮挡。
+  if (mode === 'replace' && !(await confirmReplaceImport())) return;
   let progress;
   let written = [];
   try {
@@ -391,14 +409,10 @@ async function restoreBackup(mode) {
     if (manifest.format !== FORMAT || manifest.version !== VERSION) throw new Error('不是可识别的完整备份文件');
     let data = JSON.parse(await dataEntry.async('text'));
     if (!Array.isArray(data.records) || !Array.isArray(data.photos)) throw new Error('备份数据格式不正确');
-    if (mode === 'replace' && !confirm('覆盖导入会清空当前设备内的所有本地数据，确认继续吗？')) {
-      progress.close();
-      return;
-    }
     progress.update(12, '正在准备导入', `共 ${data.records.length} 条记录、${data.photos.length} 张图片`);
-    if (mode === 'merge') {
+    if (mode === 'merge' || (!window.NativeStore.isNative() && mode === 'replace')) {
       data = await prepareIncrementalRecords(data);
-      progress.update(14, '正在准备增量导入', `共 ${data.records.length} 条记录、${data.photos.length} 张图片`);
+      progress.update(14, mode === 'merge' ? '正在准备增量导入' : '正在准备覆盖导入', `共 ${data.records.length} 条记录、${data.photos.length} 张图片`);
     }
 
     if (!window.NativeStore.isNative()) {
@@ -452,7 +466,7 @@ document.getElementById('export')?.addEventListener('click', async event => {
     if (!mode) return;
     if (mode === 'full') {
       toast('正在生成全量备份…');
-      await createBackup();
+      await createBackup(viewingsOnlyBackup(await window.NativeStore.getBackupData()));
       toast('全量备份已生成。');
     } else {
       const records = await chooseRecordsForExport();
@@ -460,12 +474,11 @@ document.getElementById('export')?.addEventListener('click', async event => {
       const data = await window.NativeStore.getBackupData();
       const ids = new Set(records.map(record => String(record.id)));
       toast(`正在生成 ${records.length} 条记录的备份…`);
-      await createBackup({
+      await createBackup(viewingsOnlyBackup({
         ...data,
         records,
-        photos: (data.photos || []).filter(photo => ids.has(String(photo.recordId))),
-        checklist: {}, mortgage: [], school: []
-      });
+        photos: (data.photos || []).filter(photo => ids.has(String(photo.recordId)))
+      }));
       toast(`已导出 ${records.length} 条记录。`);
     }
   } catch (error) {

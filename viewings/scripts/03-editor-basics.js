@@ -351,11 +351,14 @@
     form.querySelector('.form-actions')?.before(status);
 
     let timer;
+    let saveRevision = 0;
+    let scheduledRevision = 0;
     const formatTime = value => new Date(value).toLocaleTimeString('zh-CN', {
       hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
     });
-    const saveDraft = () => {
+    const saveDraft = async (revision = ++saveRevision) => {
       clearTimeout(timer);
+      timer = undefined;
       if (editor.classList.contains('hidden')) return;
       const data = Object.fromEntries(new FormData(form));
       if (!String(data.community || '').trim()) {
@@ -374,25 +377,34 @@
           : now;
         if (index >= 0) records[index] = record;
         else records.push(record);
-        void window.NativeStore.saveViewingRecords(records);
+        await window.NativeStore.saveViewingRecords(records);
         document.getElementById('recordId').value = record.id;
-        status.textContent = `已自动保存 · ${formatTime(now)}`;
+        if (revision === saveRevision) status.textContent = `已自动保存 · ${formatTime(now)}`;
       } catch (_) {
-        status.textContent = '自动保存失败，请点击“收起详情”重试';
+        if (revision === saveRevision) status.textContent = '自动保存失败，请继续编辑或稍后重试';
       }
     };
     const scheduleSave = () => {
       if (editor.classList.contains('hidden')) return;
       status.textContent = '正在自动保存…';
       clearTimeout(timer);
-      timer = setTimeout(saveDraft, 650);
+      const revision = ++saveRevision;
+      scheduledRevision = revision;
+      timer = setTimeout(() => { void saveDraft(revision); }, 650);
+    };
+    const flushPendingSave = () => {
+      if (!timer) return;
+      clearTimeout(timer);
+      timer = undefined;
+      void saveDraft(scheduledRevision);
     };
 
     form.addEventListener('input', scheduleSave);
     form.addEventListener('change', scheduleSave);
-    // 页面退出时不再启动新的 SQLite 写入。已经停止输入超过 650ms 的内容会
-    // 在此前自动保存；仍在防抖等待的最后一次输入则不打断原生桥接生命周期。
-    window.addEventListener('pagehide', () => clearTimeout(timer));
+    // 切后台或离页时立即发起尚未执行的最后一次保存；原生系统强制终止进程时
+    // 仍无法保证异步写入完成，但可显著缩小最后一次输入丢失的窗口。
+    document.addEventListener('visibilitychange', () => { if (document.hidden) flushPendingSave(); });
+    window.addEventListener('pagehide', flushPendingSave);
     document.addEventListener('click', event => {
       if (event.target.closest('#add, [data-edit]')) {
         setTimeout(() => { status.textContent = '编辑内容将自动保存'; }, 0);

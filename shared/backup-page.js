@@ -3897,7 +3897,11 @@
   }
   var getBrowserImage = (id) => browserImageStore("readonly", (store) => store.get(id));
   var putBrowserImage = (id, blob) => browserImageStore("readwrite", (store) => store.put(blob, id));
-  var clearBrowserImages = () => browserImageStore("readwrite", (store) => store.clear());
+  var deleteBrowserImages = (ids) => {
+    const uniqueIds = [...new Set((ids || []).filter(Boolean).map(String))];
+    if (!uniqueIds.length) return Promise.resolve();
+    return browserImageStore("readwrite", (store) => uniqueIds.forEach((id) => store.delete(id)));
+  };
   var parseImageRefs = (value) => {
     try {
       const refs = JSON.parse(value || "[]");
@@ -3984,6 +3988,9 @@
       });
     }
   }
+  function viewingsOnlyBackup(data) {
+    return { ...data, checklist: {}, mortgage: [], school: [] };
+  }
   async function chooseBackup() {
     if (window.NativeStore.isNative()) {
       const result = await FilePicker.pickFiles({
@@ -4016,7 +4023,7 @@
     return new Promise((resolve2) => {
       const dialog = document.createElement("div");
       dialog.className = "backup-mode-dialog";
-      dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="\u9009\u62E9\u5BFC\u5165\u65B9\u5F0F"><h3>\u9009\u62E9\u5BFC\u5165\u65B9\u5F0F</h3><p><strong>\u589E\u91CF\u5BFC\u5165</strong>\u4F1A\u4FDD\u7559\u672C\u673A\u5DF2\u6709\u6570\u636E\uFF0C\u5C06\u5907\u4EFD\u4E2D\u7684\u770B\u623F\u8BB0\u5F55\u53CA\u56FE\u7247\u4F5C\u4E3A\u65B0\u8BB0\u5F55\u8FFD\u52A0\u5BFC\u5165\u3002</p><p><strong>\u8986\u76D6\u5BFC\u5165</strong>\u4F1A\u6E05\u7A7A\u672C\u673A\u73B0\u6709\u6570\u636E\uFF0C\u518D\u5B8C\u6574\u6062\u590D\u5907\u4EFD\u3002</p><div><button type="button" data-mode="merge">\u589E\u91CF\u5BFC\u5165</button><button type="button" class="danger" data-mode="replace">\u8986\u76D6\u5BFC\u5165</button></div><button type="button" class="cancel" data-mode="cancel">\u53D6\u6D88</button></div>';
+      dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="\u9009\u62E9\u5BFC\u5165\u65B9\u5F0F"><h3>\u9009\u62E9\u5BFC\u5165\u65B9\u5F0F</h3><p><strong>\u589E\u91CF\u5BFC\u5165</strong>\u4F1A\u4FDD\u7559\u672C\u673A\u5DF2\u6709\u6570\u636E\uFF0C\u5C06\u5907\u4EFD\u4E2D\u7684\u770B\u623F\u8BB0\u5F55\u53CA\u56FE\u7247\u4F5C\u4E3A\u65B0\u8BB0\u5F55\u8FFD\u52A0\u5BFC\u5165\u3002</p><p><strong>\u8986\u76D6\u5BFC\u5165</strong>\u4F1A\u66FF\u6362\u672C\u673A\u5168\u90E8\u770B\u623F\u8BB0\u5F55\u53CA\u56FE\u7247\uFF0C\u4E0D\u5F71\u54CD\u8D2D\u623F\u6E05\u5355\u3001\u8D37\u6B3E\u65B9\u6848\u548C\u5B66\u533A\u6536\u85CF\u3002\u5EFA\u8BAE\u5148\u5BFC\u51FA\u5F53\u524D\u770B\u623F\u8BB0\u5F55\u5907\u4EFD\u3002</p><div><button type="button" data-mode="merge">\u589E\u91CF\u5BFC\u5165</button><button type="button" class="danger" data-mode="replace">\u8986\u76D6\u5BFC\u5165</button></div><button type="button" class="cancel" data-mode="cancel">\u53D6\u6D88</button></div>';
       const finish = (mode) => {
         closeDialog(dialog);
         resolve2(mode === "cancel" ? null : mode);
@@ -4029,11 +4036,31 @@
       openDialog(dialog);
     });
   }
+  function confirmReplaceImport() {
+    return new Promise((resolve2) => {
+      const dialog = document.createElement("div");
+      dialog.className = "backup-mode-dialog";
+      dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="\u786E\u8BA4\u8986\u76D6\u5BFC\u5165"><h3>\u786E\u8BA4\u8986\u76D6\u5BFC\u5165</h3><p>\u8FD9\u4F1A\u5220\u9664\u672C\u673A\u73B0\u6709\u7684\u5168\u90E8\u770B\u623F\u8BB0\u5F55\u548C\u623F\u6E90\u56FE\u7247\uFF0C\u5E76\u6062\u590D\u5907\u4EFD\u4E2D\u7684\u770B\u623F\u8BB0\u5F55\u53CA\u56FE\u7247\u3002</p><p>\u5EFA\u8BAE\u4F60\u5148\u5BFC\u51FA\u5F53\u524D\u770B\u623F\u8BB0\u5F55\u5907\u4EFD\u3002</p><label class="backup-confirm"><input type="checkbox" data-confirm-check> \u6211\u5DF2\u786E\u8BA4\u8981\u8986\u76D6\u672C\u673A\u770B\u623F\u8BB0\u5F55</label><div><button type="button" class="danger" data-confirm-replace disabled>\u786E\u8BA4\u8986\u76D6\u5BFC\u5165</button></div><button type="button" class="cancel" data-confirm-cancel>\u53D6\u6D88</button></div>';
+      const confirmButton = dialog.querySelector("[data-confirm-replace]");
+      const finish = (value) => {
+        closeDialog(dialog);
+        resolve2(value);
+      };
+      dialog.addEventListener("change", (event) => {
+        if (event.target.matches("[data-confirm-check]")) confirmButton.disabled = !event.target.checked;
+      });
+      dialog.addEventListener("click", (event) => {
+        if (event.target === dialog || event.target.closest("[data-confirm-cancel]")) return finish(false);
+        if (event.target.closest("[data-confirm-replace]") && !confirmButton.disabled) finish(true);
+      });
+      openDialog(dialog);
+    });
+  }
   function chooseExportMode() {
     return new Promise((resolve2) => {
       const dialog = document.createElement("div");
       dialog.className = "backup-mode-dialog";
-      dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="\u9009\u62E9\u5BFC\u51FA\u65B9\u5F0F"><h3>\u9009\u62E9\u5BFC\u51FA\u65B9\u5F0F</h3><p><strong>\u5168\u91CF\u5BFC\u51FA</strong>\u4F1A\u5BFC\u51FA\u5168\u90E8\u770B\u623F\u8BB0\u5F55\u3001\u56FE\u7247\u3001\u8D2D\u623F\u6E05\u5355\u3001\u8D37\u6B3E\u65B9\u6848\u548C\u5B66\u533A\u6536\u85CF\u3002</p><p><strong>\u624B\u52A8\u9009\u62E9\u8BB0\u5F55\u5BFC\u51FA</strong>\u4EC5\u5BFC\u51FA\u4F60\u52FE\u9009\u7684\u770B\u623F\u8BB0\u5F55\u53CA\u5176\u56FE\u7247\u3002</p><div><button type="button" data-mode="full">\u5168\u91CF\u5BFC\u51FA</button><button type="button" data-mode="records">\u9009\u62E9\u8BB0\u5F55</button></div><button type="button" class="cancel" data-mode="cancel">\u53D6\u6D88</button></div>';
+      dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="\u9009\u62E9\u5BFC\u51FA\u65B9\u5F0F"><h3>\u9009\u62E9\u5BFC\u51FA\u65B9\u5F0F</h3><p><strong>\u5168\u91CF\u5BFC\u51FA</strong>\u4F1A\u5BFC\u51FA\u5168\u90E8\u770B\u623F\u8BB0\u5F55\u53CA\u5176\u56FE\u7247\u3002</p><p><strong>\u624B\u52A8\u9009\u62E9\u8BB0\u5F55\u5BFC\u51FA</strong>\u4EC5\u5BFC\u51FA\u4F60\u52FE\u9009\u7684\u770B\u623F\u8BB0\u5F55\u53CA\u5176\u56FE\u7247\u3002</p><div><button type="button" data-mode="full">\u5168\u91CF\u5BFC\u51FA</button><button type="button" data-mode="records">\u9009\u62E9\u8BB0\u5F55</button></div><button type="button" class="cancel" data-mode="cancel">\u53D6\u6D88</button></div>';
       const finish = (mode) => {
         closeDialog(dialog);
         resolve2(mode === "cancel" ? null : mode);
@@ -4103,68 +4130,63 @@
   async function restoreBrowserBackup(data, zip, mode, progress) {
     const photosByRecord = /* @__PURE__ */ new Map();
     const images = [];
+    const importedImageIds = [];
+    const existingRecords = mode === "replace" ? await window.NativeStore.getViewingRecords() : [];
+    const oldImageIds = existingRecords.flatMap((record) => parseImageRefs(record.imageRefs).map((ref) => ref?.id));
     const photoCount = Math.max(data.photos.length, 1);
-    for (const [index, photo] of data.photos.entries()) {
-      if (!photo?.id || !photo?.recordId || !validPath(photo.archiveOriginalPath)) {
-        throw new Error("\u5907\u4EFD\u56FE\u7247\u7D22\u5F15\u4E0D\u6B63\u786E");
+    let recordsSaved = false;
+    try {
+      for (const [index, photo] of data.photos.entries()) {
+        if (!photo?.id || !photo?.recordId || !validPath(photo.archiveOriginalPath)) {
+          throw new Error("\u5907\u4EFD\u56FE\u7247\u7D22\u5F15\u4E0D\u6B63\u786E");
+        }
+        const entry = zip.file(photo.archiveOriginalPath);
+        if (!entry) throw new Error("\u5907\u4EFD\u56FE\u7247\u6587\u4EF6\u7F3A\u5931");
+        const blob = await entry.async("blob");
+        images.push({ id: String(photo.id), blob });
+        const refs = photosByRecord.get(String(photo.recordId)) || [];
+        refs.push({
+          id: String(photo.id),
+          name: photo.name || "\u623F\u6E90\u56FE\u7247",
+          type: photo.type || blob.type || "image/jpeg",
+          width: photo.width || null,
+          height: photo.height || null,
+          createdAt: Number(photo.createdAt || Date.now()),
+          sortOrder: Number(photo.sortOrder || 0)
+        });
+        photosByRecord.set(String(photo.recordId), refs);
+        progress.update(14 + (index + 1) / photoCount * 42, "\u6B63\u5728\u8BFB\u53D6\u5907\u4EFD\u56FE\u7247", `\u5DF2\u8BFB\u53D6 ${index + 1} / ${data.photos.length} \u5F20\u56FE\u7247`);
       }
-      const entry = zip.file(photo.archiveOriginalPath);
-      if (!entry) throw new Error("\u5907\u4EFD\u56FE\u7247\u6587\u4EF6\u7F3A\u5931");
-      const blob = await entry.async("blob");
-      images.push({ id: String(photo.id), blob });
-      const refs = photosByRecord.get(String(photo.recordId)) || [];
-      refs.push({
-        id: String(photo.id),
-        name: photo.name || "\u623F\u6E90\u56FE\u7247",
-        type: photo.type || blob.type || "image/jpeg",
-        width: photo.width || null,
-        height: photo.height || null,
-        createdAt: Number(photo.createdAt || Date.now()),
-        sortOrder: Number(photo.sortOrder || 0)
+      const records = data.records.map((record) => ({
+        ...record,
+        imageRefs: JSON.stringify((photosByRecord.get(String(record.id)) || []).sort(
+          (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
+        ))
+      }));
+      for (const [index, image] of images.entries()) {
+        await putBrowserImage(image.id, image.blob);
+        importedImageIds.push(image.id);
+        progress.update(58 + (index + 1) / photoCount * 27, "\u6B63\u5728\u4FDD\u5B58\u56FE\u7247", `\u5DF2\u4FDD\u5B58 ${index + 1} / ${images.length} \u5F20\u56FE\u7247`);
+      }
+      progress.update(88, "\u6B63\u5728\u4FDD\u5B58\u770B\u623F\u8BB0\u5F55", `\u6B63\u5728\u5199\u5165 ${records.length} \u6761\u8BB0\u5F55`);
+      const existing = mode === "merge" ? await window.NativeStore.getViewingRecords() : [];
+      await window.NativeStore.saveViewingRecords(mode === "merge" ? [...existing, ...records] : records);
+      recordsSaved = true;
+      if (mode === "replace") {
+        await deleteBrowserImages(oldImageIds).catch((error) => console.warn("\u65E7\u623F\u6E90\u56FE\u7247\u6E05\u7406\u5931\u8D25\uFF0C\u5C06\u5728\u540E\u7EED\u6E05\u7406\u3002", error));
+      }
+      progress.update(97, "\u6B63\u5728\u6574\u7406\u6570\u636E", "\u5373\u5C06\u5B8C\u6210");
+      return { records: records.length };
+    } catch (error) {
+      if (!recordsSaved) await deleteBrowserImages(importedImageIds).catch(() => {
       });
-      photosByRecord.set(String(photo.recordId), refs);
-      progress.update(14 + (index + 1) / photoCount * 42, "\u6B63\u5728\u8BFB\u53D6\u5907\u4EFD\u56FE\u7247", `\u5DF2\u8BFB\u53D6 ${index + 1} / ${data.photos.length} \u5F20\u56FE\u7247`);
+      throw error;
     }
-    const records = data.records.map((record) => ({
-      ...record,
-      imageRefs: JSON.stringify((photosByRecord.get(String(record.id)) || []).sort(
-        (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)
-      ))
-    }));
-    if (mode === "replace") {
-      progress.update(58, "\u6B63\u5728\u6E05\u7406\u65E7\u6570\u636E", "\u6B63\u5728\u51C6\u5907\u6062\u590D\u5907\u4EFD");
-      await clearBrowserImages();
-    }
-    for (const [index, image] of images.entries()) {
-      await putBrowserImage(image.id, image.blob);
-      progress.update(58 + (index + 1) / photoCount * 27, "\u6B63\u5728\u4FDD\u5B58\u56FE\u7247", `\u5DF2\u4FDD\u5B58 ${index + 1} / ${images.length} \u5F20\u56FE\u7247`);
-    }
-    progress.update(88, "\u6B63\u5728\u4FDD\u5B58\u770B\u623F\u8BB0\u5F55", `\u6B63\u5728\u5199\u5165 ${records.length} \u6761\u8BB0\u5F55`);
-    const existing = await window.NativeStore.getViewingRecords();
-    await window.NativeStore.saveViewingRecords(mode === "merge" ? [...existing, ...records] : records);
-    if (mode === "replace") {
-      await window.NativeStore.saveChecklistState(data.checklist && typeof data.checklist === "object" ? data.checklist : {});
-      const mortgage = Array.isArray(data.mortgage) ? data.mortgage.find((item) => item.id === "current")?.data || null : data.mortgage || null;
-      await window.NativeStore.saveMortgageCurrent(mortgage);
-      const school = Array.isArray(data.school) ? {
-        recentCommunity: data.school.filter((item) => item.list_type === "recent" && item.mode === "community"),
-        recentSchool: data.school.filter((item) => item.list_type === "recent" && item.mode === "school"),
-        favoriteCommunity: data.school.filter((item) => item.list_type === "favorite" && item.mode === "community"),
-        favoriteSchool: data.school.filter((item) => item.list_type === "favorite" && item.mode === "school")
-      } : data.school || {};
-      await Promise.all([
-        window.NativeStore.saveSchoolSaved("recent", "community", school.recentCommunity || []),
-        window.NativeStore.saveSchoolSaved("recent", "school", school.recentSchool || []),
-        window.NativeStore.saveSchoolSaved("favorite", "community", school.favoriteCommunity || []),
-        window.NativeStore.saveSchoolSaved("favorite", "school", school.favoriteSchool || [])
-      ]);
-    }
-    progress.update(97, "\u6B63\u5728\u6574\u7406\u6570\u636E", "\u5373\u5C06\u5B8C\u6210");
-    return { records: records.length };
   }
   async function restoreBackup(mode) {
     const selected = await chooseBackup();
     if (!selected) return;
+    if (mode === "replace" && !await confirmReplaceImport()) return;
     let progress;
     let written = [];
     try {
@@ -4179,14 +4201,10 @@
       if (manifest.format !== FORMAT || manifest.version !== VERSION) throw new Error("\u4E0D\u662F\u53EF\u8BC6\u522B\u7684\u5B8C\u6574\u5907\u4EFD\u6587\u4EF6");
       let data = JSON.parse(await dataEntry.async("text"));
       if (!Array.isArray(data.records) || !Array.isArray(data.photos)) throw new Error("\u5907\u4EFD\u6570\u636E\u683C\u5F0F\u4E0D\u6B63\u786E");
-      if (mode === "replace" && !confirm("\u8986\u76D6\u5BFC\u5165\u4F1A\u6E05\u7A7A\u5F53\u524D\u8BBE\u5907\u5185\u7684\u6240\u6709\u672C\u5730\u6570\u636E\uFF0C\u786E\u8BA4\u7EE7\u7EED\u5417\uFF1F")) {
-        progress.close();
-        return;
-      }
       progress.update(12, "\u6B63\u5728\u51C6\u5907\u5BFC\u5165", `\u5171 ${data.records.length} \u6761\u8BB0\u5F55\u3001${data.photos.length} \u5F20\u56FE\u7247`);
-      if (mode === "merge") {
+      if (mode === "merge" || !window.NativeStore.isNative() && mode === "replace") {
         data = await prepareIncrementalRecords(data);
-        progress.update(14, "\u6B63\u5728\u51C6\u5907\u589E\u91CF\u5BFC\u5165", `\u5171 ${data.records.length} \u6761\u8BB0\u5F55\u3001${data.photos.length} \u5F20\u56FE\u7247`);
+        progress.update(14, mode === "merge" ? "\u6B63\u5728\u51C6\u5907\u589E\u91CF\u5BFC\u5165" : "\u6B63\u5728\u51C6\u5907\u8986\u76D6\u5BFC\u5165", `\u5171 ${data.records.length} \u6761\u8BB0\u5F55\u3001${data.photos.length} \u5F20\u56FE\u7247`);
       }
       if (!window.NativeStore.isNative()) {
         const result2 = await restoreBrowserBackup(data, zip, mode, progress);
@@ -4236,7 +4254,7 @@
       if (!mode) return;
       if (mode === "full") {
         toast("\u6B63\u5728\u751F\u6210\u5168\u91CF\u5907\u4EFD\u2026");
-        await createBackup();
+        await createBackup(viewingsOnlyBackup(await window.NativeStore.getBackupData()));
         toast("\u5168\u91CF\u5907\u4EFD\u5DF2\u751F\u6210\u3002");
       } else {
         const records = await chooseRecordsForExport();
@@ -4244,14 +4262,11 @@
         const data = await window.NativeStore.getBackupData();
         const ids = new Set(records.map((record) => String(record.id)));
         toast(`\u6B63\u5728\u751F\u6210 ${records.length} \u6761\u8BB0\u5F55\u7684\u5907\u4EFD\u2026`);
-        await createBackup({
+        await createBackup(viewingsOnlyBackup({
           ...data,
           records,
-          photos: (data.photos || []).filter((photo) => ids.has(String(photo.recordId))),
-          checklist: {},
-          mortgage: [],
-          school: []
-        });
+          photos: (data.photos || []).filter((photo) => ids.has(String(photo.recordId)))
+        }));
         toast(`\u5DF2\u5BFC\u51FA ${records.length} \u6761\u8BB0\u5F55\u3002`);
       }
     } catch (error) {

@@ -10,6 +10,7 @@ let db;
 let sqlite;
 let readyPromise;
 let viewingCache;
+let viewingWriteQueue = Promise.resolve();
 const BackupFile = registerPlugin('BackupFile');
 const PhotoLibrary = registerPlugin('PhotoLibrary');
 const BROWSER_IMAGE_DATABASE = 'shenzhen-viewing-images-v1';
@@ -361,6 +362,7 @@ function clone(value) {
 
 async function getViewingRecords(options = {}) {
   const force = options?.force === true;
+  if (force) await flushViewingWrites();
   if (viewingCache && !force) {
     return clone(viewingCache);
   }
@@ -395,15 +397,7 @@ function viewingRecordsJson() {
   return JSON.stringify(viewingCache || []);
 }
 
-async function saveViewingRecords(records) {
-  const cleanRecords = Array.isArray(records)
-    ? records.filter(record => record && record.id && String(record.community || '').trim())
-    : [];
-  viewingCache = clone(cleanRecords);
-  if (!isNative()) {
-    localStorage.setItem(VIEWINGS_BROWSER_KEY, JSON.stringify(viewingCache));
-    return;
-  }
+async function persistViewingRecords(cleanRecords) {
   const connection = await ready();
   const now = Date.now();
   const filesToRemove = [];
@@ -481,16 +475,40 @@ async function saveViewingRecords(records) {
   await Promise.all(filesToRemove.map(removePrivateFile));
 }
 
+function flushViewingWrites() {
+  return viewingWriteQueue;
+}
+
+function saveViewingRecords(records) {
+  const cleanRecords = Array.isArray(records)
+    ? records.filter(record => record && record.id && String(record.community || '').trim())
+    : [];
+  const snapshot = clone(cleanRecords);
+  // 让连续编辑基于最新草稿继续生成快照；真正的持久化则严格串行执行。
+  viewingCache = clone(snapshot);
+  if (!isNative()) {
+    try {
+      localStorage.setItem(VIEWINGS_BROWSER_KEY, JSON.stringify(snapshot));
+      return Promise.resolve();
+    } catch (error) {
+      return Promise.reject(error);
+    }
+  }
+  const write = viewingWriteQueue.catch(() => {}).then(() => persistViewingRecords(snapshot));
+  viewingWriteQueue = write.catch(() => {});
+  return write;
+}
+
 async function deleteViewingRecord(recordId) {
   const records = await getViewingRecords();
   const record = records.find(item => String(item.id) === String(recordId));
   if (!record) return false;
   const remaining = records.filter(item => String(item.id) !== String(recordId));
+  const ids = !isNative() ? imageRefsForRecord(record).map(ref => ref?.id).filter(Boolean) : [];
+  await saveViewingRecords(remaining);
   if (!isNative()) {
-    const ids = imageRefsForRecord(record).map(ref => ref?.id).filter(Boolean);
     if (ids.length) await browserImageStore('readwrite', store => ids.forEach(id => store.delete(id)));
   }
-  await saveViewingRecords(remaining);
   return true;
 }
 
@@ -588,6 +606,7 @@ async function writePrivateFile(path, data) {
 }
 
 async function getBackupData() {
+  await flushViewingWrites();
   if (!isNative()) {
     return {
       records: await getViewingRecords(),
@@ -630,6 +649,7 @@ async function getBackupData() {
 
 async function restoreBackupData(data) {
   if (!isNative()) throw new Error('完整恢复仅在原生 App 中可用');
+  await flushViewingWrites();
   const records = Array.isArray(data?.records) ? data.records : [];
   const photos = Array.isArray(data?.photos) ? data.photos : [];
   const connection = await ready();
@@ -638,9 +658,6 @@ async function restoreBackupData(data) {
   try {
     await connection.run('DELETE FROM viewing_photos', [], false);
     await connection.run('DELETE FROM viewing_records', [], false);
-    await connection.run('DELETE FROM checklist_items', [], false);
-    await connection.run('DELETE FROM mortgage_schemes', [], false);
-    await connection.run('DELETE FROM school_saved_queries', [], false);
 
     const now = Date.now();
     const photosByRecord = new Map();
@@ -681,26 +698,6 @@ async function restoreBackupData(data) {
         false
       );
     }
-    for (const [itemId, item] of Object.entries(data?.checklist || {})) {
-      await connection.run(
-        'INSERT INTO checklist_items (item_id, done, note, is_open, updated_at) VALUES (?, ?, ?, ?, ?)',
-        [itemId, item.done ? 1 : 0, item.note || '', item.open ? 1 : 0, now], false
-      );
-    }
-    for (const scheme of Array.isArray(data?.mortgage) ? data.mortgage : []) {
-      if (!scheme?.id || !scheme.data) continue;
-      await connection.run(
-        'INSERT INTO mortgage_schemes (id, name, data_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-        [scheme.id, scheme.name || '当前方案', JSON.stringify(scheme.data), Number(scheme.createdAt || now), Number(scheme.updatedAt || now)], false
-      );
-    }
-    for (const row of Array.isArray(data?.school) ? data.school : []) {
-      if (!row?.list_type || !row?.mode || !row?.value) continue;
-      await connection.run(
-        'INSERT INTO school_saved_queries (list_type, mode, value, created_at) VALUES (?, ?, ?, ?)',
-        [row.list_type, row.mode, row.value, Number(row.created_at || now)], false
-      );
-    }
     await connection.commitTransaction();
     viewingCache = null;
   } catch (error) {
@@ -714,6 +711,7 @@ async function restoreBackupData(data) {
 
 async function mergeBackupData(data) {
   if (!isNative()) throw new Error('增量导入仅在原生 App 中可用');
+  await flushViewingWrites();
   const records = (Array.isArray(data?.records) ? data.records : []).filter(
     record => record?.id && String(record.community || '').trim()
   );
@@ -767,38 +765,6 @@ async function mergeBackupData(data) {
         false
       );
     }
-    const checklistRows = await connection.query('SELECT item_id FROM checklist_items');
-    const checklistIds = new Set((checklistRows.values || []).map(row => String(row.item_id)));
-    for (const [itemId, item] of Object.entries(data?.checklist || {})) {
-      if (checklistIds.has(String(itemId))) continue;
-      await connection.run(
-        'INSERT INTO checklist_items (item_id, done, note, is_open, updated_at) VALUES (?, ?, ?, ?, ?)',
-        [itemId, item.done ? 1 : 0, item.note || '', item.open ? 1 : 0, now], false
-      );
-    }
-    const schemeRows = await connection.query('SELECT id, updated_at FROM mortgage_schemes');
-    const schemes = new Map((schemeRows.values || []).map(row => [String(row.id), Number(row.updated_at || 0)]));
-    for (const scheme of Array.isArray(data?.mortgage) ? data.mortgage : []) {
-      if (!scheme?.id || !scheme.data) continue;
-      const incoming = Number(scheme.updatedAt || scheme.createdAt || 0);
-      if (schemes.has(String(scheme.id)) && incoming <= schemes.get(String(scheme.id))) continue;
-      await connection.run('DELETE FROM mortgage_schemes WHERE id = ?', [scheme.id], false);
-      await connection.run(
-        'INSERT INTO mortgage_schemes (id, name, data_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-        [scheme.id, scheme.name || '当前方案', JSON.stringify(scheme.data), Number(scheme.createdAt || now), Number(scheme.updatedAt || now)], false
-      );
-    }
-    const schoolRows = await connection.query('SELECT list_type, mode, value FROM school_saved_queries');
-    const schoolKeys = new Set((schoolRows.values || []).map(row => `${row.list_type}::${row.mode}::${row.value}`));
-    for (const row of Array.isArray(data?.school) ? data.school : []) {
-      if (!row?.list_type || !row?.mode || !row?.value) continue;
-      const key = `${row.list_type}::${row.mode}::${row.value}`;
-      if (schoolKeys.has(key)) continue;
-      await connection.run(
-        'INSERT INTO school_saved_queries (list_type, mode, value, created_at) VALUES (?, ?, ?, ?)',
-        [row.list_type, row.mode, row.value, Number(row.created_at || now)], false
-      );
-    }
     await connection.commitTransaction();
     viewingCache = null;
   } catch (error) {
@@ -824,6 +790,7 @@ window.NativeStore = {
   saveSchoolDistrictDataset,
   getViewingRecords,
   saveViewingRecords,
+  flushViewingWrites,
   deleteViewingRecord,
   viewingRecordsJson,
   setViewingRecordsJson,

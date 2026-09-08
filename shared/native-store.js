@@ -2500,6 +2500,7 @@
   var sqlite;
   var readyPromise;
   var viewingCache;
+  var viewingWriteQueue = Promise.resolve();
   var BackupFile = registerPlugin("BackupFile");
   var PhotoLibrary = registerPlugin("PhotoLibrary");
   var BROWSER_IMAGE_DATABASE = "shenzhen-viewing-images-v1";
@@ -2858,6 +2859,7 @@
   }
   async function getViewingRecords(options = {}) {
     const force = options?.force === true;
+    if (force) await flushViewingWrites();
     if (viewingCache && !force) {
       return clone(viewingCache);
     }
@@ -2890,13 +2892,7 @@
   function viewingRecordsJson() {
     return JSON.stringify(viewingCache || []);
   }
-  async function saveViewingRecords(records) {
-    const cleanRecords = Array.isArray(records) ? records.filter((record) => record && record.id && String(record.community || "").trim()) : [];
-    viewingCache = clone(cleanRecords);
-    if (!isNative()) {
-      localStorage.setItem(VIEWINGS_BROWSER_KEY, JSON.stringify(viewingCache));
-      return;
-    }
+  async function persistViewingRecords(cleanRecords) {
     const connection = await ready();
     const now = Date.now();
     const filesToRemove = [];
@@ -2988,16 +2984,37 @@
     }
     await Promise.all(filesToRemove.map(removePrivateFile));
   }
+  function flushViewingWrites() {
+    return viewingWriteQueue;
+  }
+  function saveViewingRecords(records) {
+    const cleanRecords = Array.isArray(records) ? records.filter((record) => record && record.id && String(record.community || "").trim()) : [];
+    const snapshot = clone(cleanRecords);
+    viewingCache = clone(snapshot);
+    if (!isNative()) {
+      try {
+        localStorage.setItem(VIEWINGS_BROWSER_KEY, JSON.stringify(snapshot));
+        return Promise.resolve();
+      } catch (error) {
+        return Promise.reject(error);
+      }
+    }
+    const write = viewingWriteQueue.catch(() => {
+    }).then(() => persistViewingRecords(snapshot));
+    viewingWriteQueue = write.catch(() => {
+    });
+    return write;
+  }
   async function deleteViewingRecord(recordId) {
     const records = await getViewingRecords();
     const record = records.find((item) => String(item.id) === String(recordId));
     if (!record) return false;
     const remaining = records.filter((item) => String(item.id) !== String(recordId));
+    const ids = !isNative() ? imageRefsForRecord(record).map((ref) => ref?.id).filter(Boolean) : [];
+    await saveViewingRecords(remaining);
     if (!isNative()) {
-      const ids = imageRefsForRecord(record).map((ref) => ref?.id).filter(Boolean);
       if (ids.length) await browserImageStore("readwrite", (store) => ids.forEach((id) => store.delete(id)));
     }
-    await saveViewingRecords(remaining);
     return true;
   }
   function setViewingRecordsJson(serialized) {
@@ -3085,6 +3102,7 @@
     await Filesystem.writeFile({ path, data, directory: Directory.Data, recursive: true });
   }
   async function getBackupData() {
+    await flushViewingWrites();
     if (!isNative()) {
       return {
         records: await getViewingRecords(),
@@ -3138,6 +3156,7 @@
   }
   async function restoreBackupData(data) {
     if (!isNative()) throw new Error("\u5B8C\u6574\u6062\u590D\u4EC5\u5728\u539F\u751F App \u4E2D\u53EF\u7528");
+    await flushViewingWrites();
     const records = Array.isArray(data?.records) ? data.records : [];
     const photos = Array.isArray(data?.photos) ? data.photos : [];
     const connection = await ready();
@@ -3146,9 +3165,6 @@
     try {
       await connection.run("DELETE FROM viewing_photos", [], false);
       await connection.run("DELETE FROM viewing_records", [], false);
-      await connection.run("DELETE FROM checklist_items", [], false);
-      await connection.run("DELETE FROM mortgage_schemes", [], false);
-      await connection.run("DELETE FROM school_saved_queries", [], false);
       const now = Date.now();
       const photosByRecord = /* @__PURE__ */ new Map();
       for (const photo of photos) {
@@ -3211,29 +3227,6 @@
           false
         );
       }
-      for (const [itemId, item] of Object.entries(data?.checklist || {})) {
-        await connection.run(
-          "INSERT INTO checklist_items (item_id, done, note, is_open, updated_at) VALUES (?, ?, ?, ?, ?)",
-          [itemId, item.done ? 1 : 0, item.note || "", item.open ? 1 : 0, now],
-          false
-        );
-      }
-      for (const scheme of Array.isArray(data?.mortgage) ? data.mortgage : []) {
-        if (!scheme?.id || !scheme.data) continue;
-        await connection.run(
-          "INSERT INTO mortgage_schemes (id, name, data_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-          [scheme.id, scheme.name || "\u5F53\u524D\u65B9\u6848", JSON.stringify(scheme.data), Number(scheme.createdAt || now), Number(scheme.updatedAt || now)],
-          false
-        );
-      }
-      for (const row of Array.isArray(data?.school) ? data.school : []) {
-        if (!row?.list_type || !row?.mode || !row?.value) continue;
-        await connection.run(
-          "INSERT INTO school_saved_queries (list_type, mode, value, created_at) VALUES (?, ?, ?, ?)",
-          [row.list_type, row.mode, row.value, Number(row.created_at || now)],
-          false
-        );
-      }
       await connection.commitTransaction();
       viewingCache = null;
     } catch (error) {
@@ -3247,6 +3240,7 @@
   }
   async function mergeBackupData(data) {
     if (!isNative()) throw new Error("\u589E\u91CF\u5BFC\u5165\u4EC5\u5728\u539F\u751F App \u4E2D\u53EF\u7528");
+    await flushViewingWrites();
     const records = (Array.isArray(data?.records) ? data.records : []).filter(
       (record) => record?.id && String(record.community || "").trim()
     );
@@ -3321,41 +3315,6 @@
           false
         );
       }
-      const checklistRows = await connection.query("SELECT item_id FROM checklist_items");
-      const checklistIds = new Set((checklistRows.values || []).map((row) => String(row.item_id)));
-      for (const [itemId, item] of Object.entries(data?.checklist || {})) {
-        if (checklistIds.has(String(itemId))) continue;
-        await connection.run(
-          "INSERT INTO checklist_items (item_id, done, note, is_open, updated_at) VALUES (?, ?, ?, ?, ?)",
-          [itemId, item.done ? 1 : 0, item.note || "", item.open ? 1 : 0, now],
-          false
-        );
-      }
-      const schemeRows = await connection.query("SELECT id, updated_at FROM mortgage_schemes");
-      const schemes = new Map((schemeRows.values || []).map((row) => [String(row.id), Number(row.updated_at || 0)]));
-      for (const scheme of Array.isArray(data?.mortgage) ? data.mortgage : []) {
-        if (!scheme?.id || !scheme.data) continue;
-        const incoming = Number(scheme.updatedAt || scheme.createdAt || 0);
-        if (schemes.has(String(scheme.id)) && incoming <= schemes.get(String(scheme.id))) continue;
-        await connection.run("DELETE FROM mortgage_schemes WHERE id = ?", [scheme.id], false);
-        await connection.run(
-          "INSERT INTO mortgage_schemes (id, name, data_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-          [scheme.id, scheme.name || "\u5F53\u524D\u65B9\u6848", JSON.stringify(scheme.data), Number(scheme.createdAt || now), Number(scheme.updatedAt || now)],
-          false
-        );
-      }
-      const schoolRows = await connection.query("SELECT list_type, mode, value FROM school_saved_queries");
-      const schoolKeys = new Set((schoolRows.values || []).map((row) => `${row.list_type}::${row.mode}::${row.value}`));
-      for (const row of Array.isArray(data?.school) ? data.school : []) {
-        if (!row?.list_type || !row?.mode || !row?.value) continue;
-        const key = `${row.list_type}::${row.mode}::${row.value}`;
-        if (schoolKeys.has(key)) continue;
-        await connection.run(
-          "INSERT INTO school_saved_queries (list_type, mode, value, created_at) VALUES (?, ?, ?, ?)",
-          [row.list_type, row.mode, row.value, Number(row.created_at || now)],
-          false
-        );
-      }
       await connection.commitTransaction();
       viewingCache = null;
     } catch (error) {
@@ -3381,6 +3340,7 @@
     saveSchoolDistrictDataset,
     getViewingRecords,
     saveViewingRecords,
+    flushViewingWrites,
     deleteViewingRecord,
     viewingRecordsJson,
     setViewingRecordsJson,

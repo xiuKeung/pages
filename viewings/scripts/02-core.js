@@ -65,8 +65,8 @@
     if (loaded) render();
     return loaded;
   }
-  function save() {
-    void window.NativeStore.saveViewingRecords(records);
+  async function save() {
+    await window.NativeStore.saveViewingRecords(records);
   }
   function toast(t) {
     $("toast").textContent = t;
@@ -132,7 +132,7 @@
               ]
                 .filter(Boolean)
                 .join(" · ");
-            return `<article class="record" data-record-id="${esc(r.id)}" data-record-order="${list.length - index}"><div class="record-top"><div><h2>${esc(r.community)}</h2><p class="meta">${esc(detail || "暂未填写价格与面积")} ${r.viewedAt ? `· 看房：${esc(r.viewedAt)}` : ""}</p><p class="meta">最后编辑：${time(r.updatedAt || r.createdAt)}</p></div><span class="badge ${kind}">${name}</span></div><p class="schools">学区：请点击下方“查学区”获取当前官方匹配结果。</p>${r.pros || r.cons || r.notes || r.nearbyLandmark ? `<p class="notes">${r.pros ? `优点：${esc(r.pros)}\n` : ""}${r.cons ? `缺点 / 风险：${esc(r.cons)}\n` : ""}${r.nearbyLandmark ? `附近地标：${esc(r.nearbyLandmark)}\n` : ""}${r.notes ? `备注：${esc(r.notes)}` : ""}</p>` : ""}<div class="record-actions"><a class="button" href="../school/index.html?mode=community&q=${encodeURIComponent(r.community)}">查学区</a><a class="button" href="../calculator/index.html?c=${encodeURIComponent(btoa(JSON.stringify({ type: "commercial", amountMode: "auto", housePrice: r.totalPrice || "", downPaymentRate: "15" })))}">算月供</a><button data-copy="${r.id}" type="button">复制信息</button><button data-edit="${r.id}" type="button">查看</button><button class="danger" data-delete="${r.id}" type="button">删除</button></div></article>`;
+            return `<article class="record" data-record-id="${esc(r.id)}" data-record-order="${list.length - index}"><div class="record-top"><div><h2>${esc(r.community)}</h2><p class="meta">${esc(detail || "暂未填写价格与面积")} ${r.viewedAt ? `· 看房：${esc(r.viewedAt)}` : ""}</p><p class="meta">最后编辑：${time(r.updatedAt || r.createdAt)}</p></div><span class="badge ${kind}">${name}</span></div><p class="schools">学区：请点击下方“查学区”获取当前官方匹配结果。</p>${r.pros || r.cons || r.notes || r.nearbyLandmark ? `<p class="notes">${r.pros ? `优点：${esc(r.pros)}\n` : ""}${r.cons ? `缺点 / 风险：${esc(r.cons)}\n` : ""}${r.nearbyLandmark ? `附近地标：${esc(r.nearbyLandmark)}\n` : ""}${r.notes ? `备注：${esc(r.notes)}` : ""}</p>` : ""}<div class="record-actions"><a class="button" href="../school/index.html?mode=community&q=${encodeURIComponent(r.community)}">查学区</a><a class="button" href="../calculator/index.html?c=${encodeURIComponent(btoa(JSON.stringify({ type: "commercial", amountMode: "auto", housePrice: r.totalPrice || "", downPaymentRate: "15" })))}">算月供</a><button data-copy="${r.id}" type="button">复制信息</button><button data-edit="${r.id}" type="button">查看</button><button data-delete="${r.id}" type="button">删除</button></div></article>`;
           })
           .join("")
       : '<div class="card empty">还没有看房记录。点击“新增房源”开始记录。</div>';
@@ -301,7 +301,7 @@
     renderLimit = 20;
     render();
   };
-  $("recordForm").onsubmit = (e) => {
+  $("recordForm").onsubmit = async (e) => {
     e.preventDefault();
     const r = Object.fromEntries(new FormData(e.target)),
       now = Date.now();
@@ -313,7 +313,13 @@
     r.updatedAt = now;
     if (i >= 0) records[i] = r;
     else records.push(r);
-    save();
+    try {
+      await save();
+    } catch (error) {
+      console.error('保存看房记录失败：', error);
+      toast('保存失败，请稍后重试。');
+      return;
+    }
     $("editor").classList.add("hidden");
     renderLimit = 20;
     render();
