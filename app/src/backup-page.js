@@ -239,7 +239,7 @@ function chooseImportMode() {
   return new Promise(resolve => {
     const dialog = document.createElement('div');
     dialog.className = 'backup-mode-dialog';
-    dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="选择导入方式"><h3>选择导入方式</h3><p><strong>增量导入</strong>会保留本机已有数据，仅补充新记录，并以最后编辑时间较新的记录为准。</p><p><strong>覆盖导入</strong>会清空本机现有数据，再完整恢复备份。</p><div><button type="button" data-mode="merge">增量导入</button><button type="button" class="danger" data-mode="replace">覆盖导入</button></div><button type="button" class="cancel" data-mode="cancel">取消</button></div>';
+    dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="选择导入方式"><h3>选择导入方式</h3><p><strong>增量导入</strong>会保留本机已有数据，将备份中的看房记录及图片作为新记录追加导入。</p><p><strong>覆盖导入</strong>会清空本机现有数据，再完整恢复备份。</p><div><button type="button" data-mode="merge">增量导入</button><button type="button" class="danger" data-mode="replace">覆盖导入</button></div><button type="button" class="cancel" data-mode="cancel">取消</button></div>';
     const finish = mode => { closeDialog(dialog); resolve(mode === 'cancel' ? null : mode); };
     dialog.addEventListener('click', event => {
       if (event.target === dialog) return finish('cancel');
