@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#4d5fd1">
+  <title>体重记录</title>
+  <link rel="stylesheet" href="../shared/theme.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="../shared/theme.js"></script>
+</head>
+<body>
+  <main class="page-shell">
+    <a class="back" href="../entrance/index.html">← 返回工具首页</a>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">GROWTH LOG · 2026</p>
+        <h1>体重记录</h1>
+        <p class="hero-copy" id="summarySentence">正在整理成长轨迹…</p>
+      </div>
+      <div class="latest-weight" aria-label="最新体重">
+        <span>最新记录</span>
+        <strong id="latestWeight">—</strong><em>kg</em>
+        <small id="latestDate">—</small>
+      </div>
+    </header>
+
+    <section class="metrics" aria-label="核心数据">
+      <article><span>累计增长</span><strong id="totalGain">—</strong><small>从首次记录至今</small></article>
+      <article><span>平均每日变化</span><strong id="averageDailyGain">—</strong><small>按自然日计算</small></article>
+      <article><span>最快单日增重</span><strong id="maxDailyGain">—</strong><small id="maxDailyGainDate">—</small></article>
+      <article><span>记录覆盖率</span><strong id="coverageRate">—</strong><small id="coverageNote">—</small></article>
+    </section>
+
+    <section class="section-head trend-heading">
+      <div><p class="section-kicker">01 · TREND</p><h2>体重趋势</h2></div>
+      <div class="range-control" role="group" aria-label="图表时间范围">
+        <button class="is-active" type="button" data-range="all">全部</button>
+        <button type="button" data-range="90">近 90 天</button>
+        <button type="button" data-range="30">近 30 天</button>
+      </div>
+    </section>
+    <section class="chart-card trend-card">
+      <div class="chart-meta"><span id="trendRange">—</span><strong id="trendGain">—</strong></div>
+      <div class="chart-wrap" id="trendChart" role="img" aria-label="体重随日期变化的折线图"></div>
+    </section>
+
+    <section class="chart-grid">
+      <article class="chart-card gain-card">
+        <div class="chart-title"><div><p class="section-kicker">02 · PACE</p><h2>记录间日均变化</h2></div><strong id="paceAverage">—</strong></div>
+        <p class="chart-description">每次称重与上一次之间，折算到每天的体重变化。</p>
+        <div class="chart-wrap compact" id="paceChart" role="img" aria-label="每日平均变化柱状图"></div>
+      </article>
+      <article class="chart-card phase-card">
+        <div class="chart-title"><div><p class="section-kicker">03 · PHASE</p><h2>30 天阶段增长</h2></div><strong id="phaseBest">—</strong></div>
+        <p class="chart-description">按首日开始的每 30 天阶段，比较累计增重。</p>
+        <div class="chart-wrap compact" id="phaseChart" role="img" aria-label="每 30 天阶段增长柱状图"></div>
+      </article>
+    </section>
+
+    <section class="section-head records-heading">
+      <div><p class="section-kicker">04 · RECORDS</p><h2>完整记录</h2></div>
+      <p id="recordCount">—</p>
+    </section>
+    <section class="table-card">
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>日期</th><th>第几天</th><th>体重</th><th>较上次</th><th>间隔</th><th>日均变化</th></tr></thead>
+          <tbody id="recordsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <footer>数据只需维护 <code>data/weight-records.js</code> 中的日期与体重；统计将自动更新。</footer>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

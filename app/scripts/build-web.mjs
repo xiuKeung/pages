@@ -8,7 +8,7 @@ const webSourceRoot = resolve(appRoot, '..');
 const outputDir = join(appRoot, 'www');
 const bundleDir = join(appRoot, 'dist');
 const websiteSharedDir = join(webSourceRoot, 'shared');
-const siteDirectories = ['entrance', 'school', 'calculator', 'viewings', 'checklist'];
+const siteDirectories = ['entrance', 'school', 'calculator', 'viewings', 'checklist', 'weight'];
 const bundles = ['native-store', 'ui-dialog', 'checklist-page', 'backup-page'];
 const sharedStaticFiles = ['theme.css', 'theme.js', 'mobile-inputs.css'];
 
