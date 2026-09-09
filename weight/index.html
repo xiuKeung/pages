@@ -11,7 +11,6 @@
 </head>
 <body>
   <main class="page-shell">
-    <a class="back" href="../entrance/index.html">← 返回工具首页</a>
     <header class="hero">
       <div>
         <p class="eyebrow">GROWTH LOG · 2026</p>
@@ -43,6 +42,7 @@
     <section class="chart-card trend-card">
       <div class="chart-meta"><span id="trendRange">—</span><strong id="trendGain">—</strong></div>
       <div class="chart-wrap" id="trendChart" role="img" aria-label="体重随日期变化的折线图"></div>
+      <p class="chart-selection" id="trendSelection" aria-live="polite">点击图中的点查看该次记录。</p>
     </section>
 
     <section class="chart-grid">
@@ -50,11 +50,13 @@
         <div class="chart-title"><div><p class="section-kicker">02 · PACE</p><h2>记录间日均变化</h2></div><strong id="paceAverage">—</strong></div>
         <p class="chart-description">每次称重与上一次之间，折算到每天的体重变化。</p>
         <div class="chart-wrap compact" id="paceChart" role="img" aria-label="每日平均变化柱状图"></div>
+        <p class="chart-selection" id="paceSelection" aria-live="polite">点击柱子查看这段时间的变化。</p>
       </article>
       <article class="chart-card phase-card">
         <div class="chart-title"><div><p class="section-kicker">03 · PHASE</p><h2>30 天阶段增长</h2></div><strong id="phaseBest">—</strong></div>
         <p class="chart-description">按首日开始的每 30 天阶段，比较累计增重。</p>
         <div class="chart-wrap compact" id="phaseChart" role="img" aria-label="每 30 天阶段增长柱状图"></div>
+        <p class="chart-selection" id="phaseSelection" aria-live="polite">点击柱子查看该阶段详情。</p>
       </article>
     </section>
 

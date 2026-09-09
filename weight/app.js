@@ -36,10 +36,25 @@ function render(range = 'all') {
   $('#trendRange').textContent = `${formatDate(first.date)} — ${formatDate(latest.date)} · ${visible.length} 次记录`;
   $('#trendGain').textContent = `${signed(gain, 2)} kg`;
   renderTrend($('#trendChart'), visible);
+  $('#trendSelection').textContent = '点击图中的点查看该次记录。';
   const paceItems = visible.slice(1);
   renderBars($('#paceChart'), paceItems.map(item => item.dailyChange * 1000), { color: 'teal', formatter: value => `${signed(value, 1)} g/天`, labels: paceItems.map(item => item.date.slice(5).replace('-', '/')), yAxis: true });
+  $('#paceSelection').textContent = '点击柱子查看这段时间的变化。';
   const phases = phaseGrowth(visible);
   renderBars($('#phaseChart'), phases.map(item => item.gain * 1000), { color: 'gold', formatter: value => `${signed(value / 1000, 2)} kg`, labels: phases.map(item => `第${item.phase}阶段`) });
+  $('#phaseSelection').textContent = '点击柱子查看该阶段详情。';
+
+  bindChartDetails('#trendChart', item => `${formatDate(item.date)} · 第 ${item.daysFromStart} 天 · <strong>${item.weight.toFixed(2)} kg</strong>${item.change === null ? '' : ` · 较上次 ${weightText(item.change)}`}`, visible, '#trendSelection');
+  bindChartDetails('#paceChart', item => `${formatDate(item.date)} · ${item.intervalDays} 天内 ${weightText(item.change)} · 日均 <strong>${signed(item.dailyChange * 1000, 1)} g/天</strong>`, paceItems, '#paceSelection');
+  bindChartDetails('#phaseChart', item => `第 ${item.phase} 阶段 · ${formatDate(item.start.date)} — ${formatDate(item.end.date)} · <strong>${signed(item.gain, 2)} kg</strong>`, phases, '#phaseSelection');
+}
+
+function bindChartDetails(chartSelector, makeDetail, items, detailSelector) {
+  const show = index => { $(detailSelector).innerHTML = makeDetail(items[index]); };
+  $(chartSelector).querySelectorAll('.data-point').forEach(point => {
+    point.addEventListener('click', () => show(Number(point.dataset.index)));
+    point.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); show(Number(point.dataset.index)); } });
+  });
 }
 
 writeSummary(); renderRecords(); render();
