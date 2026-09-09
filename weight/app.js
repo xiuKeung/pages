@@ -1,4 +1,5 @@
 import { weightRecords } from './data/weight-records.js';
+import { girlWeightReference } from './data/girl-weight-reference.js';
 import { prepareRecords, summarize, filterByRange, phaseGrowth } from './analytics.js';
 import { renderTrend, renderBars } from './charts.js';
 
@@ -35,7 +36,8 @@ function render(range = 'all') {
   const first = visible[0], latest = visible.at(-1), gain = latest.weight - first.weight;
   $('#trendRange').textContent = `${formatDate(first.date)} — ${formatDate(latest.date)} · ${visible.length} 次记录`;
   $('#trendGain').textContent = `${signed(gain, 2)} kg`;
-  renderTrend($('#trendChart'), visible);
+  const reference = girlWeightReference(Array.from({ length: latest.daysFromStart - first.daysFromStart + 1 }, (_, index) => first.daysFromStart - 1 + index));
+  renderTrend($('#trendChart'), visible, reference);
   $('#trendSelection').textContent = '点击图中的点查看该次记录。';
   const paceItems = visible.slice(1);
   renderBars($('#paceChart'), paceItems.map(item => item.dailyChange * 1000), { color: 'teal', formatter: value => `${signed(value, 1)} g/天`, labels: paceItems.map(item => item.date.slice(5).replace('-', '/')), yAxis: true });
