@@ -22,6 +22,9 @@ globalThis.SchoolDistrictDataReady.then(async () => {
   let schools = [];
   const loadError = globalThis.NanshanDistrictData?.loadError;
   const normalize = value => String(value || '').replace(/[\s（）()·、，,.-]/g, '').replace(/(小区|花园|广场|名苑|住宅楼)$/g, '').toLowerCase();
+  // 官方图中有少数条目把一整个范围及其楼盘名单写进同一个字段；它们能说明
+  // 某小区归属哪所学校，却不能作为“同名/别名”继续扩展到名单内的其他小区。
+  const isRangeDescription = value => /[\r\n]|包括以下|地段|范围|编号|交界|以东|以南|以西|以北/.test(String(value || ''));
   const escape = value => String(value || '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char]);
 
   let allHomes = [];
@@ -216,7 +219,11 @@ globalThis.SchoolDistrictDataReady.then(async () => {
     const matches = [];
     visibleSchools().forEach(school => (school.homes || []).forEach(home => {
       const homeKey = normalize(home);
-      if (keys.has(homeKey)) matches.push({ school, home });
+      const directMatch = keys.has(homeKey);
+      // 范围说明只允许按当前小区名直接命中，不能通过关联扩展带入名单中的其他小区。
+      const rangeContainsMatchedHome = isRangeDescription(home)
+        && [...keys].some(key => key.length >= 2 && homeKey.includes(key));
+      if (directMatch || rangeContainsMatchedHome) matches.push({ school, home });
     }));
     return matches;
   }
@@ -224,9 +231,12 @@ globalThis.SchoolDistrictDataReady.then(async () => {
   function candidates(value) {
     const key = normalize(value);
     if (key.length < 2) return [];
-    // 即使存在完全相同的小区名，也保留同一输入命中的其他官方名称；
-    // 例如“简称 / 全称（别名）”可能分别承载不同学段的官方关联。
-    return expandRelatedHomes(visibleHomes().filter(home => normalize(home).includes(key)))
+    const matched = visibleHomes().filter(home => normalize(home).includes(key));
+    const atomicHomes = matched.filter(home => !isRangeDescription(home));
+    const candidateHomes = atomicHomes.length ? atomicHomes : matched;
+    // 有精确官方小区名时，以它作为别名扩展的起点；避免一条范围说明带入其中的全部楼盘。
+    const exactHomes = candidateHomes.filter(home => normalize(home) === key);
+    return expandRelatedHomes(exactHomes.length ? exactHomes : candidateHomes)
       .sort((a, b) => {
         const aExact = normalize(a) === key ? 0 : 1;
         const bExact = normalize(b) === key ? 0 : 1;
@@ -237,11 +247,13 @@ globalThis.SchoolDistrictDataReady.then(async () => {
   // 递归合并官方名称：A 包含 B、B 又包含 C 时，A/B/C 视为同一名称族。
   // 这避免“简称 → 括号别名 → 全称”链条中漏掉某个学段。
   function expandRelatedHomes(initialHomes) {
-    const related = new Set(initialHomes);
+    const atomicInitialHomes = initialHomes.filter(home => !isRangeDescription(home));
+    const related = new Set(atomicInitialHomes.length ? atomicInitialHomes : initialHomes);
     let changed = true;
     while (changed) {
       changed = false;
       for (const home of visibleHomes()) {
+        if (isRangeDescription(home)) continue;
         const homeKey = normalize(home);
         if ([...related].some(item => {
           const itemKey = normalize(item);
