@@ -1,6 +1,23 @@
 const svg = (content, viewBox = '0 0 640 250') => `<svg viewBox="${viewBox}" preserveAspectRatio="none" aria-hidden="true">${content}</svg>`;
 const esc = text => String(text).replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' })[char]);
 
+function keepTrendPointsRound(target) {
+  const chart = target.querySelector('svg');
+  const update = () => {
+    const box = chart.getBoundingClientRect();
+    const ratio = (box.width / 640) / (box.height / 250);
+    chart.querySelectorAll('.trend-points ellipse').forEach(point => {
+      const radius = Number(point.dataset.radius);
+      point.setAttribute('rx', radius);
+      point.setAttribute('ry', radius * ratio);
+    });
+  };
+  target._trendPointObserver?.disconnect();
+  target._trendPointObserver = new ResizeObserver(update);
+  target._trendPointObserver.observe(chart);
+  update();
+}
+
 export function renderTrend(target, records, reference = []) {
   if (!records.length) return;
   const values = [...records.map(item => item.weight), ...reference.flatMap(item => [item.p3, item.p97])];
@@ -16,7 +33,8 @@ export function renderTrend(target, records, reference = []) {
   const p97 = reference.length ? `<polyline class="p97-line" points="${referencePoints('p97')}"/>` : '';
   const grid = [0, .5, 1].map(ratio => { const value = min + (max - min) * ratio, py = y(value); return `<line x1="42" x2="612" y1="${py}" y2="${py}"/><text x="0" y="${py + 4}">${value.toFixed(1)}</text>`; }).join('');
   const labels = [records[0], records[Math.floor((records.length - 1) / 2)], records.at(-1)].map((item, index) => `<text class="x-label" x="${[42, 327, 612][index]}" y="240" text-anchor="${index === 0 ? 'start' : index === 2 ? 'end' : 'middle'}">${item.date.slice(5).replace('-', '/')}</text>`).join('');
-  target.innerHTML = svg(`<g class="grid">${grid}</g>${band}${p97}${p85}${median}<polyline class="trend-line" points="${points}"/><g class="trend-points">${records.map((item, index) => `<circle class="data-point" data-index="${index}" tabindex="0" role="button" aria-label="${esc(item.date)}，${item.weight.toFixed(2)} kg" cx="${x(item.daysFromStart - 1)}" cy="${y(item.weight)}" r="${index === records.length - 1 ? 5 : 2.5}"><title>${esc(item.date)} · ${item.weight.toFixed(2)} kg</title></circle>`).join('')}</g>${labels}`);
+  target.innerHTML = svg(`<g class="grid">${grid}</g>${band}${p97}${p85}${median}<polyline class="trend-line" points="${points}"/><g class="trend-points">${records.map((item, index) => { const radius = index === records.length - 1 ? 5 : 2.5; return `<ellipse class="data-point" data-index="${index}" data-radius="${radius}" tabindex="0" role="button" aria-label="${esc(item.date)}，${item.weight.toFixed(2)} kg" cx="${x(item.daysFromStart - 1)}" cy="${y(item.weight)}" rx="${radius}" ry="${radius}"><title>${esc(item.date)} · ${item.weight.toFixed(2)} kg</title></ellipse>`; }).join('')}</g>${labels}`);
+  keepTrendPointsRound(target);
 }
 
 export function renderBars(target, values, { color = 'purple', formatter = value => `${value}g`, labels = [], yAxis = false } = {}) {
