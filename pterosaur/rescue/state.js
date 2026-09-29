@@ -1,6 +1,9 @@
-export const WORLD = {end:108,plate:21,bridgeStart:27,bridgeEnd:38,bridgeSwitch:{x:41,y:6.5},battery:{x:49,y:8},terminal:{x:64,y:8},station:71,turret:{x:81,y:5},wall:94,exit:103};
-export function createRescue(){
- return {status:'ready',active:'truck',docked:true,recalling:false,truck:{x:7,y:0,hp:100},bird:{x:7,y:1.8,hp:100},crate:14,crateParked:false,battery:'shelf',batteryPos:{...WORLD.battery},bridgeEnabled:false,bridgeOpen:false,plateHeld:false,powered:false,turretHp:75,turretOff:false,wallBroken:false,energy:100,shield:false,dash:0,attack:0,invincible:0,lives:8,time:0,shots:[],fireTimer:2,towing:false,event:'ready',eventId:0,checkpoint:7,respawn:0};
+import {levelConfig} from './levels.js';
+export {LEVEL_COUNT,levelConfig} from './levels.js';
+export const WORLD=levelConfig(1).world;
+export function createRescue(level=1){
+ const config=levelConfig(level);
+ return {config,world:config.world,cellsDelivered:0,status:'ready',active:'truck',docked:true,recalling:false,truck:{x:7,y:0,hp:100},bird:{x:7,y:1.8,hp:100},crate:14,crateParked:false,battery:'shelf',batteryPos:{...config.world.battery},bridgeEnabled:false,bridgeOpen:false,plateHeld:false,powered:false,turretHp:config.turretHp,turretOff:false,wallBroken:false,energy:100,shield:false,dash:0,attack:0,invincible:0,lives:8,time:0,shots:[],fireTimer:2,towing:false,event:'ready',eventId:0,checkpoint:7,respawn:0};
 }
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const near=(a,b,r=2.1)=>Math.hypot(a.x-b.x,a.y-b.y)<r;
@@ -26,16 +29,16 @@ export function actionLabel(s){
  if(s.active==='bird'&&!s.docked){
   const b=s.bird;
   if(s.battery==='bird'){
-   if(near(b,{x:WORLD.station,y:2.5},3))return '装入供电插槽';
+   if(near(b,{x:s.world.station,y:2.5},3))return '装入供电插槽';
    if(near(b,{x:s.truck.x,y:2.4},3))return '放到战车货架';
    return '放下电池';
   }
   if((s.battery==='shelf'||s.battery==='ground')&&near(b,s.batteryPos,2.2))return '抓取电池';
   if(s.battery==='truck'&&near(b,{x:s.truck.x,y:2.4},3))return '取出车上电池';
-  if(!s.bridgeEnabled&&near(b,WORLD.bridgeSwitch,2.3))return '解锁桥梁控制';
-  if(!s.turretOff&&s.turretHp>0&&near(b,WORLD.terminal,2.3))return '关闭防御炮台';
+  if(!s.bridgeEnabled&&near(b,s.world.bridgeSwitch,2.3))return '解锁桥梁控制';
+  if(!s.turretOff&&s.turretHp>0&&near(b,s.world.terminal,2.3))return s.config.terminalNeedsPower&&!s.powered?'终端需要供电':'关闭防御炮台';
  }else{
-  if(Math.abs(s.truck.x-WORLD.station)<3&&!s.powered)return (s.battery==='truck'||s.battery==='socket')?'接通供电站':'供电站需要电池';
+  if(Math.abs(s.truck.x-s.world.station)<3&&!s.powered)return (s.battery==='truck'||s.battery==='socket')?'接通供电站':'供电站需要电池';
   if(s.towing)return '松开牵引';
   if(Math.abs(s.truck.x-s.crate)<3.2&&!s.powered)return '牵引重箱';
  }
@@ -50,7 +53,11 @@ export function interact(s){
  else if(label==='放下电池'){s.battery='ground';s.batteryPos={x:s.bird.x,y:Math.max(1.6,s.bird.y-1)};announce(s,'电池已放下，可以再次抓取。');}
  else if(label==='解锁桥梁控制'){s.bridgeEnabled=true;announce(s,'桥梁已解锁 · 压住河岸的金色压力板，桥面才会升起。');}
  else if(label==='关闭防御炮台'){s.turretOff=true;s.shots=[];announce(s,'防御已关闭 · 不战斗也能安全通过。');}
- else if(label==='接通供电站'){s.battery='installed';s.powered=true;s.checkpoint=WORLD.station;s.energy=100;announce(s,'供电恢复！检查点已保存 · 合体后冲刺突破裂墙。');}
+ else if(label==='接通供电站'){
+  s.cellsDelivered++;s.energy=100;s.truck.hp=s.bird.hp=100;
+  if(s.cellsDelivered>=s.config.requiredCells){s.battery='installed';s.powered=true;s.checkpoint=s.world.station;announce(s,'供电恢复！检查点已保存 · 合体后冲刺突破裂墙。');}
+  else{s.battery='shelf';s.batteryPos={...s.world.cells[s.cellsDelivered]};announce(s,`能源已接入 ${s.cellsDelivered}/${s.config.requiredCells} · 继续寻找下一枚电池。`);}
+ }
  else if(label==='牵引重箱'){s.towing=true;s.crateParked=false;announce(s,'牵引已连接 · 前后移动箱子，放到金色压力板上。');}
  else if(label==='松开牵引'){s.towing=false;announce(s,'牵引已松开。');}
  else announce(s,label||'靠近电池、开关或重箱后再互动。');
@@ -61,7 +68,7 @@ export function skill(s){
   if(s.battery==='bird'){announce(s,'携带电池时无法攻击，先把它放下。');return;}
   if(s.attack>0)return;
   s.attack=.65;
-  if(!s.turretOff&&s.turretHp>0&&near(s.bird,WORLD.turret,5)){
+  if(!s.turretOff&&s.turretHp>0&&near(s.bird,s.world.turret,5)){
    s.turretHp=Math.max(0,s.turretHp-25);announce(s,s.turretHp===0?'炮台已拆除 · 通路安全。':`俯冲命中！炮台剩余 ${s.turretHp} 耐久。`);
    if(!s.turretHp)s.shots=[];
   }else announce(s,'俯冲打击 · 靠近炮台的发光核心再攻击。');
@@ -74,7 +81,7 @@ export function skill(s){
   s.shield=!s.shield;announce(s,s.shield?'护盾展开 · 切换翼龙后仍会保护战车周围。':'护盾收起 · 能量恢复中。');
  }
 }
-export function hurt(s,role,amount=25){
+export function hurt(s,role,amount=s.config.damage){
  if(s.invincible>0||s.respawn>0||s.status!=='playing')return;
  s[role].hp=Math.max(0,s[role].hp-amount);s.invincible=1.2;announce(s,'受到攻击！靠近战车合体修复，或用护盾抵挡。');
  if(s[role].hp===0){s.lives--;s.recalling=false;s.shield=false;s.dash=0;s.shots=[];s.towing=false;
@@ -84,8 +91,8 @@ export function hurt(s,role,amount=25){
 }
 export function objective(s){
  if(!s.bridgeEnabled)return '让翼龙飞到对岸高台，解锁桥梁开关。';
- if(s.truck.x<WORLD.bridgeEnd&&!s.powered)return '把重箱推到金色压力板，保持桥面升起，再驾驶战车过桥。';
- if(!s.powered)return s.battery==='shelf'||s.battery==='ground'?'翼龙到高处仓库抓取电池，可装车运输，也可直接送到插槽。':'把电池送到供电站，让战车靠近后接通动力。';
+ if(s.truck.x<s.world.bridgeEnd&&!s.powered)return '把重箱推到金色压力板，保持桥面升起，再驾驶战车过桥。';
+ if(!s.powered)return s.battery==='shelf'||s.battery==='ground'?`寻找能源 ${s.cellsDelivered+1}/${s.config.requiredCells}：翼龙抓取电池，可装车或送入插槽。`:'把电池送到供电站，让战车靠近后接通动力。';
  if(!s.wallBroken)return '让翼龙回到车顶合体，向裂墙发动动力冲刺。';
  return '驾驶合体战车抵达绿色出口。';
 }
@@ -102,27 +109,27 @@ function step(s,input,dt){
  if(s.docked){s.truck.hp=Math.min(100,s.truck.hp+12*dt);s.bird.hp=Math.min(100,s.bird.hp+20*dt);}
  if(s.active==='bird'&&!s.docked){
   const speed=s.battery==='bird'?3.5:6;
-  s.bird.x=clamp(s.bird.x+x*speed*dt,2,s.wallBroken?107:WORLD.wall-1.4);s.bird.y=clamp(s.bird.y+y*speed*dt,1.8,11.5);
+  s.bird.x=clamp(s.bird.x+x*speed*dt,2,s.wallBroken?s.world.end-1:s.world.wall-1.4);s.bird.y=clamp(s.bird.y+y*speed*dt,1.8,11.5);
  }else{
-  const before=s.truck.x;let next=clamp(before+(s.dash>0?16:x*5)*dt,3,107);
-  if(!s.bridgeOpen&&next>WORLD.bridgeStart-2&&next<WORLD.bridgeEnd+2){
-   next=before<WORLD.bridgeStart?WORLD.bridgeStart-2:before>WORLD.bridgeEnd?WORLD.bridgeEnd+2:before;
+  const before=s.truck.x;let next=clamp(before+(s.dash>0?16:x*5)*dt,3,s.world.end-1);
+  if(!s.bridgeOpen&&next>s.world.bridgeStart-2&&next<s.world.bridgeEnd+2){
+   next=before<s.world.bridgeStart?s.world.bridgeStart-2:before>s.world.bridgeEnd?s.world.bridgeEnd+2:before;
   }
-  if(!s.wallBroken&&next>WORLD.wall-2.3){
+  if(!s.wallBroken&&next>s.world.wall-2.3){
    if(s.dash>0&&s.powered&&s.docked){s.wallBroken=true;announce(s,'裂墙突破！把搭档一起带到出口。');}
-   else next=WORLD.wall-2.3;
+   else next=s.world.wall-2.3;
   }
-  if(s.towing){s.crate=clamp(s.crate+next-before,8,24);if(Math.abs(s.crate-next)>3.3)s.towing=false;}
+  if(s.towing){s.crate=clamp(s.crate+next-before,8,s.world.bridgeStart-3);if(Math.abs(s.crate-next)>3.3)s.towing=false;}
   else if(!s.crateParked&&Math.abs(next-s.crate)<2.4&&Math.abs(next-s.crate)<Math.abs(before-s.crate)){
-   const direction=Math.sign(next-before);s.crate=clamp(next+direction*2.4,8,24);next=s.crate-direction*2.4;
+   const direction=Math.sign(next-before);s.crate=clamp(next+direction*2.4,8,s.world.bridgeStart-3);next=s.crate-direction*2.4;
   }
   s.truck.x=next;
  }
  s.dash=Math.max(0,s.dash-dt);
- if(!s.towing&&!s.crateParked&&Math.abs(s.crate-WORLD.plate)<1.2){s.crate=WORLD.plate;s.crateParked=true;announce(s,'重箱已滑入压力板卡槽 · 可以从旁边通行。');}
- s.plateHeld=Math.abs(s.crate-WORLD.plate)<1.2||Math.abs(s.truck.x-WORLD.plate)<1.4;
+ if(!s.towing&&!s.crateParked&&Math.abs(s.crate-s.world.plate)<1.2){s.crate=s.world.plate;s.crateParked=true;announce(s,'重箱已滑入压力板卡槽 · 可以从旁边通行。');}
+ s.plateHeld=Math.abs(s.crate-s.world.plate)<1.2||Math.abs(s.truck.x-s.world.plate)<1.4;
  // Once the vehicle is crossing, a mechanical latch holds the bridge until it reaches land.
- s.bridgeOpen=s.bridgeEnabled&&(s.plateHeld||(s.truck.x>WORLD.bridgeStart-2&&s.truck.x<WORLD.bridgeEnd+2));
+ s.bridgeOpen=s.bridgeEnabled&&(s.plateHeld||(s.truck.x>s.world.bridgeStart-2&&s.truck.x<s.world.bridgeEnd+2));
  if(s.recalling&&!s.docked){
   const dx=s.truck.x-s.bird.x,dy=2.8-s.bird.y,distance=Math.hypot(dx,dy),travel=(s.battery==='bird'?4:7)*dt;
   if(distance<1.6){s.recalling=false;dock(s);}
@@ -131,10 +138,11 @@ function step(s,input,dt){
  if(s.docked){s.bird.x=s.truck.x;s.bird.y=1.8;}
  if(s.battery==='bird')s.batteryPos={x:s.bird.x,y:s.bird.y-.8};
  if(s.battery==='truck')s.batteryPos={x:s.truck.x-.8,y:2.1};
+ if(s.config.wind&&!s.docked&&s.bird.x>s.world.bridgeEnd&&s.bird.x<s.world.station&&s.bird.y>5&&!s.recalling)s.bird.y=clamp(s.bird.y+Math.sin(s.time*1.8)*s.config.wind*dt,1.8,11.5);
  if(s.battery==='ground')s.batteryPos.y=Math.max(1,s.batteryPos.y-dt*3);
  if(!s.turretOff&&s.turretHp>0){
   const target=s.active==='bird'&&!s.docked?s.bird:{x:s.truck.x,y:1.3};
-  if(Math.abs(target.x-WORLD.turret.x)<18){s.fireTimer-=dt;if(s.fireTimer<=0){s.fireTimer=1.8;const dx=target.x-WORLD.turret.x,dy=target.y-WORLD.turret.y,len=Math.hypot(dx,dy)||1;s.shots.push({x:WORLD.turret.x,y:WORLD.turret.y,vx:dx/len*7,vy:dy/len*7,ttl:4});}}
+  if(Math.abs(target.x-s.world.turret.x)<18){s.fireTimer-=dt;if(s.fireTimer<=0){s.fireTimer=s.config.fireInterval;const dx=target.x-s.world.turret.x,dy=target.y-s.world.turret.y,len=Math.hypot(dx,dy)||1;s.shots.push({x:s.world.turret.x,y:s.world.turret.y,vx:dx/len*s.config.shotSpeed,vy:dy/len*s.config.shotSpeed,ttl:4});}}
  }
  for(const shot of s.shots){
   shot.x+=shot.vx*dt;shot.y+=shot.vy*dt;shot.ttl-=dt;
@@ -143,5 +151,7 @@ function step(s,input,dt){
   else if(!s.docked&&near(shot,s.bird,.7)){shot.ttl=0;hurt(s,'bird');}
  }
  s.shots=s.shots.filter(p=>p.ttl>0&&p.y>0);
- if(s.truck.x>=WORLD.exit&&s.docked&&s.powered&&s.wallBroken){s.status='won';announce(s,'供电站恢复，搭档平安归来！');}
+ if(s.truck.x>=s.world.exit&&s.docked&&s.powered&&s.wallBroken){s.status='won';announce(s,'供电站恢复，搭档平安归来！');}
 }
+
+export function nextLevel(s){return s.status==='won'&&s.config.level<20?createRescue(s.config.level+1):null;}
