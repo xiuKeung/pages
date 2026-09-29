@@ -7,7 +7,7 @@
   <meta name="description" content="从十八张积木照片重建的机械翼龙战车。旋转、缩放、展开双翼，在 3D 中重新发现你的创作。">
   <title>机械翼龙战车 · 积木档案</title>
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./style.css?v=2">
+  <link rel="stylesheet" href="./style.css?v=3">
 </head>
 <body>
   <header class="header">
@@ -25,8 +25,14 @@
 
       <div class="exhibit-layout">
         <div class="viewer" id="viewer">
-          <div class="stage-label"><span class="live-dot"></span> 交互式 3D 预览<span class="stage-label-sub">RECONSTRUCTION / V2</span></div>
+          <div class="stage-label"><span class="live-dot"></span> 交互式 3D 预览<span class="stage-label-sub">TRANSFORMATION / V3</span></div>
           <div id="canvas-host" role="img" aria-label="机械翼龙战车三维模型，可用鼠标拖动旋转、滚轮缩放，或使用下方视角按钮"></div>
+          <div class="cinema-caption" id="cinema-caption" hidden><span id="chapter-number">01 / 07</span><h3 id="chapter-title">战车驶入</h3><p id="chapter-detail">四轮滚动，进入展示区域</p></div>
+          <section class="playback" id="playback" aria-label="变身动画播放器" hidden>
+            <div class="playback-top"><span class="film-label">TRANSFORM <b>20s</b></span><span id="playback-status" role="status">已暂停</span><button id="exit-animation">退出动画 ×</button></div>
+            <input id="animation-seek" type="range" min="0" max="20" step="0.01" value="0" aria-label="动画进度（秒）">
+            <div class="playback-buttons"><button id="animation-play" aria-label="播放动画">播放</button><button id="animation-restart" aria-label="从头重播">↺ 重播</button><button id="animation-reverse" aria-pressed="false">倒放</button><label class="speed-label">速度 <select id="animation-speed" aria-label="动画播放速度"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label><output id="animation-clock" for="animation-seek">00.0 / 20.0</output></div>
+          </section>
           <div class="loading" id="loading"><span class="loader"></span><span>正在搭建你的积木世界…</span></div>
           <div class="view-tools"><button id="reset" class="icon-button" aria-label="重置视角" title="重置视角"><svg viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 7M4 4v6h6"/></svg></button><button id="fullscreen" class="icon-button" aria-label="全屏查看" title="全屏查看"><svg viewBox="0 0 24 24"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4"/></svg></button></div>
           <span class="orientation" aria-hidden="true"><span>Y</span><svg viewBox="0 0 60 55"><path d="M30 30V5M30 30 8 44M30 30l22 14"/><circle cx="30" cy="30" r="3"/></svg><b>X</b><i>Z</i></span>
@@ -38,6 +44,8 @@
           <h2>地面与天空的<br>双重想象</h2>
           <p class="description">伏在车顶的机械翼龙，以长喙、折翼和关节勾勒轮廓；四轮底盘，承载下一段冒险。</p>
           <div class="tags"><span>机械翼龙</span><span>四轮战车</span><span>积木创作</span></div>
+          <button id="start-animation" class="animation-launch"><span aria-hidden="true">▶</span><span>播放变身动画<small>脱离 · 站立 · 展翼 · 合体</small></span><b>20s</b></button>
+          <p class="animation-disclaimer">动画为结构演示；空中移位由演出编排完成。</p>
           <div class="divider"></div>
           <label class="small-label">展示模式</label>
           <div class="mode-switch" role="group" aria-label="展示模式"><button data-mode="combined" class="selected" aria-pressed="true">完整作品</button><button data-mode="split" aria-pressed="false">分离同屏</button><button data-mode="creature" aria-pressed="false">机械翼龙</button><button data-mode="chassis" aria-pressed="false">独立战车</button></div>
@@ -86,6 +94,6 @@
   <dialog id="photo-dialog" aria-label="参考照片大图"><button id="close-photo" class="dialog-close" aria-label="关闭照片">×</button><button id="prev-photo" class="photo-arrow prev" aria-label="上一张照片">←</button><img id="large-photo" alt=""><button id="next-photo" class="photo-arrow next" aria-label="下一张照片">→</button><p id="photo-caption"></p></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
   <noscript><p class="noscript">请开启 JavaScript 以浏览交互式 3D 模型。下方参考照片仍可查看。</p></noscript>
-  <script type="module" src="./main.js?v=2"></script>
+  <script type="module" src="./main.js?v=3"></script>
 </body>
 </html>

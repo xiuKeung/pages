@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { buildModel } from './model.js?v=2';
+import { AnimationPlayer, sampleAnimation, CHAPTERS, DURATION } from './animation.js?v=3';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -74,6 +75,11 @@ function startGallery() {
   const ring = new THREE.Mesh(new THREE.TorusGeometry(5.12, .008, 3, 128), new THREE.MeshBasicMaterial({ color: 0xc4ccb7 }));
   ring.rotation.x = Math.PI / 2; ring.position.y = -.005; scene.add(ring);
   const { model, chassis, creature, poseCreature, materials, meshCount } = buildModel(); scene.add(model);
+  const player = new AnimationPlayer();
+  let cinematic = false;
+  const wheels = chassis.children.filter(part => part.name === 'Wheel with tread and spoked rim');
+  const creatureBounds = new THREE.Box3();
+  const restingClearance = creatureBounds.setFromObject(creature).min.y;
 
   let mode = 'combined', separated = false, targetLift = 0, targetWing = 0, cameraMotion = null;
   let pose = 'standing', targetStand = 0, targetHead = 0;
@@ -126,6 +132,7 @@ function startGallery() {
     $('#wireframe').setAttribute('aria-checked', value);
   }
   function reset() {
+    if (cinematic) exitAnimation();
     setAuto(false); setWireframe(false); setMode('combined');
     $('#wings').value = '0'; $('#wing-value').value = '0%'; targetWing = 0;
     $('#head-pitch').value = '0'; $('#head-value').value = '0°'; targetHead = 0;
@@ -140,6 +147,71 @@ function startGallery() {
   $('#wings').addEventListener('input', e => { targetWing = Number(e.target.value) / 100; $('#wing-value').value = `${e.target.value}%`; });
   $('#head-pitch').addEventListener('input', e => { targetHead = THREE.MathUtils.degToRad(Number(e.target.value)); $('#head-value').value = `${e.target.value}°`; });
   $('#reset').addEventListener('click', reset);
+  const manualControls = $$('[data-mode], [data-pose], #rotate, #wireframe, #wings, #head-pitch, #separate, .views button');
+  function updatePlayback() {
+    $('#animation-seek').value = player.time;
+    $('#animation-seek').setAttribute('aria-valuetext', `${player.time.toFixed(1)} 秒，共 20 秒`);
+    $('#animation-clock').value = `${player.time.toFixed(1).padStart(4,'0')} / 20.0`;
+    $('#animation-play').textContent = player.playing ? 'Ⅱ 暂停' : '▶ 播放';
+    $('#animation-play').setAttribute('aria-label', player.playing ? '暂停动画' : '播放动画');
+    $('#animation-reverse').setAttribute('aria-pressed', player.direction === -1);
+    const status = player.playing ? (player.direction === -1 ? '正在倒放' : '正在播放') : player.time === DURATION ? '播放完成' : '已暂停';
+    if ($('#playback-status').textContent !== status) $('#playback-status').textContent = status;
+    const chapter = sampleAnimation(player.time).chapter;
+    $('#chapter-number').textContent = `${String(chapter+1).padStart(2,'0')} / 07`;
+    $('#chapter-title').textContent = CHAPTERS[chapter].title;
+    $('#chapter-detail').textContent = CHAPTERS[chapter].detail;
+  }
+  function applyAnimation() {
+    const s = sampleAnimation(player.time);
+    model.position.set(s.drive,0,-1.2);
+    chassis.position.set(0,0,0); chassis.visible = true; creature.visible = true;
+    poseCreature({stand:s.stand,wing:s.wing,headPitch:s.headPitch});
+    // Keep clear of the deck while moving sideways; then place both feet on the floor.
+    const bottom = creatureBounds.setFromObject(creature).min.y;
+    creature.position.y += (1-s.stand)*(restingClearance+s.lift)-bottom;
+    creature.position.z = s.side;
+    wheels.forEach(wheel => { wheel.rotation.z = s.wheelAngle; });
+    const angle = .72 + (reduceMotion.matches ? 0 : s.orbit);
+    const distance = 20.5 * fitDistance();
+    controls.target.set(-.2,1.8,.7);
+    camera.position.set(Math.sin(angle)*distance,1.8+9*fitDistance(),Math.cos(angle)*distance+.7);
+    camera.lookAt(controls.target);
+    updatePlayback();
+  }
+  function startAnimation() {
+    setMode('combined'); setAuto(false); setWireframe(false); cameraMotion = null;
+    cinematic = true; controls.enabled = false;
+    player.direction = 1; player.seek(0); player.play();
+    platform.scale.set(1.3,1,1.3); ring.scale.setScalar(1.3);
+    $('#viewer').classList.add('cinematic');
+    $('#playback').hidden = false; $('#cinema-caption').hidden = false;
+    manualControls.forEach(control => { control.disabled = true; });
+    $('#mode-detail').textContent = '正在展示变身动画。退出动画后可继续手动查看。';
+    applyAnimation();
+    $('#viewer').scrollIntoView({behavior:reduceMotion.matches ? 'instant' : 'smooth',block:'start'});
+  }
+  function exitAnimation() {
+    cinematic = false; player.playing = false; controls.enabled = true;
+    model.position.set(0,0,0); wheels.forEach(wheel => {wheel.rotation.z=0;});
+    platform.scale.set(1,1,1); ring.scale.setScalar(1);
+    $('#viewer').classList.remove('cinematic');
+    $('#playback').hidden = true; $('#cinema-caption').hidden = true;
+    manualControls.forEach(control => { control.disabled = false; });
+    currentLift=currentWing=currentStand=currentHead=currentGround=splitOffset=0;
+    targetWing=targetHead=0; $('#wings').value='0'; $('#wing-value').value='0%';
+    $('#head-pitch').value='0'; $('#head-value').value='0°';
+    setMode('combined'); poseCreature(); chassis.position.set(0,0,0);
+    moveCamera('perspective',true);
+  }
+  $('#start-animation').addEventListener('click',startAnimation);
+  $('#exit-animation').addEventListener('click',exitAnimation);
+  $('#animation-play').addEventListener('click',()=>{if(player.playing)player.playing=false;else player.play();updatePlayback();});
+  $('#animation-restart').addEventListener('click',()=>{player.direction=1;player.seek(0);player.play();applyAnimation();});
+  $('#animation-reverse').addEventListener('click',()=>{player.direction*=-1;player.play();updatePlayback();});
+  $('#animation-seek').addEventListener('input',event=>{player.seek(Number(event.target.value));applyAnimation();renderer.render(scene,camera);});
+  $('#animation-speed').addEventListener('change',event=>{player.speed=Number(event.target.value);});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&cinematic){player.playing=false;updatePlayback();}});
   $('#fullscreen').addEventListener('click', async () => {
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
@@ -153,16 +225,17 @@ function startGallery() {
     const width = host.clientWidth, height = host.clientHeight;
     if (!width || !height) return;
     camera.aspect = width / height; camera.updateProjectionMatrix(); renderer.setSize(width, height);
-    moveCamera(view, true);
+    if(cinematic) applyAnimation(); else moveCamera(view, true);
   }); observer.observe(host);
   camera.aspect = host.clientWidth / host.clientHeight; camera.updateProjectionMatrix();
   renderer.setSize(host.clientWidth, host.clientHeight); moveCamera('perspective', true);
   let lastTime = performance.now(), currentWing = 0, currentStand = 0, currentHead = 0, currentLift = 0, currentGround = 0, splitOffset = 0, visible = true;
-  const visibilityObserver = new IntersectionObserver(entries => { visible = entries[0].isIntersecting; }, { rootMargin: '80px' }); visibilityObserver.observe(host);
+  const visibilityObserver = new IntersectionObserver(entries => { visible = entries[0].isIntersecting; if(!visible&&cinematic){player.playing=false;updatePlayback();} }, { rootMargin: '80px' }); visibilityObserver.observe(host);
   function frame(time) {
     requestAnimationFrame(frame);
-    const dt = Math.min((time - lastTime) / 1000, .05); lastTime = time;
+    const dt = Math.min((time - lastTime) / 1000, .25); lastTime = time;
     if (document.hidden || !visible) return;
+    if(cinematic) {player.advance(dt);applyAnimation();renderer.render(scene,camera);return;}
     const smooth = reduceMotion.matches ? 1 : 1 - Math.exp(-dt * 9);
     currentLift = THREE.MathUtils.lerp(currentLift, targetLift, smooth);
     currentWing = THREE.MathUtils.lerp(currentWing, targetWing, smooth);
@@ -183,7 +256,7 @@ function startGallery() {
   }
   renderer.render(scene, camera); loading.classList.add('hidden'); requestAnimationFrame(frame);
   // Read-only diagnostics for checking the interactive state during local QA.
-  window.galleryState = () => ({ mode, pose, separated, autoRotate, wireframe, wing: targetWing, standing:currentStand, meshCount, canvasWidth: renderer.domElement.width, canvasHeight: renderer.domElement.height, meshes: renderer.info.render.calls, camera: camera.position.toArray() });
+  window.galleryState = () => ({ mode, pose, separated, autoRotate, wireframe, cinematic, animationTime:player.time, playing:player.playing, direction:player.direction, wing: targetWing, standing:currentStand, meshCount, canvasWidth: renderer.domElement.width, canvasHeight: renderer.domElement.height, meshes: renderer.info.render.calls, camera: camera.position.toArray() });
 }
 
 try { startGallery(); }
