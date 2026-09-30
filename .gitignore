@@ -2,6 +2,53 @@
 .DS_Store
 Thumbs.db
 Desktop.ini
+._*
+
+# Local dependency installations and caches.
+node_modules/
+__pycache__/
+*.py[cod]
+.cache/
+.npm/
+
+# Test reports and local logs.
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+*.log
+
+# Editor working files and temporary backups.
+*.swp
+*.swo
+*~
+*.tmp
+*.bak
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/shelf/
+
+# Local environment values; keep documented templates shareable.
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# Generated mobile packages (including copies in the repository root).
+*.apk
+*.aab
+*.ap_
+*.ipa
+
+# Private signing material and machine-specific signing configuration.
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.mobileprovision
+key.properties
+keystore.properties
 
 # Playwright / Node.js are installed locally by school/sync-official-data.js.
 # They are reproducible and should not be committed.
