@@ -1,6 +1,8 @@
 import * as THREE from '../vendor/three.module.js';
 import {buildModel} from '../model.js';
 import {LEVEL_COUNT,levelConfig,nextLevel,createRescue,start,pause,resume,switchRole,dock,interact,skill,tick,actionLabel,objective} from './state.js?v=10';
+import {createFlightMotion,updateFlightMotion} from './flight-motion.js';
+let flightMotion=createFlightMotion();
 const $=id=>document.getElementById(id);
 let state=createRescue(),renderer,lastStatus='',lastEvent=-1,messageEnd=0,stickPointer=null,axis={x:0,y:0};
 const keys=new Set(),scene=new THREE.Scene();scene.background=new THREE.Color('#dceefa');scene.fog=new THREE.Fog('#dceefa',55,130);
@@ -90,7 +92,11 @@ let prev=performance.now();
 function resize(){const host=$('canvas'),w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);const aspect=w/h,width=Math.max(19,17*aspect);camera.left=-width/2;camera.right=width/2;camera.top=width/aspect/2;camera.bottom=-width/aspect/2;camera.updateProjectionMatrix();}
 function draw(dt){
  const {bridge,plate,crate,tether,bridgeControl,terminal,cell,stationLight,turretHead,turretCore,turretHalo,chunks,batteryLabel}=env;const W=state.world;
- rig.poseCreature({wing:state.docked?0:.45+Math.sin(state.time*8)*.35});rig.creature.position.set(0,0,0);rig.creature.rotation.z=state.attack>0?-.25:0;
+ const motion=updateFlightMotion(flightMotion,state);
+ rig.poseCreature({wing:motion.wing,headPitch:-motion.pitch*.25});rig.creature.position.set(0,motion.bob,0);rig.creature.rotation.z=0;
+ bird.rotation.set(motion.bank,motion.yaw,motion.pitch,'YZX');
+ // Unequal wing deflection gives a readable banking silhouette.
+ rig.wings.forEach(w=>{w.rotation.x+=motion.bank*.16;});
  truck.position.set(state.truck.x,0,0);bird.position.set(state.bird.x,state.bird.y,0);bird.visible=state.respawn===0;
  wheels.forEach(w=>w.rotation.z=-state.truck.x/.464);shield.visible=state.shield;
  ring.position.set(state.truck.x,.13,0);ring.visible=state.active==='truck';birdRing.position.set(state.bird.x,state.bird.y,-.5);birdRing.visible=state.active==='bird';
@@ -155,7 +161,7 @@ function sync(){
  if(['paused','won','lost'].includes(state.status))$('primary').focus({preventScroll:true});
 }
 function resetInput(){keys.clear();stickPointer=null;axis={x:0,y:0};$('thumb').style.transform='translate(0,0)';$('joystick').classList.remove('held');$('joystick').setAttribute('aria-valuenow','0');$('joystick').setAttribute('aria-valuetext','静止');}
-function loadLevel(n,play=false){resetInput();state=createRescue(n);lastStatus='';lastEvent=-1;messageEnd=0;cameraX=13;brokenAt=null;buildEnvironment();if(play)start(state);sync();}
+function loadLevel(n,play=false){resetInput();state=createRescue(n);flightMotion=createFlightMotion();lastStatus='';lastEvent=-1;messageEnd=0;cameraX=13;brokenAt=null;buildEnvironment();if(play)start(state);sync();}
 function restart(){loadLevel(state.config.level,true);}
 function togglePause(){resetInput();if(state.status==='playing')pause(state);else if(state.status==='paused')resume(state);sync();}
 $('primary').addEventListener('click',()=>{resetInput();if(state.status==='ready')start(state);else if(state.status==='paused')resume(state);else if(nextLevel(state))loadLevel(state.config.level+1);else restart();sync();});
