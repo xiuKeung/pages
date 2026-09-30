@@ -35,11 +35,14 @@ test-results/
 !.env.sample
 !.env.template
 
-# Generated mobile packages (including copies in the repository root).
+# Generated mobile build outputs.
 *.apk
 *.aab
 *.ap_
 *.ipa
+
+# Keep the distributable APK at the project root.
+!/安家笔记-debug.apk
 
 # Private signing material and machine-specific signing configuration.
 *.jks

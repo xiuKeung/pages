@@ -48,7 +48,7 @@ app/android/app/build/outputs/apk/debug/app-debug.apk
 Pages/安家笔记-debug.apk
 ```
 
-两处 APK 都是构建产物，不提交 Git。`share-apk.sh` 保持运行期间，同一个二维码会一直指向原始 Gradle 输出；每次重新打包后再次扫码下载即可获得最新 APK。若 Mac 更换 Wi-Fi、IP 变化或脚本重启，需要重新扫码。
+项目根目录的 `安家笔记-debug.apk` 作为可下载的安装包提交到 GitHub；Gradle 构建目录中的原始 APK 不提交 Git。`share-apk.sh` 保持运行期间，同一个二维码会一直指向原始 Gradle 输出；每次重新打包后再次扫码下载即可获得最新 APK。若 Mac 更换 Wi-Fi、IP 变化或脚本重启，需要重新扫码。
 
 ## 脚本说明
 
@@ -102,7 +102,7 @@ Pages/安家笔记-debug.apk
 
 ## 新电脑继续开发
 
-先准备：Node.js、JDK 21、Android Studio 和 Android SDK；如果需要 iOS，再安装 Xcode。不要提交本机 SDK 路径、构建目录或 APK。
+先准备：Node.js、JDK 21、Android Studio 和 Android SDK；如果需要 iOS，再安装 Xcode。不要提交本机 SDK 路径或构建目录；需要分享的 APK 统一复制到项目根目录的 `安家笔记-debug.apk` 后提交。
 
 当前 `build-app.sh` 使用 Homebrew 的 JDK 21 路径：
 
@@ -134,7 +134,7 @@ npm ci
 
 应提交：网页源码、`app/src/`、`app/assets/`、脚本、`package.json`、`package-lock.json`、Android/iOS 原生工程配置和原生资源。
 
-不提交：`node_modules/`、`www/`、`dist/`、Android/iOS 构建目录、`local.properties`、`Pods/`、`.DS_Store`、APK/AAB（包括根目录的 `安家笔记-debug.apk`）。
+不提交：`node_modules/`、`www/`、`dist/`、Android/iOS 构建目录、`local.properties`、`Pods/`、`.DS_Store`、构建生成的 APK/AAB。例外：项目根目录的 `安家笔记-debug.apk` 保留 Git 跟踪并上传到 GitHub，供下载安装。
 
 打包完成后，建议检查：
 
