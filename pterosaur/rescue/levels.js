@@ -9,5 +9,6 @@ export function levelConfig(number=1){
  const requiredCells=level>=16?3:level>=7?2:1;
  const cells=[battery,{x:bridgeEnd+6,y:10},{x:station-8,y:8.8}].slice(0,requiredCells);
  return {level,name:names[level-1],requiredCells,terminalNeedsPower:level>=11,turretHp:75+25*Math.floor((level-1)/7),fireInterval:2.3-t*1.1,shotSpeed:6+t*3,damage:25+Math.floor(t*10),wind:level>=6?.35+t*.6:0,
- world:{end:exit+5,plate,bridgeStart,bridgeEnd,bridgeSwitch:{x:bridgeEnd+3,y:6.5+((level-1)%3)*.6},battery,cells,terminal:{x:station-7,y:8+((level-1)%2)*.8},station,turret,wall,exit}};
+ lift:level>=5,scanner:level>=4,coopGate:level>=12,
+ world:{bricks:[{x:plate-5,y:8.5},{x:battery.x+5,y:10.7},{x:station+4,y:6.5}],rescue:{x:bridgeEnd+8,y:3.4},scanner:{x:battery.x+6,y:7},gate:wall-5,gatePlate:station+3,gateSwitch:{x:station+7,y:9},end:exit+5,plate,bridgeStart,bridgeEnd,bridgeSwitch:{x:bridgeEnd+3,y:6.5+((level-1)%3)*.6},battery,cells,terminal:{x:station-7,y:8+((level-1)%2)*.8},station,turret,wall,exit}};
 }

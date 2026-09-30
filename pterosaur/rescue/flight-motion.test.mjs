@@ -21,3 +21,10 @@ test('docking resets flight orientation without changing gameplay coordinates',(
  const {s,m}=flight();fly(s,m,-6,3);s.docked=true;const before=structuredClone(s);updateFlightMotion(m,s);
  assert.deepEqual(s,before);for(const key of ['yaw','pitch','bank','wing','bob'])assert.equal(m[key],0);
 });
+test('landing aligns heading and folds wings continuously before docking',()=>{
+ const {s,m}=flight();fly(s,m,-6,0);const yaw=m.yaw;
+ s.docking={elapsed:0};s.time+=1/60;updateFlightMotion(m,s);
+ s.docking.elapsed=.45;s.time+=1/60;updateFlightMotion(m,s);assert.ok(m.yaw>0&&m.yaw<yaw);
+ s.docking.elapsed=.9;s.time+=1/60;updateFlightMotion(m,s);
+ for(const key of ['yaw','pitch','bank','wing','bob'])assert.equal(m[key],0);
+});

@@ -6,8 +6,16 @@ export function updateFlightMotion(m,s){
  const previous=m.previous;
  const dt=previous?clamp(s.time-previous.time,0,.1):0;
  m.previous={x:s.bird.x,y:s.bird.y,time:s.time,docked:s.docked};
- if(s.docked||s.respawn>0){Object.assign(m,{yaw:0,pitch:0,bank:0,wing:0,bob:0,phase:0,facing:1,speed:0});return m;}
+ if(s.docked||s.respawn>0){Object.assign(m,{yaw:0,pitch:0,bank:0,wing:0,bob:0,phase:0,facing:1,speed:0,landing:null});return m;}
  if(!dt)return m;
+ if(s.docking){
+  const t=Math.min(1,s.docking.elapsed/.9);
+  if(!m.landing)m.landing={yaw:m.yaw,pitch:m.pitch,bank:m.bank,wing:m.wing};
+  const eased=t*t*(3-2*t);
+  for(const key of ['yaw','pitch','bank'])m[key]=m.landing[key]*(1-eased);
+  m.wing=m.landing.wing*(1-eased);m.bob=0;return m;
+ }
+ m.landing=null;
  // Ignore the launch/respawn offset; derive intent from actual flight, including recall.
  const vx=previous&&!previous.docked?clamp((s.bird.x-previous.x)/dt,-7,7):0;
  const vy=previous&&!previous.docked?clamp((s.bird.y-previous.y)/dt,-6,6):0;

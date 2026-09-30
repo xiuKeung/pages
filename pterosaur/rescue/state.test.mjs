@@ -10,7 +10,7 @@ test('complete rescue through crate, bridge, battery, terminal, power and combin
  go(s,s.truck.x,3);interact(s);assert.equal(s.battery,'truck');
  switchRole(s);go(s,54,0);switchRole(s);go(s,64,8);interact(s);assert.equal(s.turretOff,true);
  switchRole(s);go(s,71,0);interact(s);assert.equal(s.powered,true);
- switchRole(s);go(s,71,3);dock(s);assert.equal(s.docked,true);
+ switchRole(s);go(s,71,3);dock(s);run(s,1);assert.equal(s.docked,true);
  go(s,91,0);skill(s);run(s,1,{x:1});assert.equal(s.wallBroken,true);run(s,3,{x:1});assert.equal(s.status,'won');assert.equal(s.lives,8);
 });
 test('bridge requires switch plus pressure and truck cannot drive into an unpowered gap',()=>{
@@ -53,14 +53,17 @@ test('all 20 rescue levels can be completed with their actual layouts and energy
    go(s,w.station,2.5);interact(s);assert.equal(s.battery,'socket');switchRole(s);interact(s);
   }
   assert.equal(s.powered,true,`power ${level}`);assert.equal(s.cellsDelivered,s.config.requiredCells);
-  dock(s);go(s,w.wall-3,0);skill(s);run(s,1,{x:1});assert.equal(s.wallBroken,true);run(s,3,{x:1});
+  if(s.config.coopGate){
+   go(s,w.gatePlate,0);run(s,.1);switchRole(s);go(s,w.gateSwitch.x,w.gateSwitch.y);interact(s);assert.equal(s.gateOpen,true,`gate ${level}`);
+  }
+  dock(s);run(s,5);go(s,w.wall-3,0);skill(s);run(s,1,{x:1});assert.equal(s.wallBroken,true,JSON.stringify({level,active:s.active,docked:s.docked,recalling:s.recalling,event:s.event,truck:s.truck,bird:s.bird}));run(s,3,{x:1});
   assert.equal(s.status,'won',`finish ${level}`);assert.ok(s.lives>0);
  }
 });
 test('energy powers shields and dash, while armour loss consumes a life',()=>{
  const s=createRescue();start(s);switchRole(s);switchRole(s);skill(s);run(s,1);assert.ok(s.energy<80&&s.shield);
  run(s,4);assert.equal(s.shield,false);const remaining=s.energy;run(s,1);assert.ok(s.energy>remaining);
- s.bird.x=s.truck.x;s.bird.y=3;dock(s);s.powered=true;s.energy=100;skill(s);assert.equal(s.energy,65);
+ s.bird.x=s.truck.x;s.bird.y=3;dock(s);run(s,1);s.powered=true;s.energy=100;skill(s);assert.equal(s.energy,65);
  s.invincible=0;hurt(s,'truck',100);assert.equal(s.lives,7);
 });
 test('later levels require multiple cells and powering the defence terminal',()=>{
