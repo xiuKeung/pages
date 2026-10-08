@@ -6,6 +6,12 @@
 
 在此目录执行 `python3 -m http.server 8080`，然后打开 `http://localhost:8080/`。也可以从 Pages 目录启动服务器，访问 `/pterosaur/`。ES 模块需要 HTTP 服务，不支持直接双击 `index.html` 后以 `file://` 运行。
 
+## 黄色双炮坦克
+
+新增的五张坦克实拍照片位于 `assets/photos/tank/`，已按 `tank-front.jpg`、`tank-left-side.jpg`、`tank-right-side.jpg`、`tank-rear.jpg` 与 `tank-top.jpg` 重命名。打开 `/pterosaur/tank/` 可旋转查看独立的几何重建模型，调节炮塔和双炮仰角，并下载 `assets/yellow-twin-cannon-tank.glb`。
+
+坦克模型定义在 `tank/model.js`；修改后运行 `node tank/export-model.mjs` 更新 GLB。它同样是依照照片可见结构制作的近似模型。
+
 ## 内容与交互
 
 - 根据用户提供的十八张照片，使用几何积木重建黄色四轮底盘与车顶机械翼龙。
