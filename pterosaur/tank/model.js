@@ -80,14 +80,16 @@ export function buildTank() {
   }
   for (const x of [-.7, -.42, -.14, .14]) stud(turret, [x, .84, -.48], 'yellowDark');
 
-  const cannons = new THREE.Group(); cannons.name = 'Paired elevation cannon assembly'; cannons.position.set(1.1, .54, 0); turret.add(cannons);
+  // Keep the neutral 0° position level and above the turret deck.  The source
+  // bricks have enough clearance here for the interactive upward elevation.
+  const cannons = new THREE.Group(); cannons.name = 'Paired elevation cannon assembly'; cannons.position.set(1.1, .60, 0); turret.add(cannons);
   const barrelParts = [];
   for (const side of [-1, 1]) {
-    const pivot = cylinder(cannons, .18, .34, [0, 0, side * .34], 'yellowDark', 'z', 'Cannon elevation pivot');
-    const barrel = new THREE.Group(); barrel.name = side > 0 ? 'Right cannon barrel' : 'Left cannon barrel'; barrel.position.set(.12, .08, side * .34); cannons.add(barrel); barrelParts.push(barrel);
-    const stem = cylinder(barrel, .105, 1.83, [.84, .14, 0], 'gray', 'x', 'Cannon barrel'); stem.rotation.z = Math.PI / 2 - .18;
-    const sleeve = cylinder(barrel, .16, .58, [1.72, -.02, 0], 'gray', 'x', 'Cannon muzzle sleeve'); sleeve.rotation.z = Math.PI / 2 - .18;
-    const bore = cylinder(barrel, .077, .018, [2.02, -.075, 0], 'dark', 'x', 'Hollow cannon muzzle'); bore.rotation.z = Math.PI / 2 - .18;
+    const pivot = cylinder(cannons, .18, .34, [0, .38, side * .34], 'yellowDark', 'z', 'Cannon elevation pivot');
+    const barrel = new THREE.Group(); barrel.name = side > 0 ? 'Right cannon barrel' : 'Left cannon barrel'; barrel.position.set(.12, .38, side * .34); cannons.add(barrel); barrelParts.push(barrel);
+    const stem = cylinder(barrel, .105, 1.83, [.84, 0, 0], 'gray', 'x', 'Cannon barrel');
+    const sleeve = cylinder(barrel, .16, .58, [1.72, 0, 0], 'gray', 'x', 'Cannon muzzle sleeve');
+    const bore = cylinder(barrel, .077, .018, [2.02, 0, 0], 'dark', 'x', 'Hollow cannon muzzle');
   }
   tank.userData = {
     description: 'Geometric reconstruction of the supplied yellow brick tank photographs. The turret and twin cannon elevation are interactive approximations.',

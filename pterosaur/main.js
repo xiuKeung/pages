@@ -298,7 +298,7 @@ function startTankShowcase() {
   function frame(now) {
     requestAnimationFrame(frame); const dt = Math.min(.05, (now-last)/1000); last = now;
     if (spin) tank.rotation.y += dt*.45;
-    if (autoAim) { turret.rotation.y = Math.sin(now*.00065)*.62; cannons.rotation.z = -.1 + Math.sin(now*.00105)*.17; }
+    if (autoAim) { turret.rotation.y = Math.sin(now*.00065)*.62; cannons.rotation.z = .42 + Math.sin(now*.00105)*.12; }
     const [position,target] = views[view]; camera.position.lerp(new THREE.Vector3(...position), .07); controls.target.lerp(new THREE.Vector3(...target), .07); controls.update(); renderer.render(scene,camera);
   }
   requestAnimationFrame(frame);
