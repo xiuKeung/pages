@@ -69,24 +69,28 @@
     </section>
 
     <section class="tank-showcase" id="tank-model" aria-labelledby="tank-title">
-      <div class="section-heading"><div><p class="eyebrow">COLLECTION 002 · BRICK RECONSTRUCTION</p><h2 id="tank-title">黄色双炮坦克<span>5 张参考照片</span></h2></div><a class="download tank-download" href="./assets/yellow-twin-cannon-tank.glb" download>下载 3D 模型<span>GLB</span></a></div>
-      <div class="tank-layout">
-        <div class="tank-viewer">
+      <div class="intro tank-intro"><div><p class="eyebrow"><span>藏品 002</span><b></b> PHOTO TO FORM</p><h1 id="tank-title">黄色双炮坦克<span class="title-dot">.</span></h1><p class="subtitle">一辆双炮装甲战术坦克。旋转、缩放，并调整炮塔与炮管，细看积木里的机械结构。</p></div><a class="download" href="./assets/yellow-twin-cannon-tank.glb" download><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>下载 3D 模型<span>GLB</span></a></div>
+      <div class="exhibit-layout">
+        <div class="viewer" id="tank-viewer">
+          <div class="stage-label"><span class="live-dot"></span> 交互式 3D 预览<span class="stage-label-sub">TACTICAL ARMOUR / V1</span></div>
           <div id="tank-canvas-host" role="img" aria-label="黄色双炮坦克三维模型，可用鼠标拖动旋转、滚轮缩放，或使用下方视角按钮"></div>
-          <div class="tank-stage-label"><span class="live-dot"></span> 交互式 3D 预览 <span id="tank-mesh-count"></span></div>
-          <div class="tank-tools"><button id="tank-spin" class="icon-button" aria-pressed="false" aria-label="坦克自动旋转" title="自动旋转">↻</button><button id="tank-wireframe" class="icon-button" aria-pressed="false" aria-label="坦克线框" title="查看线框">⌗</button><button id="tank-fullscreen" class="icon-button" aria-label="坦克全屏" title="全屏查看">⛶</button></div>
-          <div class="tank-views" role="group" aria-label="坦克模型视角"><button data-tank-view="perspective" class="selected" aria-pressed="true">透视</button><button data-tank-view="side" aria-pressed="false">侧面</button><button data-tank-view="front" aria-pressed="false">正面</button><button data-tank-view="top" aria-pressed="false">俯视</button></div>
+          <div class="view-tools"><button id="tank-reset" class="icon-button" aria-label="重置坦克视角" title="重置视角"><svg viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 1 7M4 4v6h6"/></svg></button><button id="tank-fullscreen" class="icon-button" aria-label="坦克全屏" title="全屏查看"><svg viewBox="0 0 24 24"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4"/></svg></button></div>
+          <span class="orientation" aria-hidden="true"><span>Y</span><svg viewBox="0 0 60 55"><path d="M30 30V5M30 30 8 44M30 30l22 14"/><circle cx="30" cy="30" r="3"/></svg><b>X</b><i>Z</i></span>
+          <div class="stage-bottom"><span class="gesture-hint"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="6"/><path d="M12 6v5"/></svg><span>拖动旋转 <em>·</em> 滚动缩放</span></span><div class="views" role="group" aria-label="坦克模型视角"><button data-tank-view="perspective" class="selected" aria-pressed="true">透视</button><button data-tank-view="side" aria-pressed="false">侧面</button><button data-tank-view="front" aria-pressed="false">正面</button><button data-tank-view="top" aria-pressed="false">俯视</button></div></div>
         </div>
-        <aside class="tank-panel" aria-label="坦克模型控制">
+        <aside class="panel" aria-label="坦克模型控制">
           <div class="panel-heading"><span class="small-label">认识这件作品</span><span class="number">02 / 02</span></div>
           <h2>双炮装甲<br>战术坦克</h2><p class="description">黄色楔形车体、黑色履带、侧面灰色格栅，以及可旋转的双管炮塔。</p>
           <div class="tags"><span>双炮</span><span>履带底盘</span><span>可动炮塔</span></div><div class="divider"></div>
+          <div class="toggle-row"><label for="tank-rotate">自动旋转</label><button id="tank-rotate" class="switch" role="switch" aria-checked="false" aria-label="坦克自动旋转"><span></span></button></div>
+          <div class="toggle-row"><label for="tank-wireframe">查看线框</label><button id="tank-wireframe" class="switch" role="switch" aria-checked="false" aria-label="坦克查看线框"><span></span></button></div>
           <div class="slider-heading"><label for="tank-turret">炮塔转向</label><output for="tank-turret">左右</output></div><input id="tank-turret" type="range" min="-90" max="90" value="0" aria-label="炮塔转向">
           <div class="slider-heading"><label for="tank-barrel">炮管仰角</label><output for="tank-barrel">0° — 80°</output></div><input id="tank-barrel" type="range" min="0" max="80" value="0" aria-label="炮管仰角，范围零至八十度">
-          <button id="tank-auto-aim" class="tank-auto-aim" aria-pressed="false">◎ 演示炮塔扫描</button>
+          <button id="tank-auto-aim" class="separate-button" aria-pressed="false"><span aria-hidden="true">◎</span><span>演示炮塔扫描</span><span aria-hidden="true">↗</span></button>
           <p class="model-note"><span>关于模型</span>根据五个实拍角度制作；未拍到的内部连接与底面按外形补全。</p>
         </aside>
       </div>
+      <div class="exhibit-footer"><span><b class="yellow-square"></b> 经典明黄 <span class="muted">/</span> 石墨黑 <span class="muted">/</span> 机械灰</span><span id="tank-mesh-count">源于真实积木 · 可自由探索</span></div>
       <div class="tank-photos" aria-label="坦克参考照片"><figure><img src="./assets/photos/tank/tank-front.jpg" alt="坦克前方照片" loading="lazy"><figcaption>tank-front.jpg · 前方</figcaption></figure><figure><img src="./assets/photos/tank/tank-left-side.jpg" alt="坦克左侧照片" loading="lazy"><figcaption>tank-left-side.jpg · 左侧</figcaption></figure><figure><img src="./assets/photos/tank/tank-right-side.jpg" alt="坦克右侧照片" loading="lazy"><figcaption>tank-right-side.jpg · 右侧</figcaption></figure><figure><img src="./assets/photos/tank/tank-rear.jpg" alt="坦克后方照片" loading="lazy"><figcaption>tank-rear.jpg · 后方</figcaption></figure><figure><img src="./assets/photos/tank/tank-top.jpg" alt="坦克俯视照片" loading="lazy"><figcaption>tank-top.jpg · 俯视</figcaption></figure></div>
     </section>
 
