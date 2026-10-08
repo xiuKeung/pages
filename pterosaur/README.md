@@ -8,7 +8,7 @@
 
 ## 黄色双炮坦克
 
-新增的五张坦克实拍照片位于 `assets/photos/tank/`，已按 `tank-front.jpg`、`tank-left-side.jpg`、`tank-right-side.jpg`、`tank-rear.jpg` 与 `tank-top.jpg` 重命名。打开 `/pterosaur/tank/` 可旋转查看独立的几何重建模型，调节炮塔和双炮仰角，并下载 `assets/yellow-twin-cannon-tank.glb`。
+新增的五张坦克实拍照片位于 `assets/photos/tank/`，已按 `tank-front.jpg`、`tank-left-side.jpg`、`tank-right-side.jpg`、`tank-rear.jpg` 与 `tank-top.jpg` 重命名。坦克与机械翼龙战车的全部 3D 模型都集中在 `/pterosaur/`：向下滚动到“黄色双炮坦克”即可旋转查看，调节炮塔和双炮仰角，并下载 `assets/yellow-twin-cannon-tank.glb`。旧地址 `/pterosaur/tank/` 会跳转到这一节。
 
 坦克模型定义在 `tank/model.js`；修改后运行 `node tank/export-model.mjs` 更新 GLB。它同样是依照照片可见结构制作的近似模型。
 
