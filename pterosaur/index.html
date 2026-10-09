@@ -7,7 +7,7 @@
   <meta name="description" content="从十八张积木照片重建的机械翼龙战车。旋转、缩放、展开双翼，在 3D 中重新发现你的创作。">
   <title>机械翼龙战车 · 积木档案</title>
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./style.css?v=6">
+  <link rel="stylesheet" href="./style.css?v=7">
 </head>
 <body>
   <header class="header">
@@ -19,7 +19,7 @@
   <main>
     <section id="exhibit" aria-labelledby="title">
       <div class="intro">
-        <div><p class="eyebrow"><span>藏品 001</span><b></b> PHOTO TO FORM</p><h1 id="title">机械翼龙战车<span class="title-dot">.</span></h1><p class="subtitle">一只机械翼龙，一辆探索战车。让积木里的想象，走进 3D 世界。</p></div>
+        <div><p class="eyebrow"><span>藏品 001</span><b></b> PHOTO TO FORM</p><h1 id="title">机械翼龙战车<span class="title-dot">.</span></h1><p class="subtitle">一只机械翼龙，一辆探索战车。让积木里的想象，走进 3D 世界。</p><div class="collection-summary"><p>伏在车顶的机械翼龙，以长喙、折翼和关节勾勒轮廓；四轮底盘，承载下一段冒险。</p><div class="tags"><span>机械翼龙</span><span>四轮战车</span><span>积木创作</span></div></div></div>
         <a class="download" href="./assets/mechanical-pterosaur.glb" download><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>下载 3D 模型<span>GLB</span></a>
       </div>
 
@@ -40,10 +40,7 @@
         </div>
 
         <aside class="panel" aria-label="模型控制">
-          <div class="panel-heading"><span class="small-label">认识这件作品</span></div>
-          <h2>地面与天空的<br>双重想象</h2>
-          <p class="description">伏在车顶的机械翼龙，以长喙、折翼和关节勾勒轮廓；四轮底盘，承载下一段冒险。</p>
-          <div class="tags"><span>机械翼龙</span><span>四轮战车</span><span>积木创作</span></div>
+          <div class="panel-heading"><span class="small-label">互动控制</span></div>
           <button id="start-animation" class="animation-launch"><span aria-hidden="true">▶</span><span>播放变身动画<small>脱离 · 站立 · 展翼 · 合体</small></span><b>20s</b></button>
           <p class="animation-disclaimer">动画为结构演示；空中移位由演出编排完成。</p>
           <div class="divider"></div>
@@ -66,7 +63,7 @@
     </section>
 
     <section class="tank-showcase" id="tank-model" aria-labelledby="tank-title">
-      <div class="intro tank-intro"><div><p class="eyebrow"><span>藏品 002</span><b></b> PHOTO TO FORM</p><h1 id="tank-title">黄色双炮坦克<span class="title-dot">.</span></h1><p class="subtitle">一辆双炮装甲战术坦克。旋转、缩放，并调整炮塔与炮管，细看积木里的机械结构。</p></div><a class="download" href="./assets/yellow-twin-cannon-tank.glb" download><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>下载 3D 模型<span>GLB</span></a></div>
+      <div class="intro tank-intro"><div><p class="eyebrow"><span>藏品 002</span><b></b> PHOTO TO FORM</p><h1 id="tank-title">黄色双炮坦克<span class="title-dot">.</span></h1><p class="subtitle">一辆双炮装甲战术坦克。旋转、缩放，并调整炮塔与炮管，细看积木里的机械结构。</p><div class="collection-summary"><p>黄色楔形车体、黑色履带、侧面灰色格栅，以及可旋转的双管炮塔。</p><div class="tags"><span>双炮</span><span>履带底盘</span><span>可动炮塔</span></div></div></div><a class="download" href="./assets/yellow-twin-cannon-tank.glb" download><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>下载 3D 模型<span>GLB</span></a></div>
       <div class="exhibit-layout">
         <div class="viewer" id="tank-viewer">
           <div class="stage-label"><span class="live-dot"></span> 交互式 3D 预览<span class="stage-label-sub">TACTICAL ARMOUR / V1</span></div>
@@ -76,9 +73,7 @@
           <div class="stage-bottom"><span class="gesture-hint"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="6"/><path d="M12 6v5"/></svg><span>拖动旋转 <em>·</em> 滚动缩放</span></span><div class="views" role="group" aria-label="坦克模型视角"><button data-tank-view="perspective" class="selected" aria-pressed="true">透视</button><button data-tank-view="side" aria-pressed="false">侧面</button><button data-tank-view="front" aria-pressed="false">正面</button><button data-tank-view="top" aria-pressed="false">俯视</button></div></div>
         </div>
         <aside class="panel" aria-label="坦克模型控制">
-          <div class="panel-heading"><span class="small-label">认识这件作品</span></div>
-          <h2>双炮装甲<br>战术坦克</h2><p class="description">黄色楔形车体、黑色履带、侧面灰色格栅，以及可旋转的双管炮塔。</p>
-          <div class="tags"><span>双炮</span><span>履带底盘</span><span>可动炮塔</span></div><div class="divider"></div>
+          <div class="panel-heading"><span class="small-label">互动控制</span></div><div class="divider"></div>
           <div class="toggle-row"><label for="tank-rotate">自动旋转</label><button id="tank-rotate" class="switch" role="switch" aria-checked="false" aria-label="坦克自动旋转"><span></span></button></div>
           <div class="toggle-row"><label for="tank-wireframe">查看线框</label><button id="tank-wireframe" class="switch" role="switch" aria-checked="false" aria-label="坦克查看线框"><span></span></button></div>
           <div class="slider-heading"><label for="tank-turret">炮塔转向</label><output for="tank-turret">左右</output></div><input id="tank-turret" type="range" min="-90" max="90" value="0" aria-label="炮塔转向">
