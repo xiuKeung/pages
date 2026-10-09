@@ -272,7 +272,9 @@ function startTankShowcase() {
   renderer.domElement.setAttribute('aria-hidden', 'true');
   const camera = new THREE.PerspectiveCamera(36, 1, .1, 100);
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true; controls.dampingFactor = .065; controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = 1.15; controls.minDistance = 6; controls.maxDistance = 15; controls.maxPolarAngle = Math.PI * .5 - .018; controls.autoRotateSpeed = .7;
+  // Tank bounds are smaller than the winged carrier; these limits preserve the
+  // same close and far framing ratios as the carrier viewer (8–31).
+  controls.enableDamping = true; controls.dampingFactor = .065; controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = 1.15; controls.minDistance = 6; controls.maxDistance = 23; controls.maxPolarAngle = Math.PI * .5 - .018; controls.autoRotateSpeed = .7;
   const { tank, turret, cannons, materials, meshCount } = buildTank(); tank.rotation.y = -.42; scene.add(tank);
   scene.add(new THREE.HemisphereLight(0xfffdf4, 0xa3ab9a, 1.65));
   const key = new THREE.DirectionalLight(0xfff8e6, 2.3); key.position.set(3, 12, 6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.normalBias = .035; key.shadow.bias = -.00015; key.shadow.radius = 4; scene.add(key);
