@@ -2,6 +2,8 @@
 
 独立静态 3D 展示页。所有运行依赖、十八张参考照片和 GLB 模型均保存在本目录，无需 CDN、账号或构建步骤。
 
+后续展厅、模型与游戏的视觉设计统一遵循 [美术风格规范](ART_DIRECTION.md)。
+
 ## 本地浏览
 
 在此目录执行 `python3 -m http.server 8080`，然后打开 `http://localhost:8080/`。也可以从 Pages 目录启动服务器，访问 `/pterosaur/`。ES 模块需要 HTTP 服务，不支持直接双击 `index.html` 后以 `file://` 运行。
