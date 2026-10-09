@@ -3,7 +3,7 @@ import { OrbitControls } from './vendor/OrbitControls.js';
 import { buildModel } from './model.js?v=2';
 import { buildTank } from './tank/model.js?v=1';
 import { AnimationPlayer, sampleAnimation, CHAPTERS, DURATION } from './animation.js?v=3';
-import { createModelFraming, DEFAULT_MODEL_HEADING } from './viewer-framing.js?v=1';
+import { addArchiveLighting, addArchiveStage, createModelFraming, DEFAULT_MODEL_HEADING } from './viewer-framing.js?v=2';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -62,22 +62,10 @@ function startGallery() {
   controls.enablePan = false;
   controls.maxPolarAngle = Math.PI * .5 - .018; controls.autoRotateSpeed = .7;
   controls.target.set(-.25, 1.4, 0);
-  scene.add(new THREE.HemisphereLight(0xfffdf4, 0xa3ab9a, 1.65));
-  const key = new THREE.DirectionalLight(0xfff8e6, 2.3); key.position.set(3, 12, 6); key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048); key.shadow.camera.left = -9; key.shadow.camera.right = 9; key.shadow.camera.top = 9; key.shadow.camera.bottom = -9;
-  key.shadow.normalBias = .035; key.shadow.bias = -.00015; key.shadow.radius = 4; scene.add(key);
-  const fill = new THREE.DirectionalLight(0xeaf1ff, 1.1); fill.position.set(-6, 7, -8); scene.add(fill);
-  const edge = new THREE.DirectionalLight(0xffffff, .6); edge.position.set(8, 4, -4); scene.add(edge);
-
-  const platform = new THREE.Mesh(new THREE.CylinderGeometry(5.42, 5.48, .17, 96), new THREE.MeshStandardMaterial({ color: 0xe0e3d8, roughness: .88 }));
-  platform.position.y = -.1; platform.receiveShadow = true; scene.add(platform);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0xeeefe9, roughness: 1 }));
-  floor.rotation.x = -Math.PI / 2; floor.position.y = -.19; floor.receiveShadow = true; scene.add(floor);
-  const grid = new THREE.GridHelper(100, 100, 0xd1d6c6, 0xdde1d2); grid.position.y = -.185; grid.material.transparent = true; grid.material.opacity = .40; scene.add(grid);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(5.12, .008, 3, 128), new THREE.MeshBasicMaterial({ color: 0xc4ccb7 }));
-  ring.rotation.x = Math.PI / 2; ring.position.y = -.005; scene.add(ring);
   const { model, chassis, creature, poseCreature, materials, meshCount } = buildModel(); scene.add(model);
   const framing = createModelFraming({ camera, controls, model });
+  addArchiveLighting(scene);
+  const { platform, ring } = addArchiveStage(scene, framing.frame);
   const player = new AnimationPlayer();
   let cinematic = false;
   const wheels = chassis.children.filter(part => part.name === 'Wheel with tread and spoked rim');
@@ -91,8 +79,7 @@ function startGallery() {
   function fitDistance() { return Math.max(1, .98 / camera.aspect); }
   function moveCamera(nextView, instant = false) {
     view = nextView;
-    const target = new THREE.Vector3(mode === 'creature' ? .55 : -.25, mode === 'creature' ? (pose === 'standing' ? 2.4 : .6) : mode === 'split' ? 1.9 : separated ? 2.0 : 1.35, mode === 'creature' ? 0 : mode === 'split' ? .2 : 0);
-    const { position: end } = framing.pose(view, target);
+    const { position: end, target } = framing.pose(view);
     if (instant || reduceMotion.matches) { camera.position.copy(end); controls.target.copy(target); controls.update(); cameraMotion = null; }
     else cameraMotion = { from: camera.position.clone(), to: end, fromTarget: controls.target.clone(), toTarget: target, time: performance.now() };
     $$('[data-view]').forEach(b => { const yes = b.dataset.view === view; b.classList.toggle('selected', yes); b.setAttribute('aria-pressed', yes); });
@@ -274,17 +261,8 @@ function startTankShowcase() {
   controls.enableDamping = true; controls.dampingFactor = .065; controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = 1.15; controls.maxPolarAngle = Math.PI * .5 - .018; controls.autoRotateSpeed = .7;
   const { tank, turret, cannons, materials, meshCount } = buildTank(); tank.rotation.y = DEFAULT_MODEL_HEADING; scene.add(tank);
   const framing = createModelFraming({ camera, controls, model: tank });
-  scene.add(new THREE.HemisphereLight(0xfffdf4, 0xa3ab9a, 1.65));
-  const key = new THREE.DirectionalLight(0xfff8e6, 2.3); key.position.set(3, 12, 6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.normalBias = .035; key.shadow.bias = -.00015; key.shadow.radius = 4; scene.add(key);
-  const fill = new THREE.DirectionalLight(0xeaf1ff, 1.1); fill.position.set(-6, 7, -8); scene.add(fill);
-  const edge = new THREE.DirectionalLight(0xffffff, .6); edge.position.set(8, 4, -4); scene.add(edge);
-  const platform = new THREE.Mesh(new THREE.CylinderGeometry(5.42, 5.48, .17, 96), new THREE.MeshStandardMaterial({ color: 0xe0e3d8, roughness: .88 }));
-  platform.position.y = .28; platform.receiveShadow = true; scene.add(platform);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0xeeefe9, roughness: 1 }));
-  floor.rotation.x = -Math.PI / 2; floor.position.y = .19; floor.receiveShadow = true; scene.add(floor);
-  const grid = new THREE.GridHelper(100, 100, 0xd1d6c6, 0xdde1d2); grid.position.y = .195; grid.material.transparent = true; grid.material.opacity = .40; scene.add(grid);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(5.12, .008, 3, 128), new THREE.MeshBasicMaterial({ color: 0xc4ccb7 }));
-  ring.rotation.x = Math.PI / 2; ring.position.y = .375; scene.add(ring);
+  addArchiveLighting(scene);
+  addArchiveStage(scene, framing.frame);
   let view = 'perspective', autoRotate = false, wireframe = false, autoAim = false, cameraMotion = null, last = performance.now();
   function moveCamera(name, instant = false) {
     view = name; root.querySelectorAll('[data-tank-view]').forEach(button => { const selected = button.dataset.tankView === name; button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', selected); });
