@@ -272,7 +272,7 @@ function startTankShowcase() {
   renderer.domElement.setAttribute('aria-hidden', 'true');
   const camera = new THREE.PerspectiveCamera(36, 1, .1, 100);
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true; controls.dampingFactor = .065; controls.enablePan = false; controls.minDistance = 6; controls.maxDistance = 15; controls.maxPolarAngle = Math.PI * .5 - .018; controls.autoRotateSpeed = .7;
+  controls.enableDamping = true; controls.dampingFactor = .065; controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = 1.15; controls.minDistance = 6; controls.maxDistance = 15; controls.maxPolarAngle = Math.PI * .5 - .018; controls.autoRotateSpeed = .7;
   const { tank, turret, cannons, materials, meshCount } = buildTank(); tank.rotation.y = -.42; scene.add(tank);
   scene.add(new THREE.HemisphereLight(0xfffdf4, 0xa3ab9a, 1.65));
   const key = new THREE.DirectionalLight(0xfff8e6, 2.3); key.position.set(3, 12, 6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.normalBias = .035; key.shadow.bias = -.00015; key.shadow.radius = 4; scene.add(key);
@@ -286,9 +286,12 @@ function startTankShowcase() {
   const ring = new THREE.Mesh(new THREE.TorusGeometry(5.12, .008, 3, 128), new THREE.MeshBasicMaterial({ color: 0xc4ccb7 }));
   ring.rotation.x = Math.PI / 2; ring.position.y = .375; scene.add(ring);
   const views = { perspective:[[7.2,5.4,8],[0,1.25,0]], front:[[9.8,3.2,0],[0,1.2,0]], side:[[0,3,10.5],[0,1.2,0]], top:[[0,12.5,.1],[0,1.1,0]] };
-  let view = 'perspective', autoRotate = false, wireframe = false, autoAim = false, last = performance.now();
-  function selectView(name) {
+  let view = 'perspective', autoRotate = false, wireframe = false, autoAim = false, cameraMotion = null, last = performance.now();
+  function moveCamera(name, instant = false) {
     view = name; root.querySelectorAll('[data-tank-view]').forEach(button => { const selected = button.dataset.tankView === name; button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', selected); });
+    const [position, target] = views[name];
+    if (instant) { camera.position.set(...position); controls.target.set(...target); controls.update(); cameraMotion = null; }
+    else cameraMotion = { position: new THREE.Vector3(...position), target: new THREE.Vector3(...target) };
   }
   function setAutoRotate(value) { autoRotate = value; controls.autoRotate = value; root.querySelector('#tank-rotate').setAttribute('aria-checked', String(value)); }
   function setWireframe(value) { wireframe = value; Object.values(materials).forEach(material => { material.wireframe = value; }); root.querySelector('#tank-wireframe').setAttribute('aria-checked', String(value)); }
@@ -296,9 +299,9 @@ function startTankShowcase() {
   function reset() {
     tank.rotation.y = -.42; turret.rotation.y = 0; cannons.rotation.z = 0;
     root.querySelector('#tank-turret').value = '0'; root.querySelector('#tank-barrel').value = '0';
-    setAutoRotate(false); setWireframe(false); setAutoAim(false); selectView('perspective');
+    setAutoRotate(false); setWireframe(false); setAutoAim(false); moveCamera('perspective');
   }
-  root.querySelectorAll('[data-tank-view]').forEach(button => button.addEventListener('click', () => { setAutoRotate(false); selectView(button.dataset.tankView); }));
+  root.querySelectorAll('[data-tank-view]').forEach(button => button.addEventListener('click', () => { setAutoRotate(false); moveCamera(button.dataset.tankView); }));
   root.querySelector('#tank-rotate').addEventListener('click', () => setAutoRotate(!autoRotate));
   root.querySelector('#tank-wireframe').addEventListener('click', () => setWireframe(!wireframe));
   root.querySelector('#tank-turret').addEventListener('input', event => { setAutoAim(false); turret.rotation.y = THREE.MathUtils.degToRad(Number(event.target.value)); });
@@ -308,12 +311,16 @@ function startTankShowcase() {
   root.querySelector('#tank-fullscreen').addEventListener('click', () => viewer.requestFullscreen?.());
   root.querySelector('#tank-mesh-count').textContent = `${meshCount} 个几何部件`;
   function resize() { const {width,height} = tankHost.getBoundingClientRect(); if (!width || !height) return; camera.aspect = width / height; camera.updateProjectionMatrix(); renderer.setSize(width, height, false); }
-  new ResizeObserver(resize).observe(tankHost); resize(); selectView(view);
-  controls.addEventListener('start', () => { setAutoRotate(false); root.querySelectorAll('[data-tank-view]').forEach(button => { button.classList.remove('selected'); button.setAttribute('aria-pressed', 'false'); }); });
+  new ResizeObserver(resize).observe(tankHost); resize(); moveCamera(view, true);
+  controls.addEventListener('start', () => { cameraMotion = null; setAutoRotate(false); root.querySelectorAll('[data-tank-view]').forEach(button => { button.classList.remove('selected'); button.setAttribute('aria-pressed', 'false'); }); });
   function frame(now) {
     requestAnimationFrame(frame); const dt = Math.min(.05, (now-last)/1000); last = now;
     if (autoAim) { turret.rotation.y = Math.sin(now*.00065)*.62; cannons.rotation.z = .42 + Math.sin(now*.00105)*.12; }
-    const [position,target] = views[view]; camera.position.lerp(new THREE.Vector3(...position), .07); controls.target.lerp(new THREE.Vector3(...target), .07); controls.update(); renderer.render(scene,camera);
+    if (cameraMotion) {
+      camera.position.lerp(cameraMotion.position, .09); controls.target.lerp(cameraMotion.target, .09);
+      if (camera.position.distanceTo(cameraMotion.position) < .02 && controls.target.distanceTo(cameraMotion.target) < .02) { camera.position.copy(cameraMotion.position); controls.target.copy(cameraMotion.target); cameraMotion = null; }
+    }
+    controls.update(); renderer.render(scene,camera);
   }
   requestAnimationFrame(frame);
 }
