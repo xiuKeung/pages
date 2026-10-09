@@ -5,6 +5,10 @@
 后续展厅、模型与游戏的视觉设计统一遵循 [美术风格规范](ART_DIRECTION.md)。
 《翼龙战车：遗迹战术》的功能范围与验收标准见 [游戏需求文档](GAME_REQUIREMENTS.md)。
 
+## 翼龙战车：遗迹战术 · 第一关原型
+
+新地址：`/pterosaur/tactics/`。第一关“遗迹入口”已实现：使用现有机械翼龙和黄色双炮战车 3D 模型，在小型棋盘上完成点击选中、移动、敌方炮台攻击预告、结束回合、核心稳定度与通关结算。规则与状态机位于 `tactics/state.js`，运行 `npm test` 会包含其移动范围、预告伤害与通关测试。
+
 ## 本地浏览
 
 在此目录执行 `python3 -m http.server 8080`，然后打开 `http://localhost:8080/`。也可以从 Pages 目录启动服务器，访问 `/pterosaur/`。ES 模块需要 HTTP 服务，不支持直接双击 `index.html` 后以 `file://` 运行。
