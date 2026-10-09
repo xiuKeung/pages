@@ -3,7 +3,7 @@ import { OrbitControls } from './vendor/OrbitControls.js';
 import { buildModel } from './model.js?v=2';
 import { buildTank } from './tank/model.js?v=1';
 import { AnimationPlayer, sampleAnimation, CHAPTERS, DURATION } from './animation.js?v=3';
-import { createModelFraming } from './viewer-framing.js?v=1';
+import { createModelFraming, DEFAULT_MODEL_HEADING } from './viewer-framing.js?v=1';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -272,7 +272,7 @@ function startTankShowcase() {
   const camera = new THREE.PerspectiveCamera(36, 1, .1, 100);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = .065; controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = 1.15; controls.maxPolarAngle = Math.PI * .5 - .018; controls.autoRotateSpeed = .7;
-  const { tank, turret, cannons, materials, meshCount } = buildTank(); tank.rotation.y = -.42; scene.add(tank);
+  const { tank, turret, cannons, materials, meshCount } = buildTank(); tank.rotation.y = DEFAULT_MODEL_HEADING; scene.add(tank);
   const framing = createModelFraming({ camera, controls, model: tank });
   scene.add(new THREE.HemisphereLight(0xfffdf4, 0xa3ab9a, 1.65));
   const key = new THREE.DirectionalLight(0xfff8e6, 2.3); key.position.set(3, 12, 6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.normalBias = .035; key.shadow.bias = -.00015; key.shadow.radius = 4; scene.add(key);
@@ -296,7 +296,7 @@ function startTankShowcase() {
   function setWireframe(value) { wireframe = value; Object.values(materials).forEach(material => { material.wireframe = value; }); root.querySelector('#tank-wireframe').setAttribute('aria-checked', String(value)); }
   function setAutoAim(value) { autoAim = value; root.querySelector('#tank-auto-aim').setAttribute('aria-pressed', String(value)); }
   function reset() {
-    tank.rotation.y = -.42; turret.rotation.y = 0; cannons.rotation.z = 0;
+    tank.rotation.y = DEFAULT_MODEL_HEADING; turret.rotation.y = 0; cannons.rotation.z = 0;
     root.querySelector('#tank-turret').value = '0'; root.querySelector('#tank-barrel').value = '0';
     setAutoRotate(false); setWireframe(false); setAutoAim(false); moveCamera('perspective');
   }

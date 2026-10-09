@@ -9,6 +9,10 @@ export const VIEW_DIRECTIONS = {
   top: [0, 1, .001],
 };
 
+// Archive models use +X as their forward direction. Keeping the neutral model
+// heading here prevents individual viewers from introducing hidden offsets.
+export const DEFAULT_MODEL_HEADING = 0;
+
 const CLOSE_FACTOR = 1.65;
 const FAR_FACTOR = 6.4;
 const FIT_PADDING = 1.14;
