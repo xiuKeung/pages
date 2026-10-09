@@ -3,6 +3,7 @@ import { OrbitControls } from './vendor/OrbitControls.js';
 import { buildModel } from './model.js?v=2';
 import { buildTank } from './tank/model.js?v=1';
 import { AnimationPlayer, sampleAnimation, CHAPTERS, DURATION } from './animation.js?v=3';
+import { createModelFraming } from './viewer-framing.js?v=1';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -58,7 +59,7 @@ function startGallery() {
   const camera = new THREE.PerspectiveCamera(36, 1, .1, 100);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = .065;
-  controls.enablePan = false; controls.minDistance = 8; controls.maxDistance = 31;
+  controls.enablePan = false;
   controls.maxPolarAngle = Math.PI * .5 - .018; controls.autoRotateSpeed = .7;
   controls.target.set(-.25, 1.4, 0);
   scene.add(new THREE.HemisphereLight(0xfffdf4, 0xa3ab9a, 1.65));
@@ -76,6 +77,7 @@ function startGallery() {
   const ring = new THREE.Mesh(new THREE.TorusGeometry(5.12, .008, 3, 128), new THREE.MeshBasicMaterial({ color: 0xc4ccb7 }));
   ring.rotation.x = Math.PI / 2; ring.position.y = -.005; scene.add(ring);
   const { model, chassis, creature, poseCreature, materials, meshCount } = buildModel(); scene.add(model);
+  const framing = createModelFraming({ camera, controls, model });
   const player = new AnimationPlayer();
   let cinematic = false;
   const wheels = chassis.children.filter(part => part.name === 'Wheel with tread and spoked rim');
@@ -86,15 +88,11 @@ function startGallery() {
   let pose = 'standing', targetStand = 0, targetHead = 0;
   let view = 'perspective', autoRotate = false, wireframe = false;
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  const poses = { perspective: [10.8, 8.7, 12.2], side: [0, 5.0, 17.2], front: [17.0, 5.1, 0], top: [0, 19.0, .015] };
   function fitDistance() { return Math.max(1, .98 / camera.aspect); }
   function moveCamera(nextView, instant = false) {
     view = nextView;
     const target = new THREE.Vector3(mode === 'creature' ? .55 : -.25, mode === 'creature' ? (pose === 'standing' ? 2.4 : .6) : mode === 'split' ? 1.9 : separated ? 2.0 : 1.35, mode === 'creature' ? 0 : mode === 'split' ? .2 : 0);
-    const offset = new THREE.Vector3(...poses[view]);
-    if (mode === 'creature') offset.multiplyScalar(pose === 'standing' ? .74 : .86);
-    if (mode === 'split') offset.multiplyScalar(1.16);
-    const end = offset.multiplyScalar(fitDistance()).add(target);
+    const { position: end } = framing.pose(view, target);
     if (instant || reduceMotion.matches) { camera.position.copy(end); controls.target.copy(target); controls.update(); cameraMotion = null; }
     else cameraMotion = { from: camera.position.clone(), to: end, fromTarget: controls.target.clone(), toTarget: target, time: performance.now() };
     $$('[data-view]').forEach(b => { const yes = b.dataset.view === view; b.classList.toggle('selected', yes); b.setAttribute('aria-pressed', yes); });
@@ -226,6 +224,7 @@ function startGallery() {
     const width = host.clientWidth, height = host.clientHeight;
     if (!width || !height) return;
     camera.aspect = width / height; camera.updateProjectionMatrix(); renderer.setSize(width, height);
+    framing.refresh();
     if(cinematic) applyAnimation(); else moveCamera(view, true);
   }); observer.observe(host);
   camera.aspect = host.clientWidth / host.clientHeight; camera.updateProjectionMatrix();
@@ -272,10 +271,9 @@ function startTankShowcase() {
   renderer.domElement.setAttribute('aria-hidden', 'true');
   const camera = new THREE.PerspectiveCamera(36, 1, .1, 100);
   const controls = new OrbitControls(camera, renderer.domElement);
-  // Tank bounds are smaller than the winged carrier; these limits preserve the
-  // same close and far framing ratios as the carrier viewer (8–31).
-  controls.enableDamping = true; controls.dampingFactor = .065; controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = 1.15; controls.minDistance = 6; controls.maxDistance = 23; controls.maxPolarAngle = Math.PI * .5 - .018; controls.autoRotateSpeed = .7;
+  controls.enableDamping = true; controls.dampingFactor = .065; controls.enablePan = false; controls.enableZoom = true; controls.zoomSpeed = 1.15; controls.maxPolarAngle = Math.PI * .5 - .018; controls.autoRotateSpeed = .7;
   const { tank, turret, cannons, materials, meshCount } = buildTank(); tank.rotation.y = -.42; scene.add(tank);
+  const framing = createModelFraming({ camera, controls, model: tank });
   scene.add(new THREE.HemisphereLight(0xfffdf4, 0xa3ab9a, 1.65));
   const key = new THREE.DirectionalLight(0xfff8e6, 2.3); key.position.set(3, 12, 6); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.normalBias = .035; key.shadow.bias = -.00015; key.shadow.radius = 4; scene.add(key);
   const fill = new THREE.DirectionalLight(0xeaf1ff, 1.1); fill.position.set(-6, 7, -8); scene.add(fill);
@@ -287,13 +285,12 @@ function startTankShowcase() {
   const grid = new THREE.GridHelper(100, 100, 0xd1d6c6, 0xdde1d2); grid.position.y = .195; grid.material.transparent = true; grid.material.opacity = .40; scene.add(grid);
   const ring = new THREE.Mesh(new THREE.TorusGeometry(5.12, .008, 3, 128), new THREE.MeshBasicMaterial({ color: 0xc4ccb7 }));
   ring.rotation.x = Math.PI / 2; ring.position.y = .375; scene.add(ring);
-  const views = { perspective:[[7.2,5.4,8],[0,1.25,0]], front:[[9.8,3.2,0],[0,1.2,0]], side:[[0,3,10.5],[0,1.2,0]], top:[[0,12.5,.1],[0,1.1,0]] };
   let view = 'perspective', autoRotate = false, wireframe = false, autoAim = false, cameraMotion = null, last = performance.now();
   function moveCamera(name, instant = false) {
     view = name; root.querySelectorAll('[data-tank-view]').forEach(button => { const selected = button.dataset.tankView === name; button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', selected); });
-    const [position, target] = views[name];
-    if (instant) { camera.position.set(...position); controls.target.set(...target); controls.update(); cameraMotion = null; }
-    else cameraMotion = { position: new THREE.Vector3(...position), target: new THREE.Vector3(...target) };
+    const pose = framing.pose(name);
+    if (instant) { camera.position.copy(pose.position); controls.target.copy(pose.target); controls.update(); cameraMotion = null; }
+    else cameraMotion = pose;
   }
   function setAutoRotate(value) { autoRotate = value; controls.autoRotate = value; root.querySelector('#tank-rotate').setAttribute('aria-checked', String(value)); }
   function setWireframe(value) { wireframe = value; Object.values(materials).forEach(material => { material.wireframe = value; }); root.querySelector('#tank-wireframe').setAttribute('aria-checked', String(value)); }
@@ -312,7 +309,7 @@ function startTankShowcase() {
   root.querySelector('#tank-reset').addEventListener('click', reset);
   root.querySelector('#tank-fullscreen').addEventListener('click', () => viewer.requestFullscreen?.());
   root.querySelector('#tank-mesh-count').textContent = `${meshCount} 个几何部件`;
-  function resize() { const {width,height} = tankHost.getBoundingClientRect(); if (!width || !height) return; camera.aspect = width / height; camera.updateProjectionMatrix(); renderer.setSize(width, height, false); }
+  function resize() { const {width,height} = tankHost.getBoundingClientRect(); if (!width || !height) return; camera.aspect = width / height; camera.updateProjectionMatrix(); framing.refresh(); renderer.setSize(width, height, false); }
   new ResizeObserver(resize).observe(tankHost); resize(); moveCamera(view, true);
   controls.addEventListener('start', () => { cameraMotion = null; setAutoRotate(false); root.querySelectorAll('[data-tank-view]').forEach(button => { button.classList.remove('selected'); button.setAttribute('aria-pressed', 'false'); }); });
   function frame(now) {
