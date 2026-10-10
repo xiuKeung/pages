@@ -5,6 +5,7 @@ import {LEVELS} from './levels.js';
 
 const $=id=>document.getElementById(id);
 let levelIndex=0,level=LEVELS[levelIndex];
+const levelSelect=$('level-select');
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(level.palette.sky);
 scene.fog=new THREE.Fog(level.palette.sky,22,48);
@@ -70,7 +71,8 @@ function damage(text='坦克受击！'){
 }
 function end(title,copy,label){state=title==='关卡完成'?'won':'lost';$('overlay').hidden=false;$('overlay').querySelector('.eyebrow').textContent=state==='won'?'首批关卡包 · 完成':'首批关卡包 · 失败';$('overlay').querySelector('h2').textContent=title;$('overlay').querySelector('p:not(.eyebrow)').textContent=copy;$('start').textContent=label}
 function advance(){if(waveIndex<level.waves.length-1)spawnWave(waveIndex+1);else{const hasNext=levelIndex<LEVELS.length-1;end('关卡完成',hasNext?`关卡 ${String(levelIndex+1).padStart(2,'0')} 完成，下一关会增加一项新的压力。`:'你已完成首批六个关卡。可重新挑战终端突袭。',hasNext?'下一关':'再玩一次')}}
-function loadLevel(index){levelIndex=THREE.MathUtils.clamp(index,0,LEVELS.length-1);level=LEVELS[levelIndex];scene.background.set(level.palette.sky);scene.fog.color.set(level.palette.fog);$('stage').textContent=`关卡 ${String(levelIndex+1).padStart(2,'0')} · ${level.name}`;$('overlay').querySelector('.eyebrow').textContent=`首批关卡包 · ${String(levelIndex+1).padStart(2,'0')} / ${String(LEVELS.length).padStart(2,'0')}`}
+function showLevelIntro(){const overlay=$('overlay');overlay.hidden=false;overlay.querySelector('.eyebrow').textContent=`首批关卡包 · ${String(levelIndex+1).padStart(2,'0')} / ${String(LEVELS.length).padStart(2,'0')}`;overlay.querySelector('h2').textContent=`${level.name} · 编队接近`;overlay.querySelector('p:not(.eyebrow)').textContent='击败敌人会掉落强化晶体。接住后可短时获得双炮、散射、护盾或减速时间。';$('start').textContent='开始'}
+function loadLevel(index){levelIndex=THREE.MathUtils.clamp(index,0,LEVELS.length-1);level=LEVELS[levelIndex];levelSelect.value=String(levelIndex);scene.background.set(level.palette.sky);scene.fog.color.set(level.palette.fog)}
 function clearPowerups(){powerups.splice(0).forEach(o=>o.removeFromParent());Object.keys(powerTimers).forEach(key=>powerTimers[key]=0)}
 function reset(){
   enemyLayer.clear();enemies.length=0;[...shots,...enemyShots,...sparks].forEach(o=>o.removeFromParent());shots.length=enemyShots.length=sparks.length=0;droppedCars.splice(0).forEach(o=>o.removeFromParent());clearPowerups();
@@ -122,4 +124,6 @@ window.addEventListener('keyup',e=>{if(['ArrowLeft','KeyA','ArrowRight','KeyD'].
 for(const b of document.querySelectorAll('[data-move]')){const dir=Number(b.dataset.move),startMove=e=>{e.preventDefault();move=dir},stopMove=()=>move=0;b.addEventListener('pointerdown',e=>{startMove(e);try{b.setPointerCapture(e.pointerId)}catch{}});b.addEventListener('touchstart',startMove,{passive:false});for(const ev of ['pointerup','pointercancel','lostpointercapture','touchend','touchcancel'])b.addEventListener(ev,stopMove)}
 const fire=$('fire'),startFire=e=>{e.preventDefault();fireHeld=true},stopFire=()=>fireHeld=false;fire.addEventListener('pointerdown',startFire);fire.addEventListener('touchstart',startFire,{passive:false});for(const ev of ['pointerup','pointercancel','lostpointercapture','touchend','touchcancel'])fire.addEventListener(ev,stopFire);
 function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);renderer.render(scene,camera);requestAnimationFrame(loop)}
-loadLevel(0);requestAnimationFrame(loop);sync();
+LEVELS.forEach((item,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=`关卡 ${String(index+1).padStart(2,'0')} · ${item.name}`;levelSelect.append(option)});
+levelSelect.addEventListener('change',()=>{loadLevel(Number(levelSelect.value));if(state==='playing')reset();else{state='ready';showLevelIntro();sync()}});
+loadLevel(0);showLevelIntro();requestAnimationFrame(loop);sync();
