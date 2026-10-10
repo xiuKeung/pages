@@ -11,6 +11,7 @@ function mesh(geo,material,parent=scene){const o=new THREE.Mesh(geo,material);o.
 // 源模型的 Y 轴是车顶方向、X 轴是车头方向。先把车顶转向镜头，
 // 再将车头转到屏幕上方；战场始终是屏幕的 X/Y 平面。
 function topDownRig(template,scale,heading=Math.PI/2){const rig=new THREE.Group(),visual=template.clone(true);visual.rotation.x=Math.PI/2;rig.rotation.z=heading;rig.scale.setScalar(scale);rig.add(visual);return rig}
+function sideViewRig(template,scale){const rig=new THREE.Group(),visual=template.clone(true);visual.position.y=-1.3;rig.scale.setScalar(scale);rig.add(visual);return rig}
 // 玩家坦克：车顶朝向镜头，炮管/车头指向屏幕上方。
 const tankRig=buildTank(),player=new THREE.Group();tankRig.tank.rotation.x=Math.PI/2;player.rotation.z=Math.PI/2;player.add(tankRig.tank);tankRig.tank.scale.setScalar(.32);player.position.set(0,-3,0);scene.add(player);
 // 上方单位是完整合体。分离时隐藏车体、保留翼龙，并生成独立落下的战车。
@@ -30,7 +31,7 @@ function reset(){enemyLayer.clear();enemies.length=0;[...shots,...enemyShots,...
 function sync(){ $('score').textContent=String(score).padStart(6,'0');$('lives').innerHTML=Array.from({length:level.player.lives},(_,i)=>`<span class="life${i<lives?' is-active':''}"></span>`).join('');$('lives').setAttribute('aria-label',`${lives} / ${level.player.lives} 格装甲`);$('wave-label').textContent='波次 '+String(waveIndex+1).padStart(2,'0');$('objective').textContent=`残余合体 ${enemies.filter(e=>e.parent).length}`;}
 function resize(){const w=host.clientWidth,h=host.clientHeight,aspect=w/h,viewH=18;renderer.setSize(w,h,false);camera.left=-viewH*aspect/2;camera.right=viewH*aspect/2;camera.top=viewH/2;camera.bottom=-viewH/2;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(host);resize();
 function hit(a,b,r){return a.position.distanceTo(b.position)<r}
-function deploy(enemy,wave){const d=enemy.userData;if(d.phase!=='combined')return;d.phase='turn';d.phaseTime=0;const car=topDownRig(carrierTemplate,.24);car.position.copy(enemy.position);car.position.y-=.7;car.userData={v:4.3,health:1};scene.add(car);droppedCars.push(car);const chassis=enemy.getObjectByName('Four-wheel carrier');if(chassis)chassis.visible=false;say('战车已投放！翼龙正在掉头。',2)}
+function deploy(enemy,wave){const d=enemy.userData;if(d.phase!=='combined')return;d.phase='turn';d.phaseTime=0;const car=sideViewRig(carrierTemplate,.24);car.position.copy(enemy.position);car.position.y-=.7;car.userData={v:4.3,health:1};scene.add(car);droppedCars.push(car);const chassis=enemy.getObjectByName('Four-wheel carrier');if(chassis)chassis.visible=false;say('战车已投放！翼龙正在掉头。',2)}
 function update(dt){if(state!=='playing')return;time+=dt;const lane=laneLimit();playerX=THREE.MathUtils.clamp(playerX+move*level.player.speed*dt,-lane,lane);player.position.x=playerX;
  fireClock-=dt;if((fireHeld||true)&&fireClock<=0){shoot();fireClock=level.player.fireRate}
  const wave=level.waves[waveIndex];deployClock-=dt;if(deployClock<=0){const target=enemies.find(e=>e.parent&&e.userData.phase==='combined');if(target)deploy(target,wave);deployClock=wave.deployEvery;}
