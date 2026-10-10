@@ -17,7 +17,7 @@ const camera=new THREE.OrthographicCamera(-10,10,8,-8,.1,80);camera.position.set
 scene.add(new THREE.HemisphereLight(0xfffdf4,0x7a9081,2.6));
 const sun=new THREE.DirectionalLight(0xffe2a5,2.3);sun.position.set(-8,16,14);sun.castShadow=true;scene.add(sun);
 const mat=(color,extra={})=>new THREE.MeshStandardMaterial({color,roughness:.7,...extra});
-const mats={gold:mat('#efb63b',{emissive:'#875c00',emissiveIntensity:.2}),red:mat('#d66f5d',{emissive:'#6f1f18',emissiveIntensity:.3}),dark:mat('#39473c'),mint:mat('#78b49a',{emissive:'#2f8166',emissiveIntensity:.3}),blue:mat('#6c9fd1',{emissive:'#244f80',emissiveIntensity:.3}),violet:mat('#9a88c9',{emissive:'#473776',emissiveIntensity:.3})};
+const mats={gold:mat('#efb63b',{emissive:'#875c00',emissiveIntensity:.2}),orange:mat('#f18e45',{emissive:'#8d3600',emissiveIntensity:.3}),red:mat('#d66f5d',{emissive:'#6f1f18',emissiveIntensity:.3}),dark:mat('#39473c'),mint:mat('#78b49a',{emissive:'#2f8166',emissiveIntensity:.3}),blue:mat('#6c9fd1',{emissive:'#244f80',emissiveIntensity:.3}),violet:mat('#9a88c9',{emissive:'#473776',emissiveIntensity:.3})};
 function mesh(geo,material,parent=scene){const o=new THREE.Mesh(geo,material);o.castShadow=o.receiveShadow=true;parent.add(o);return o}
 function topDownRig(template,scale,heading=Math.PI/2){const rig=new THREE.Group(),visual=template.clone(true);visual.rotation.x=Math.PI/2;rig.rotation.z=heading;rig.scale.setScalar(scale);rig.add(visual);return rig}
 function sideViewRig(template,scale){const rig=new THREE.Group(),visual=template.clone(true);visual.position.y=-1.3;rig.scale.setScalar(scale);rig.add(visual);return rig}
@@ -31,7 +31,7 @@ const combinedTemplate=enemyRig.model,carrierTemplate=enemyRig.chassis.clone(tru
 const enemies=[],droppedCars=[],shots=[],enemyShots=[],sparks=[],powerups=[];
 const enemyLayer=new THREE.Group();scene.add(enemyLayer);
 const bulletGeo=new THREE.SphereGeometry(.14,10,8),enemyBulletGeo=new THREE.SphereGeometry(.18,10,8);
-const POWERUPS={double:{name:'双炮',duration:9,material:mats.gold},spread:{name:'散射',duration:8,material:mats.blue},shield:{name:'护盾',duration:7,material:mats.mint},slow:{name:'减速时间',duration:7,material:mats.violet}};
+const POWERUPS={double:{name:'双炮',duration:9,material:mats.gold},spread:{name:'散射',duration:8,material:mats.blue},rapid:{name:'快射',duration:8,material:mats.orange},shield:{name:'护盾',duration:7,material:mats.mint},slow:{name:'减速时间',duration:7,material:mats.violet}};
 const powerTimers=Object.fromEntries(Object.keys(POWERUPS).map(key=>[key,0]));
 let state='ready',time=0,last=performance.now(),playerX=0,move=0,fireClock=0,waveIndex=0,score=0,lives=level.player.lives,deployClock=0,enemyFireClock=0,defeatCount=0;
 function say(){}
@@ -107,7 +107,7 @@ function update(dt){
   if(state!=='playing')return;time+=dt;
   Object.keys(powerTimers).forEach(key=>powerTimers[key]=Math.max(0,powerTimers[key]-dt));const shieldActive=powerTimers.shield>0,slowActive=powerTimers.slow>0;shieldVisual.visible=shieldActive;shieldVisual.rotation.z+=dt*1.3;shieldVisual.scale.setScalar(1+Math.sin(time*8)*.06);slowWash.visible=slowActive;slowWash.material.opacity=slowActive?.25+Math.sin(time*5)*.045:0;scene.background.set(slowActive?'#9aa8d5':level.palette.sky);scene.fog.color.set(slowActive?'#9aa8d5':level.palette.fog);
   const enemyDt=dt*(powerTimers.slow>0?.55:1),lane=laneLimit();playerX=THREE.MathUtils.clamp(playerX+move*level.player.speed*dt,-lane,lane);player.position.x=playerX;
-  fireClock-=dt;if(fireClock<=0){shoot();fireClock=level.player.fireRate}
+  fireClock-=dt;if(fireClock<=0){shoot();fireClock=level.player.fireRate*(powerTimers.rapid>0?.58:1)}
   const wave=level.waves[waveIndex],formationShift=Math.sin(time*1.15)*wave.drift;deployClock-=enemyDt;enemyFireClock-=enemyDt;
   if(deployClock<=0){const target=enemies.filter(e=>e.parent&&e.userData.phase==='combined').sort((a,b)=>b.userData.row-a.userData.row)[0];if(target)deploy(target,wave);deployClock=wave.deployEvery;}
   if(enemyFireClock<=0){const source=enemies.filter(e=>e.parent&&e.userData.phase==='combined').sort((a,b)=>b.userData.row-a.userData.row)[0];if(source)enemyShoot(source.position.x,source.position.y);enemyFireClock=Math.max(1.05,wave.deployEvery*.52);}
@@ -132,6 +132,7 @@ function update(dt){
 }
 function startGame(){if(state==='won'&&levelIndex<LEVELS.length-1)loadLevel(levelIndex+1);if(state==='ready'||state==='won'||state==='lost')reset()}
 $('start').onclick=startGame;$('start').addEventListener('touchend',e=>{e.preventDefault();startGame()},{passive:false});
+const helpModal=$('help-modal');$('help').addEventListener('click',()=>helpModal.hidden=false);$('help-close').addEventListener('click',()=>helpModal.hidden=true);helpModal.addEventListener('click',event=>{if(event.target===helpModal)helpModal.hidden=true});
 window.addEventListener('keydown',e=>{if(['ArrowLeft','KeyA'].includes(e.code)){move=-1;e.preventDefault()}if(['ArrowRight','KeyD'].includes(e.code)){move=1;e.preventDefault()}});
 window.addEventListener('keyup',e=>{if(['ArrowLeft','KeyA','ArrowRight','KeyD'].includes(e.code))move=0});
 for(const b of document.querySelectorAll('[data-move]')){const dir=Number(b.dataset.move),startMove=e=>{e.preventDefault();move=dir},stopMove=()=>move=0;b.addEventListener('pointerdown',e=>{startMove(e);try{b.setPointerCapture(e.pointerId)}catch{}});b.addEventListener('touchstart',startMove,{passive:false});for(const ev of ['pointerup','pointercancel','lostpointercapture','touchend','touchcancel'])b.addEventListener(ev,stopMove)}
