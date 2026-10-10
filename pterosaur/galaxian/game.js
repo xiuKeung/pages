@@ -60,15 +60,12 @@ function shoot(){
   barrels.forEach(barrel=>spread.forEach(vx=>makeShot(barrel,vx)));
 }
 function powerPart(geometry,material){const part=new THREE.Mesh(geometry,material);part.castShadow=part.receiveShadow=true;return part}
+function powerLabel(text,color){const canvas=document.createElement('canvas'),context=canvas.getContext('2d');canvas.width=256;canvas.height=112;context.fillStyle=color;context.fillRect(0,0,canvas.width,canvas.height);context.strokeStyle='#fff8d8';context.lineWidth=7;context.strokeRect(5,5,246,102);context.fillStyle='#fff8d8';context.font='700 52px sans-serif';context.textAlign='center';context.textBaseline='middle';context.fillText(text,128,58);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(canvas),transparent:true,depthWrite:false}));sprite.scale.set(.92,.4,1);return sprite}
 function powerModule(type){
-  const module=new THREE.Group(),material=POWERUPS[type].material,glow=new THREE.MeshBasicMaterial({color:material.color,transparent:true,opacity:.82});
-  const halo=powerPart(new THREE.TorusGeometry(.36,.045,8,20),glow);halo.rotation.x=Math.PI/2;module.add(halo);
-  const core=powerPart(new THREE.SphereGeometry(.19,12,8),material);core.scale.set(1,1,.55);module.add(core);
-  const ink=new THREE.MeshBasicMaterial({color:'#fff8d8'});
-  if(type==='double')[-.085,.085].forEach(x=>{const bar=powerPart(new THREE.BoxGeometry(.055,.24,.035),ink);bar.position.set(x,0,.12);module.add(bar)});
-  if(type==='spread')[-.17,0,.17].forEach((x,index)=>{const ray=powerPart(new THREE.BoxGeometry(.04,.22,.035),ink);ray.position.set(0,.01,.12);ray.rotation.z=(index-1)*.45;module.add(ray)});
-  if(type==='shield'){const shield=powerPart(new THREE.TorusGeometry(.12,.035,6,12),ink);shield.rotation.x=Math.PI/2;shield.position.z=.12;module.add(shield)}
-  if(type==='slow'){const top=powerPart(new THREE.BoxGeometry(.18,.045,.035),ink),bottom=top.clone(),neck=powerPart(new THREE.BoxGeometry(.045,.16,.035),ink);top.position.set(0,.1,.12);bottom.position.set(0,-.1,.12);neck.position.z=.12;module.add(top,bottom,neck)}
+  const module=new THREE.Group(),material=POWERUPS[type].material,glow=new THREE.MeshBasicMaterial({color:material.color,transparent:true,opacity:.76});
+  const halo=powerPart(new THREE.TorusGeometry(.45,.04,8,20),glow);halo.rotation.x=Math.PI/2;halo.position.z=-.04;module.add(halo);
+  const tile=powerPart(new THREE.BoxGeometry(.94,.43,.1),material);module.add(tile);
+  const label=powerLabel(POWERUPS[type].name,`#${material.color.getHexString()}`);label.position.z=.08;module.add(label);
   return module;
 }
 function spawnPowerup(pos){
@@ -130,12 +127,12 @@ function update(dt){
   if(enemies.length&&enemies.every(e=>!e.parent)&&!droppedCars.length)advance();sync();
 }
 function startGame(){if(state==='won'&&levelIndex<LEVELS.length-1)loadLevel(levelIndex+1);if(state==='ready'||state==='won'||state==='lost')reset()}
-$('start').onclick=startGame;$('start').addEventListener('touchend',e=>{e.preventDefault();startGame()},{passive:false});$('restart').onclick=reset;
+$('start').onclick=startGame;$('start').addEventListener('touchend',e=>{e.preventDefault();startGame()},{passive:false});
 window.addEventListener('keydown',e=>{if(['ArrowLeft','KeyA'].includes(e.code)){move=-1;e.preventDefault()}if(['ArrowRight','KeyD'].includes(e.code)){move=1;e.preventDefault()}if(e.code==='Space'){fireHeld=true;e.preventDefault()}});
 window.addEventListener('keyup',e=>{if(['ArrowLeft','KeyA','ArrowRight','KeyD'].includes(e.code))move=0;if(e.code==='Space')fireHeld=false});
 for(const b of document.querySelectorAll('[data-move]')){const dir=Number(b.dataset.move),startMove=e=>{e.preventDefault();move=dir},stopMove=()=>move=0;b.addEventListener('pointerdown',e=>{startMove(e);try{b.setPointerCapture(e.pointerId)}catch{}});b.addEventListener('touchstart',startMove,{passive:false});for(const ev of ['pointerup','pointercancel','lostpointercapture','touchend','touchcancel'])b.addEventListener(ev,stopMove)}
 const fire=$('fire'),startFire=e=>{e.preventDefault();fireHeld=true},stopFire=()=>fireHeld=false;fire.addEventListener('pointerdown',startFire);fire.addEventListener('touchstart',startFire,{passive:false});for(const ev of ['pointerup','pointercancel','lostpointercapture','touchend','touchcancel'])fire.addEventListener(ev,stopFire);
 function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);renderer.render(scene,camera);requestAnimationFrame(loop)}
-LEVELS.forEach((item,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=`关卡 ${String(index+1).padStart(2,'0')} · ${item.name}`;levelSelect.append(option)});
+if(levelSelect.options.length===0)LEVELS.forEach((item,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=`关卡 ${String(index+1).padStart(2,'0')} · ${item.name}`;levelSelect.append(option)});
 levelSelect.addEventListener('change',()=>{loadLevel(Number(levelSelect.value));if(state==='playing')reset();else{state='ready';showLevelIntro();sync()}});
 loadLevel(0);showLevelIntro();requestAnimationFrame(loop);sync();
