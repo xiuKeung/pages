@@ -62,7 +62,7 @@ function shoot(){
 }
 function enemyShoot(x,y){const b=mesh(enemyBulletGeo,mats.red);b.position.set(x,y,.1);b.userData={v:-8};enemyShots.push(b)}
 function powerPart(geometry,material){const part=new THREE.Mesh(geometry,material);part.castShadow=part.receiveShadow=true;return part}
-function powerLabel(text,color){const canvas=document.createElement('canvas'),context=canvas.getContext('2d');canvas.width=320;canvas.height=132;context.fillStyle=color;context.fillRect(0,0,canvas.width,canvas.height);context.strokeStyle='#fff8d8';context.lineWidth=8;context.strokeRect(5,5,310,122);context.fillStyle='#17231d';context.font='800 74px sans-serif';context.textAlign='center';context.textBaseline='middle';context.fillText(text,160,69);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(canvas),transparent:true,depthWrite:false}));sprite.scale.set(1.16,.48,1);return sprite}
+function powerLabel(text,color){const canvas=document.createElement('canvas'),context=canvas.getContext('2d');canvas.width=320;canvas.height=132;context.fillStyle=color;context.fillRect(0,0,canvas.width,canvas.height);context.strokeStyle='#fff8d8';context.lineWidth=8;context.strokeRect(5,5,310,122);context.fillStyle='#000000';context.font='800 74px sans-serif';context.textAlign='center';context.textBaseline='middle';context.fillText(text,160,69);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(canvas),transparent:true,depthWrite:false}));sprite.scale.set(1.16,.48,1);return sprite}
 function powerModule(type){
   const module=new THREE.Group(),material=POWERUPS[type].material,glow=new THREE.MeshBasicMaterial({color:material.color,transparent:true,opacity:.76});
   const halo=powerPart(new THREE.TorusGeometry(.45,.04,8,20),glow);halo.position.z=-.04;module.add(halo);
@@ -72,7 +72,7 @@ function powerModule(type){
 }
 function spawnPowerup(pos){
   const type=Object.keys(POWERUPS)[Math.floor(defeatCount/3)%4],orb=powerModule(type);
-  orb.position.copy(pos);orb.userData={type,v:2.0,phase:Math.random()*Math.PI*2};scene.add(orb);powerups.push(orb);
+  orb.scale.setScalar(1.2);orb.position.copy(pos);orb.userData={type,v:2.0,phase:Math.random()*Math.PI*2};scene.add(orb);powerups.push(orb);
 }
 function activatePower(type){powerTimers[type]=POWERUPS[type].duration;score+=40;burst(player.position,POWERUPS[type].material.color,16);sync()}
 function damage(text='坦克受击！'){
