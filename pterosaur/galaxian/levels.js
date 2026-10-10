@@ -1,12 +1,11 @@
-// 关卡只在这里配：扩展时不要在渲染代码中写波次或数值。
+// 关卡只在这里配：合体巡航、投放与俯冲都不写入渲染代码。
 export const LEVELS=[{
- id:'trial-01',name:'积木编队试飞',palette:{sky:'#dfe9e4',fog:'#dfe9e4',accent:'#efb63b'},
- player:{lives:3,fireRate:.26,speed:12},
+ id:'trial-01',name:'投放突袭',palette:{sky:'#dfe9e4',fog:'#dfe9e4',accent:'#efb63b'},
+ player:{lives:3,fireRate:.28,speed:12},
  waves:[
-  {label:'巡航编队',rows:2,cols:4,health:1,drift:1.25,diveEvery:3.6,score:100},
-  {label:'交错俯冲',rows:2,cols:5,health:1,drift:1.8,diveEvery:2.35,score:150},
-  {label:'翼龙指挥机',rows:1,cols:5,health:2,drift:2.2,diveEvery:1.9,score:220}
- ],
- boss:{health:22,shotEvery:1.15,score:1800}
+  {label:'合体侦察队',count:3,health:2,drift:1.5,deployEvery:4.2,diveSpeed:5.8,score:180},
+  {label:'分离投放队',count:4,health:2,drift:2.1,deployEvery:3.1,diveSpeed:6.6,score:240},
+  {label:'翼龙突袭队',count:4,health:3,drift:2.8,deployEvery:2.25,diveSpeed:7.4,score:320}
+ ]
 }];
 export const getLevel=id=>LEVELS.find(level=>level.id===id)||LEVELS[0];
