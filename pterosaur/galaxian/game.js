@@ -27,7 +27,16 @@ tankRig.tank.rotation.x=Math.PI/2;player.rotation.z=Math.PI/2;player.add(tankRig
 const shieldVisual=new THREE.Group(),shieldCore=new THREE.Mesh(new THREE.CircleGeometry(1.02,28),new THREE.MeshBasicMaterial({color:'#84c8a8',transparent:true,opacity:.16,depthWrite:false})),shieldRing=new THREE.Mesh(new THREE.TorusGeometry(1.04,.09,8,28),new THREE.MeshBasicMaterial({color:'#c9f5d8',transparent:true,opacity:.95,depthWrite:false}));shieldCore.position.z=-.08;shieldVisual.add(shieldCore,shieldRing);shieldVisual.visible=false;player.add(shieldVisual);
 const slowWash=new THREE.Mesh(new THREE.PlaneGeometry(30,22),new THREE.MeshBasicMaterial({color:'#8271bd',transparent:true,opacity:.12,depthWrite:false}));slowWash.position.set(0,1,2);slowWash.visible=false;scene.add(slowWash);
 const enemyRig=buildModel();enemyRig.poseCreature({stand:0,wing:.42});
-const combinedTemplate=enemyRig.model,carrierTemplate=enemyRig.chassis.clone(true);
+const combinedTemplate=enemyRig.model;
+function fallingCarrierTemplate(){
+  const carrier=new THREE.Group(),part=(geometry,material,x=0,y=0,z=0)=>{const piece=new THREE.Mesh(geometry,material);piece.position.set(x,y,z);piece.castShadow=piece.receiveShadow=true;carrier.add(piece);return piece};
+  part(new THREE.BoxGeometry(.92,.25,.28),mats.dark,0,0,0);
+  part(new THREE.BoxGeometry(.64,.22,.3),mats.gold,.04,.18,0);
+  part(new THREE.BoxGeometry(.24,.16,.32),mats.gold,.35,.32,0);
+  [-.3,.3].forEach(x=>{part(new THREE.CircleGeometry(.16,12),new THREE.MeshBasicMaterial({color:'#1e2822'}),x,-.17,.17);part(new THREE.CircleGeometry(.075,10),new THREE.MeshBasicMaterial({color:'#a8ada7'}),x,-.17,.18)});
+  return carrier;
+}
+const fallingCarrier=fallingCarrierTemplate();
 const enemies=[],droppedCars=[],shots=[],enemyShots=[],sparks=[],powerups=[];
 const enemyLayer=new THREE.Group();scene.add(enemyLayer);
 const bulletGeo=new THREE.SphereGeometry(.14,10,8),enemyBulletGeo=new THREE.SphereGeometry(.18,10,8);
@@ -98,7 +107,7 @@ new ResizeObserver(resize).observe(host);resize();
 function hit(a,b,r){return a.position.distanceTo(b.position)<r}
 function deploy(enemy,wave){
   const d=enemy.userData;if(d.phase!=='combined')return;d.phase='turn';d.phaseTime=0;
-  const car=sideViewRig(carrierTemplate,.24);car.position.copy(enemy.position);car.position.y-=.7;car.userData={v:4.3,health:1};scene.add(car);droppedCars.push(car);
+  const car=fallingCarrier.clone(true);car.scale.setScalar(.82);car.position.copy(enemy.position);car.position.y-=.7;car.userData={v:4.3,health:1};scene.add(car);droppedCars.push(car);
   const chassis=enemy.getObjectByName('Four-wheel carrier');if(chassis)chassis.visible=false;say('战车已投放！翼龙正在掉头。',2);
 }
 function update(dt){
@@ -116,7 +125,7 @@ function update(dt){
     else{e.position.x=THREE.MathUtils.clamp(THREE.MathUtils.lerp(e.position.x,d.target,enemyDt*1.35),-lane,lane);e.position.y-=wave.diveSpeed*enemyDt;e.rotation.z=-Math.PI/2+Math.sin(time*8+i)*.08;if(e.position.y<player.position.y+.55){const connects=Math.abs(e.position.x-playerX)<1.15;e.removeFromParent();if(connects){damage('翼龙俯冲命中坦克！');burst(e.position,'#d66f5d',20)}else burst(e.position,'#a9bbaa',8);}}
     const wings=e.getObjectByName('Left small triangular wing');if(wings)wings.rotation.x=Math.sin(time*11+i)*.35;
   });
-  droppedCars.forEach((car,i)=>{car.position.y-=car.userData.v*enemyDt;if(car.position.y<player.position.y-.25){const connects=Math.abs(car.position.x-playerX)<1.1;car.removeFromParent();droppedCars.splice(i,1);if(connects)damage('投放战车撞击坦克！');else burst(car.position,'#a9bbaa',8);}});
+  for(let i=droppedCars.length-1;i>=0;i--){const car=droppedCars[i];car.position.y-=car.userData.v*enemyDt;if(car.position.y<player.position.y-.25){const connects=Math.abs(car.position.x-playerX)<1.1;car.removeFromParent();droppedCars.splice(i,1);if(connects)damage('投放战车撞击坦克！');else burst(car.position,'#a9bbaa',8);}}
   powerups.forEach((orb,i)=>{orb.position.y-=orb.userData.v*dt;orb.position.y+=Math.sin(time*3+orb.userData.phase)*.035;if(hit(orb,player,.98)){activatePower(orb.userData.type);burst(orb.position,'#fff8d8',10);orb.removeFromParent();powerups.splice(i,1)}else if(orb.position.y<-6){orb.removeFromParent();powerups.splice(i,1)}});
   shots.forEach((b,i)=>{
     b.position.x+=b.userData.vx*dt;b.position.y+=b.userData.vy*dt;b.rotation.y+=dt*9;
