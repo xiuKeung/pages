@@ -65,11 +65,11 @@ function spawnPowerup(pos){
 function activatePower(type){powerTimers[type]=POWERUPS[type].duration;score+=40;burst(player.position,POWERUPS[type].material.color,16);sync()}
 function damage(text='坦克受击！'){
   if(powerTimers.shield>0){burst(player.position,'#78b49a',12);return}
-  lives--;burst(player.position,'#d66f5d',18);say(lives?text:'试玩结束',2);
+  lives--;burst(player.position,'#d66f5d',18);say(lives?text:'战斗结束',2);
   if(lives<=0)end('坦克已损坏','再试一次：利用强化挡住压力，并通过横移躲开投放战车和俯冲翼龙。','重新开始');sync();
 }
-function end(title,copy,label){state=title==='试玩完成'?'won':'lost';$('overlay').hidden=false;$('overlay').querySelector('.eyebrow').textContent=state==='won'?'首批关卡包 · 完成':'首批关卡包 · 失败';$('overlay').querySelector('h2').textContent=title;$('overlay').querySelector('p:not(.eyebrow)').textContent=copy;$('start').textContent=label}
-function advance(){if(waveIndex<level.waves.length-1)spawnWave(waveIndex+1);else{const hasNext=levelIndex<LEVELS.length-1;end('试玩完成',hasNext?`关卡 ${String(levelIndex+1).padStart(2,'0')} 完成，下一关会增加一项新的压力。`:'你已完成首批六个关卡。可重新挑战终端突袭。',hasNext?'下一关':'再玩一次')}}
+function end(title,copy,label){state=title==='关卡完成'?'won':'lost';$('overlay').hidden=false;$('overlay').querySelector('.eyebrow').textContent=state==='won'?'首批关卡包 · 完成':'首批关卡包 · 失败';$('overlay').querySelector('h2').textContent=title;$('overlay').querySelector('p:not(.eyebrow)').textContent=copy;$('start').textContent=label}
+function advance(){if(waveIndex<level.waves.length-1)spawnWave(waveIndex+1);else{const hasNext=levelIndex<LEVELS.length-1;end('关卡完成',hasNext?`关卡 ${String(levelIndex+1).padStart(2,'0')} 完成，下一关会增加一项新的压力。`:'你已完成首批六个关卡。可重新挑战终端突袭。',hasNext?'下一关':'再玩一次')}}
 function loadLevel(index){levelIndex=THREE.MathUtils.clamp(index,0,LEVELS.length-1);level=LEVELS[levelIndex];scene.background.set(level.palette.sky);scene.fog.color.set(level.palette.fog);$('stage').textContent=`关卡 ${String(levelIndex+1).padStart(2,'0')} · ${level.name}`;$('overlay').querySelector('.eyebrow').textContent=`首批关卡包 · ${String(levelIndex+1).padStart(2,'0')} / ${String(LEVELS.length).padStart(2,'0')}`}
 function clearPowerups(){powerups.splice(0).forEach(o=>o.removeFromParent());Object.keys(powerTimers).forEach(key=>powerTimers[key]=0)}
 function reset(){
