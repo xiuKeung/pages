@@ -100,7 +100,7 @@ function reset(){
 }
 function sync(){
   $('score').textContent=String(score).padStart(6,'0');$('lives').innerHTML=Array.from({length:level.player.lives},(_,i)=>`<span class="life${i<lives?' is-active':i===lives&&lifeFlashTimer>0?' is-damaged':''}"></span>`).join('');$('lives').setAttribute('aria-label',`${lives} / ${level.player.lives} 格装甲`);
-  $('wave-label').textContent='波次 '+String(waveIndex+1).padStart(2,'0');$('objective').textContent=`残余合体 ${enemies.filter(e=>e.parent).length}`;
+  $('wave-label').textContent=`波次 ${waveIndex+1} / ${level.waves.length}`;$('objective').textContent=`残余合体 ${enemies.filter(e=>e.parent).length}`;
   const active=Object.entries(powerTimers).filter(([,remaining])=>remaining>0).map(([key,remaining])=>key==='slow'?`减速 x0.55 ${Math.ceil(remaining)}s`:`${POWERUPS[key].name} ${Math.ceil(remaining)}s`);$('power-state').textContent=active.length?active.join(' · '):'强化待机';
 }
 function resize(){const w=host.clientWidth,h=host.clientHeight,aspect=w/h,viewH=18;renderer.setSize(w,h,false);camera.left=-viewH*aspect/2;camera.right=viewH*aspect/2;camera.top=viewH/2;camera.bottom=-viewH/2;camera.updateProjectionMatrix()}
