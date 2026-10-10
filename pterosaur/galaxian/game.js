@@ -32,7 +32,7 @@ const combinedTemplate=enemyRig.model,carrierTemplate=enemyRig.chassis.clone(tru
 const enemies=[],droppedCars=[],shots=[],enemyShots=[],sparks=[],powerups=[];
 const enemyLayer=new THREE.Group();scene.add(enemyLayer);
 const bulletGeo=new THREE.SphereGeometry(.14,10,8),enemyBulletGeo=new THREE.SphereGeometry(.18,10,8);
-const POWERUPS={double:{name:'双炮',duration:9,material:mats.gold},spread:{name:'散射',duration:8,material:mats.blue},rapid:{name:'快射',duration:8,material:mats.orange},shield:{name:'护盾',duration:7,material:mats.mint},slow:{name:'减速时间',duration:7,material:mats.violet}};
+const POWERUPS={double:{name:'双炮',duration:9,material:mats.gold},spread:{name:'散射',duration:8,material:mats.blue},rapid:{name:'速射',duration:8,material:mats.orange},shield:{name:'护盾',duration:7,material:mats.mint},slow:{name:'减速时间',duration:7,material:mats.violet}};
 const powerTimers=Object.fromEntries(Object.keys(POWERUPS).map(key=>[key,0]));
 let state='ready',time=0,last=performance.now(),playerX=0,move=0,fireClock=0,waveIndex=0,score=0,lives=level.player.lives,deployClock=0,enemyFireClock=0,defeatCount=0,invulnerable=0,playerHitTimer=0,shieldImpactTimer=0,shakeTimer=0,lifeFlashTimer=0;
 function say(){}
@@ -91,7 +91,7 @@ function updateFeedback(dt){
 }
 function end(title,copy,label){state=title==='关卡完成'?'won':'lost';$('overlay').hidden=false;$('overlay').querySelector('.eyebrow').textContent=state==='won'?'首批关卡包 · 完成':'首批关卡包 · 失败';$('overlay').querySelector('h2').textContent=title;$('overlay').querySelector('p:not(.eyebrow)').textContent=copy;$('start').textContent=label}
 function advance(){if(waveIndex<level.waves.length-1)spawnWave(waveIndex+1);else{const hasNext=levelIndex<LEVELS.length-1;end('关卡完成',hasNext?`关卡 ${String(levelIndex+1).padStart(2,'0')} 完成，下一关会增加一项新的压力。`:'你已完成首批六个关卡。可重新挑战终端突袭。',hasNext?'下一关':'再玩一次')}}
-function showLevelIntro(){const overlay=$('overlay');overlay.hidden=false;overlay.querySelector('.eyebrow').textContent=`首批关卡包 · ${String(levelIndex+1).padStart(2,'0')} / ${String(LEVELS.length).padStart(2,'0')}`;overlay.querySelector('h2').textContent=`${level.name} · 编队接近`;overlay.querySelector('p:not(.eyebrow)').textContent='击败敌人会掉落强化模块。接住后可短时获得双炮、散射、快射、护盾或减速时间。';$('start').textContent='开始'}
+function showLevelIntro(){const overlay=$('overlay');overlay.hidden=false;overlay.querySelector('.eyebrow').textContent=`首批关卡包 · ${String(levelIndex+1).padStart(2,'0')} / ${String(LEVELS.length).padStart(2,'0')}`;overlay.querySelector('h2').textContent=`${level.name} · 编队接近`;overlay.querySelector('p:not(.eyebrow)').textContent='击败敌人会掉落强化模块。接住后可短时获得双炮、散射、速射、护盾或减速时间。';$('start').textContent='开始'}
 function loadLevel(index){levelIndex=THREE.MathUtils.clamp(index,0,LEVELS.length-1);level=LEVELS[levelIndex];levelSelect.value=String(levelIndex);scene.background.set(level.palette.sky);scene.fog.color.set(level.palette.fog)}
 function clearPowerups(){powerups.splice(0).forEach(o=>o.removeFromParent());Object.keys(powerTimers).forEach(key=>powerTimers[key]=0)}
 function reset(){
@@ -116,7 +116,7 @@ function update(dt){
   if(state!=='playing')return;time+=dt;
   Object.keys(powerTimers).forEach(key=>powerTimers[key]=Math.max(0,powerTimers[key]-dt));const slowActive=powerTimers.slow>0;updateFeedback(dt);slowMarkerMaterial.opacity=slowActive?.52+Math.sin(time*5)*.16:.72;
   const enemyDt=dt*(powerTimers.slow>0?.55:1),lane=laneLimit();playerX=THREE.MathUtils.clamp(playerX+move*level.player.speed*dt,-lane,lane);player.position.x=playerX;
-  fireClock-=dt;if(fireClock<=0){shoot();fireClock=level.player.fireRate*(powerTimers.rapid>0?.58:1)}
+  fireClock-=dt;if(fireClock<=0){shoot();fireClock=level.player.fireRate*(powerTimers.rapid>0?.5:1)}
   const wave=level.waves[waveIndex],formationShift=Math.sin(time*1.15)*wave.drift;deployClock-=enemyDt;enemyFireClock-=enemyDt;
   if(deployClock<=0){const target=enemies.filter(e=>e.parent&&e.userData.phase==='combined').sort((a,b)=>b.userData.row-a.userData.row)[0];if(target)deploy(target,wave);deployClock=wave.deployEvery;}
   if(enemyFireClock<=0){const source=enemies.filter(e=>e.parent&&e.userData.phase==='combined').sort((a,b)=>b.userData.row-a.userData.row)[0];if(source)enemyShoot(source.position.x,source.position.y);enemyFireClock=Math.max(1.05,wave.deployEvery*.52);}
