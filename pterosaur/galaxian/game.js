@@ -24,8 +24,8 @@ function sideViewRig(template,scale){const rig=new THREE.Group(),visual=template
 
 const tankRig=buildTank(),player=new THREE.Group();
 tankRig.tank.rotation.x=Math.PI/2;player.rotation.z=Math.PI/2;player.add(tankRig.tank);tankRig.tank.scale.setScalar(.32);player.position.set(0,-3,0);scene.add(player);
-const shieldVisual=new THREE.Group(),shieldCore=new THREE.Mesh(new THREE.CircleGeometry(1.02,28),new THREE.MeshBasicMaterial({color:'#84c8a8',transparent:true,opacity:.16,depthWrite:false})),shieldRing=new THREE.Mesh(new THREE.TorusGeometry(1.04,.09,8,28),new THREE.MeshBasicMaterial({color:'#c9f5d8',transparent:true,opacity:.95,depthWrite:false}));shieldCore.position.z=-.08;shieldVisual.add(shieldCore,shieldRing);shieldVisual.visible=false;player.add(shieldVisual);
-const slowWash=new THREE.Mesh(new THREE.PlaneGeometry(30,22),new THREE.MeshBasicMaterial({color:'#8271bd',transparent:true,opacity:.12,depthWrite:false}));slowWash.position.set(0,1,2);slowWash.visible=false;scene.add(slowWash);
+const shieldVisual=new THREE.Group(),shieldCore=new THREE.Mesh(new THREE.CircleGeometry(1.14,32),new THREE.MeshBasicMaterial({color:'#0c7961',transparent:true,opacity:.38,depthWrite:false})),shieldRing=new THREE.Mesh(new THREE.TorusGeometry(1.06,.14,8,32),new THREE.MeshBasicMaterial({color:'#064d40',transparent:true,opacity:.98,depthWrite:false})),shieldOuterRing=new THREE.Mesh(new THREE.TorusGeometry(1.23,.055,8,32),new THREE.MeshBasicMaterial({color:'#70f4c4',transparent:true,opacity:.96,depthWrite:false}));shieldCore.position.z=-.08;shieldRing.position.z=.02;shieldOuterRing.position.z=.03;shieldVisual.add(shieldCore,shieldRing,shieldOuterRing);shieldVisual.visible=false;player.add(shieldVisual);
+const slowWash=new THREE.Mesh(new THREE.PlaneGeometry(30,22),new THREE.MeshBasicMaterial({color:'#536cb5',transparent:true,opacity:.25,depthWrite:false}));slowWash.position.set(0,1,2);slowWash.visible=false;scene.add(slowWash);
 const enemyRig=buildModel();enemyRig.poseCreature({stand:0,wing:.42});
 const combinedTemplate=enemyRig.model,carrierTemplate=enemyRig.chassis.clone(true);
 const enemies=[],droppedCars=[],shots=[],enemyShots=[],sparks=[],powerups=[];
@@ -92,11 +92,12 @@ function reset(){
 function sync(){
   $('score').textContent=String(score).padStart(6,'0');$('lives').innerHTML=Array.from({length:level.player.lives},(_,i)=>`<span class="life${i<lives?' is-active':''}"></span>`).join('');$('lives').setAttribute('aria-label',`${lives} / ${level.player.lives} 格装甲`);
   $('wave-label').textContent='波次 '+String(waveIndex+1).padStart(2,'0');$('objective').textContent=`残余合体 ${enemies.filter(e=>e.parent).length}`;
-  const active=Object.entries(powerTimers).filter(([,remaining])=>remaining>0).map(([key,remaining])=>`${POWERUPS[key].name} ${Math.ceil(remaining)}s`);$('power-state').textContent=active.length?active.join(' · '):'强化待机';
+  const active=Object.entries(powerTimers).filter(([,remaining])=>remaining>0).map(([key,remaining])=>key==='slow'?`减速 x0.55 ${Math.ceil(remaining)}s`:`${POWERUPS[key].name} ${Math.ceil(remaining)}s`);$('power-state').textContent=active.length?active.join(' · '):'强化待机';
 }
 function resize(){const w=host.clientWidth,h=host.clientHeight,aspect=w/h,viewH=18;renderer.setSize(w,h,false);camera.left=-viewH*aspect/2;camera.right=viewH*aspect/2;camera.top=viewH/2;camera.bottom=-viewH/2;camera.updateProjectionMatrix()}
 new ResizeObserver(resize).observe(host);resize();
 function hit(a,b,r){return a.position.distanceTo(b.position)<r}
+function hitPowerup(orb){return Math.abs(orb.position.x-playerX)<1.08&&Math.abs(orb.position.y-player.position.y)<1.08}
 function deploy(enemy,wave){
   const d=enemy.userData;if(d.phase!=='combined')return;d.phase='turn';d.phaseTime=0;
   const car=sideViewRig(carrierTemplate,.24);car.position.copy(enemy.position);car.position.y-=.7;car.userData={v:4.3,health:1};scene.add(car);droppedCars.push(car);
@@ -104,7 +105,7 @@ function deploy(enemy,wave){
 }
 function update(dt){
   if(state!=='playing')return;time+=dt;
-  Object.keys(powerTimers).forEach(key=>powerTimers[key]=Math.max(0,powerTimers[key]-dt));const shieldActive=powerTimers.shield>0,slowActive=powerTimers.slow>0;shieldVisual.visible=shieldActive;shieldVisual.rotation.z+=dt*1.3;shieldVisual.scale.setScalar(1+Math.sin(time*8)*.045);slowWash.visible=slowActive;slowWash.material.opacity=slowActive?.12+Math.sin(time*5)*.025:0;scene.background.set(slowActive?'#d8d4e5':level.palette.sky);scene.fog.color.set(slowActive?'#d8d4e5':level.palette.fog);
+  Object.keys(powerTimers).forEach(key=>powerTimers[key]=Math.max(0,powerTimers[key]-dt));const shieldActive=powerTimers.shield>0,slowActive=powerTimers.slow>0;shieldVisual.visible=shieldActive;shieldVisual.rotation.z+=dt*1.3;shieldVisual.scale.setScalar(1+Math.sin(time*8)*.06);slowWash.visible=slowActive;slowWash.material.opacity=slowActive?.25+Math.sin(time*5)*.045:0;scene.background.set(slowActive?'#9aa8d5':level.palette.sky);scene.fog.color.set(slowActive?'#9aa8d5':level.palette.fog);
   const enemyDt=dt*(powerTimers.slow>0?.55:1),lane=laneLimit();playerX=THREE.MathUtils.clamp(playerX+move*level.player.speed*dt,-lane,lane);player.position.x=playerX;
   fireClock-=dt;if(fireClock<=0){shoot();fireClock=level.player.fireRate}
   const wave=level.waves[waveIndex],formationShift=Math.sin(time*1.15)*wave.drift;deployClock-=enemyDt;enemyFireClock-=enemyDt;
@@ -118,7 +119,7 @@ function update(dt){
     const wings=e.getObjectByName('Left small triangular wing');if(wings)wings.rotation.x=Math.sin(time*11+i)*.35;
   });
   for(let i=droppedCars.length-1;i>=0;i--){const car=droppedCars[i];car.position.y-=car.userData.v*enemyDt;if(car.position.y<player.position.y-.25){const connects=Math.abs(car.position.x-playerX)<1.1;car.removeFromParent();droppedCars.splice(i,1);if(connects)damage('投放战车撞击坦克！');else burst(car.position,'#a9bbaa',8);}}
-  powerups.forEach((orb,i)=>{orb.position.y-=orb.userData.v*dt;orb.position.y+=Math.sin(time*3+orb.userData.phase)*.035;if(hit(orb,player,.98)){activatePower(orb.userData.type);burst(orb.position,'#fff8d8',10);orb.removeFromParent();powerups.splice(i,1)}else if(orb.position.y<-6){orb.removeFromParent();powerups.splice(i,1)}});
+  powerups.forEach((orb,i)=>{orb.position.y-=orb.userData.v*dt;orb.position.y+=Math.sin(time*3+orb.userData.phase)*.035;if(hitPowerup(orb)){activatePower(orb.userData.type);burst(orb.position,'#fff8d8',10);orb.removeFromParent();powerups.splice(i,1)}else if(orb.position.y<-6){orb.removeFromParent();powerups.splice(i,1)}});
   shots.forEach((b,i)=>{
     b.position.x+=b.userData.vx*dt;b.position.y+=b.userData.vy*dt;b.rotation.y+=dt*9;
     if(b.position.y>12||Math.abs(b.position.x)>lane+1){b.removeFromParent();shots.splice(i,1);return}
