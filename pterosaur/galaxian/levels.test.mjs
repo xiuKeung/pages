@@ -10,11 +10,17 @@ test('每个投放突袭关卡都有可读的波次与安全的节奏参数',()=
     assert.ok(level.player.lives>=3);
     for(const wave of level.waves){
       assert.ok(wave.count>0);
+      assert.ok(['line','grid','stagger','wedge'].includes(wave.formation),'波次必须指定可读的编队模板');
       assert.ok(wave.deployEvery>=1.8,'投放间隔须保留反应时间');
       assert.ok(wave.diveSpeed>0&&wave.diveSpeed<=8,'俯冲速度须保留移动空间');
       assert.equal(wave.health,2,'合体翼龙战车固定需要两次命中');
     }
   }
+});
+
+test('首批关卡包含小蜜蜂式列阵、矩阵、错位和楔形变化',()=>{
+  const formations=new Set(LEVELS.flatMap(level=>level.waves.map(wave=>wave.formation)));
+  for(const formation of ['line','grid','stagger','wedge'])assert.ok(formations.has(formation));
 });
 
 test('首批关卡逐步提高投放与俯冲压力',()=>{
