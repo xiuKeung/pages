@@ -29,7 +29,7 @@ const enemyRig=buildModel();enemyRig.poseCreature({stand:0,wing:.42});
 const combinedTemplate=enemyRig.model,carrierTemplate=enemyRig.chassis.clone(true);
 const enemies=[],droppedCars=[],shots=[],enemyShots=[],sparks=[],powerups=[];
 const enemyLayer=new THREE.Group();scene.add(enemyLayer);
-const bulletGeo=new THREE.SphereGeometry(.14,10,8),enemyBulletGeo=new THREE.SphereGeometry(.18,10,8),powerGeo=new THREE.OctahedronGeometry(.25,0);
+const bulletGeo=new THREE.SphereGeometry(.14,10,8),enemyBulletGeo=new THREE.SphereGeometry(.18,10,8);
 const POWERUPS={double:{name:'双炮',duration:9,material:mats.gold},spread:{name:'散射',duration:8,material:mats.blue},shield:{name:'护盾',duration:7,material:mats.mint},slow:{name:'减速时间',duration:7,material:mats.violet}};
 const powerTimers=Object.fromEntries(Object.keys(POWERUPS).map(key=>[key,0]));
 let state='ready',time=0,last=performance.now(),playerX=0,move=0,fireHeld=false,fireClock=0,waveIndex=0,score=0,lives=level.player.lives,deployClock=0,defeatCount=0;
@@ -59,9 +59,21 @@ function shoot(){
   const barrels=powerTimers.double>0?[-.28,.28]:[0];const spread=powerTimers.spread>0?[-2,0,2]:[0];
   barrels.forEach(barrel=>spread.forEach(vx=>makeShot(barrel,vx)));
 }
+function powerPart(geometry,material){const part=new THREE.Mesh(geometry,material);part.castShadow=part.receiveShadow=true;return part}
+function powerModule(type){
+  const module=new THREE.Group(),material=POWERUPS[type].material,glow=new THREE.MeshBasicMaterial({color:material.color,transparent:true,opacity:.82});
+  const halo=powerPart(new THREE.TorusGeometry(.36,.045,8,20),glow);halo.rotation.x=Math.PI/2;module.add(halo);
+  const core=powerPart(new THREE.SphereGeometry(.19,12,8),material);core.scale.set(1,1,.55);module.add(core);
+  const ink=new THREE.MeshBasicMaterial({color:'#fff8d8'});
+  if(type==='double')[-.085,.085].forEach(x=>{const bar=powerPart(new THREE.BoxGeometry(.055,.24,.035),ink);bar.position.set(x,0,.12);module.add(bar)});
+  if(type==='spread')[-.17,0,.17].forEach((x,index)=>{const ray=powerPart(new THREE.BoxGeometry(.04,.22,.035),ink);ray.position.set(0,.01,.12);ray.rotation.z=(index-1)*.45;module.add(ray)});
+  if(type==='shield'){const shield=powerPart(new THREE.TorusGeometry(.12,.035,6,12),ink);shield.rotation.x=Math.PI/2;shield.position.z=.12;module.add(shield)}
+  if(type==='slow'){const top=powerPart(new THREE.BoxGeometry(.18,.045,.035),ink),bottom=top.clone(),neck=powerPart(new THREE.BoxGeometry(.045,.16,.035),ink);top.position.set(0,.1,.12);bottom.position.set(0,-.1,.12);neck.position.z=.12;module.add(top,bottom,neck)}
+  return module;
+}
 function spawnPowerup(pos){
-  const type=Object.keys(POWERUPS)[Math.floor(defeatCount/3)%4],orb=mesh(powerGeo,POWERUPS[type].material);
-  orb.position.copy(pos);orb.userData={type,v:2.35,spin:Math.random()*6.28};powerups.push(orb);
+  const type=Object.keys(POWERUPS)[Math.floor(defeatCount/3)%4],orb=powerModule(type);
+  orb.position.copy(pos);orb.userData={type,v:2.0,phase:Math.random()*Math.PI*2};scene.add(orb);powerups.push(orb);
 }
 function activatePower(type){powerTimers[type]=POWERUPS[type].duration;score+=40;burst(player.position,POWERUPS[type].material.color,16);sync()}
 function damage(text='坦克受击！'){
@@ -71,7 +83,7 @@ function damage(text='坦克受击！'){
 }
 function end(title,copy,label){state=title==='关卡完成'?'won':'lost';$('overlay').hidden=false;$('overlay').querySelector('.eyebrow').textContent=state==='won'?'首批关卡包 · 完成':'首批关卡包 · 失败';$('overlay').querySelector('h2').textContent=title;$('overlay').querySelector('p:not(.eyebrow)').textContent=copy;$('start').textContent=label}
 function advance(){if(waveIndex<level.waves.length-1)spawnWave(waveIndex+1);else{const hasNext=levelIndex<LEVELS.length-1;end('关卡完成',hasNext?`关卡 ${String(levelIndex+1).padStart(2,'0')} 完成，下一关会增加一项新的压力。`:'你已完成首批六个关卡。可重新挑战终端突袭。',hasNext?'下一关':'再玩一次')}}
-function showLevelIntro(){const overlay=$('overlay');overlay.hidden=false;overlay.querySelector('.eyebrow').textContent=`首批关卡包 · ${String(levelIndex+1).padStart(2,'0')} / ${String(LEVELS.length).padStart(2,'0')}`;overlay.querySelector('h2').textContent=`${level.name} · 编队接近`;overlay.querySelector('p:not(.eyebrow)').textContent='击败敌人会掉落强化晶体。接住后可短时获得双炮、散射、护盾或减速时间。';$('start').textContent='开始'}
+function showLevelIntro(){const overlay=$('overlay');overlay.hidden=false;overlay.querySelector('.eyebrow').textContent=`首批关卡包 · ${String(levelIndex+1).padStart(2,'0')} / ${String(LEVELS.length).padStart(2,'0')}`;overlay.querySelector('h2').textContent=`${level.name} · 编队接近`;overlay.querySelector('p:not(.eyebrow)').textContent='击败敌人会掉落强化模块。接住后可短时获得双炮、散射、护盾或减速时间。';$('start').textContent='开始'}
 function loadLevel(index){levelIndex=THREE.MathUtils.clamp(index,0,LEVELS.length-1);level=LEVELS[levelIndex];levelSelect.value=String(levelIndex);scene.background.set(level.palette.sky);scene.fog.color.set(level.palette.fog)}
 function clearPowerups(){powerups.splice(0).forEach(o=>o.removeFromParent());Object.keys(powerTimers).forEach(key=>powerTimers[key]=0)}
 function reset(){
@@ -106,7 +118,7 @@ function update(dt){
     const wings=e.getObjectByName('Left small triangular wing');if(wings)wings.rotation.x=Math.sin(time*11+i)*.35;
   });
   droppedCars.forEach((car,i)=>{car.position.y-=car.userData.v*enemyDt;if(car.position.y<player.position.y-.25){const connects=Math.abs(car.position.x-playerX)<1.1;car.removeFromParent();droppedCars.splice(i,1);if(connects)damage('投放战车撞击坦克！');else burst(car.position,'#a9bbaa',8);}});
-  powerups.forEach((orb,i)=>{orb.position.y-=orb.userData.v*dt;orb.rotation.y+=dt*4;orb.rotation.x+=dt*2;if(hit(orb,player,.9)){activatePower(orb.userData.type);orb.removeFromParent();powerups.splice(i,1)}else if(orb.position.y<-6){orb.removeFromParent();powerups.splice(i,1)}});
+  powerups.forEach((orb,i)=>{orb.position.y-=orb.userData.v*dt;orb.position.y+=Math.sin(time*3+orb.userData.phase)*.035;orb.rotation.z+=dt*.9;if(hit(orb,player,.98)){activatePower(orb.userData.type);burst(orb.position,'#fff8d8',10);orb.removeFromParent();powerups.splice(i,1)}else if(orb.position.y<-6){orb.removeFromParent();powerups.splice(i,1)}});
   shots.forEach((b,i)=>{
     b.position.x+=b.userData.vx*dt;b.position.y+=b.userData.vy*dt;b.rotation.y+=dt*9;
     if(b.position.y>12||Math.abs(b.position.x)>lane+1){b.removeFromParent();shots.splice(i,1);return}
