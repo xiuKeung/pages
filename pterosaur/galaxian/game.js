@@ -74,7 +74,7 @@ function spawnPowerup(pos){
   const type=Object.keys(POWERUPS)[Math.floor(defeatCount/3)%4],orb=powerModule(type);
   orb.scale.setScalar(1.2);orb.position.copy(pos);orb.userData={type,v:2.0,phase:Math.random()*Math.PI*2};scene.add(orb);powerups.push(orb);
 }
-function activatePower(type){powerTimers[type]=POWERUPS[type].duration;score+=40;burst(player.position,POWERUPS[type].material.color,16);sync()}
+function activatePower(type){if(type==='double')powerTimers.spread=0;if(type==='spread')powerTimers.double=0;powerTimers[type]=POWERUPS[type].duration;score+=40;burst(player.position,POWERUPS[type].material.color,16);sync()}
 function damage(text='坦克受击！'){
   if(powerTimers.shield>0){burst(player.position,'#78b49a',12);return}
   lives--;burst(player.position,'#d66f5d',18);say(lives?text:'战斗结束',2);
