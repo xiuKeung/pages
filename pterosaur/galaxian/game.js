@@ -27,16 +27,7 @@ tankRig.tank.rotation.x=Math.PI/2;player.rotation.z=Math.PI/2;player.add(tankRig
 const shieldVisual=new THREE.Group(),shieldCore=new THREE.Mesh(new THREE.CircleGeometry(1.02,28),new THREE.MeshBasicMaterial({color:'#84c8a8',transparent:true,opacity:.16,depthWrite:false})),shieldRing=new THREE.Mesh(new THREE.TorusGeometry(1.04,.09,8,28),new THREE.MeshBasicMaterial({color:'#c9f5d8',transparent:true,opacity:.95,depthWrite:false}));shieldCore.position.z=-.08;shieldVisual.add(shieldCore,shieldRing);shieldVisual.visible=false;player.add(shieldVisual);
 const slowWash=new THREE.Mesh(new THREE.PlaneGeometry(30,22),new THREE.MeshBasicMaterial({color:'#8271bd',transparent:true,opacity:.12,depthWrite:false}));slowWash.position.set(0,1,2);slowWash.visible=false;scene.add(slowWash);
 const enemyRig=buildModel();enemyRig.poseCreature({stand:0,wing:.42});
-const combinedTemplate=enemyRig.model;
-function fallingCarrierTemplate(){
-  const carrier=new THREE.Group(),part=(geometry,material,x=0,y=0,z=0)=>{const piece=new THREE.Mesh(geometry,material);piece.position.set(x,y,z);piece.castShadow=piece.receiveShadow=true;carrier.add(piece);return piece};
-  part(new THREE.BoxGeometry(.92,.25,.28),mats.dark,0,0,0);
-  part(new THREE.BoxGeometry(.64,.22,.3),mats.gold,.04,.18,0);
-  part(new THREE.BoxGeometry(.24,.16,.32),mats.gold,.35,.32,0);
-  [-.3,.3].forEach(x=>{part(new THREE.CircleGeometry(.16,12),new THREE.MeshBasicMaterial({color:'#1e2822'}),x,-.17,.17);part(new THREE.CircleGeometry(.075,10),new THREE.MeshBasicMaterial({color:'#a8ada7'}),x,-.17,.18)});
-  return carrier;
-}
-const fallingCarrier=fallingCarrierTemplate();
+const combinedTemplate=enemyRig.model,carrierTemplate=enemyRig.chassis.clone(true);
 const enemies=[],droppedCars=[],shots=[],enemyShots=[],sparks=[],powerups=[];
 const enemyLayer=new THREE.Group();scene.add(enemyLayer);
 const bulletGeo=new THREE.SphereGeometry(.14,10,8),enemyBulletGeo=new THREE.SphereGeometry(.18,10,8);
@@ -69,6 +60,7 @@ function shoot(){
   const barrels=powerTimers.double>0?[-.28,.28]:[0];const spread=powerTimers.spread>0?[-2,0,2]:[0];
   barrels.forEach(barrel=>spread.forEach(vx=>makeShot(barrel,vx)));
 }
+function enemyShoot(x,y){const b=mesh(enemyBulletGeo,mats.red);b.position.set(x,y,.1);b.userData={v:-8};enemyShots.push(b)}
 function powerPart(geometry,material){const part=new THREE.Mesh(geometry,material);part.castShadow=part.receiveShadow=true;return part}
 function powerLabel(text,color){const canvas=document.createElement('canvas'),context=canvas.getContext('2d');canvas.width=320;canvas.height=132;context.fillStyle=color;context.fillRect(0,0,canvas.width,canvas.height);context.strokeStyle='#fff8d8';context.lineWidth=8;context.strokeRect(5,5,310,122);context.fillStyle='#17231d';context.font='800 74px sans-serif';context.textAlign='center';context.textBaseline='middle';context.fillText(text,160,69);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(canvas),transparent:true,depthWrite:false}));sprite.scale.set(1.16,.48,1);return sprite}
 function powerModule(type){
@@ -107,7 +99,7 @@ new ResizeObserver(resize).observe(host);resize();
 function hit(a,b,r){return a.position.distanceTo(b.position)<r}
 function deploy(enemy,wave){
   const d=enemy.userData;if(d.phase!=='combined')return;d.phase='turn';d.phaseTime=0;
-  const car=fallingCarrier.clone(true);car.scale.setScalar(.82);car.position.copy(enemy.position);car.position.y-=.7;car.userData={v:4.3,health:1};scene.add(car);droppedCars.push(car);
+  const car=sideViewRig(carrierTemplate,.24);car.position.copy(enemy.position);car.position.y-=.7;car.userData={v:4.3,health:1};scene.add(car);droppedCars.push(car);
   const chassis=enemy.getObjectByName('Four-wheel carrier');if(chassis)chassis.visible=false;say('战车已投放！翼龙正在掉头。',2);
 }
 function update(dt){
