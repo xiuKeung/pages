@@ -1,6 +1,6 @@
 // 关卡只在这里配：合体巡航、投放与俯冲都不写入渲染代码。
 // 每关只提升一个主要压力变量，保持手机竖屏下的可读性与闪避空间。
-const basePlayer={lives:4,fireRate:.34,speed:12};
+const basePlayer={lives:4,fireRate:.43,speed:12};
 const palette={sky:'#dfe9e4',fog:'#dfe9e4',accent:'#efb63b'};
 export const LEVELS=[
  {id:'level-01',name:'首次拦截',palette,player:basePlayer,waves:[

@@ -24,7 +24,8 @@ function sideViewRig(template,scale){const rig=new THREE.Group(),visual=template
 
 const tankRig=buildTank(),player=new THREE.Group();
 tankRig.tank.rotation.x=Math.PI/2;player.rotation.z=Math.PI/2;player.add(tankRig.tank);tankRig.tank.scale.setScalar(.32);player.position.set(0,-3,0);scene.add(player);
-const shieldVisual=new THREE.Mesh(new THREE.TorusGeometry(1.02,.045,8,24),new THREE.MeshBasicMaterial({color:'#79bda2',transparent:true,opacity:.78}));shieldVisual.rotation.x=Math.PI/2;shieldVisual.visible=false;player.add(shieldVisual);
+const shieldVisual=new THREE.Group(),shieldCore=new THREE.Mesh(new THREE.CircleGeometry(1.02,28),new THREE.MeshBasicMaterial({color:'#84c8a8',transparent:true,opacity:.16,depthWrite:false})),shieldRing=new THREE.Mesh(new THREE.TorusGeometry(1.04,.09,8,28),new THREE.MeshBasicMaterial({color:'#c9f5d8',transparent:true,opacity:.95,depthWrite:false}));shieldCore.position.z=-.08;shieldVisual.add(shieldCore,shieldRing);shieldVisual.visible=false;player.add(shieldVisual);
+const slowWash=new THREE.Mesh(new THREE.PlaneGeometry(30,22),new THREE.MeshBasicMaterial({color:'#8271bd',transparent:true,opacity:.12,depthWrite:false}));slowWash.position.set(0,1,2);slowWash.visible=false;scene.add(slowWash);
 const enemyRig=buildModel();enemyRig.poseCreature({stand:0,wing:.42});
 const combinedTemplate=enemyRig.model,carrierTemplate=enemyRig.chassis.clone(true);
 const enemies=[],droppedCars=[],shots=[],enemyShots=[],sparks=[],powerups=[];
@@ -32,7 +33,7 @@ const enemyLayer=new THREE.Group();scene.add(enemyLayer);
 const bulletGeo=new THREE.SphereGeometry(.14,10,8),enemyBulletGeo=new THREE.SphereGeometry(.18,10,8);
 const POWERUPS={double:{name:'双炮',duration:9,material:mats.gold},spread:{name:'散射',duration:8,material:mats.blue},shield:{name:'护盾',duration:7,material:mats.mint},slow:{name:'减速时间',duration:7,material:mats.violet}};
 const powerTimers=Object.fromEntries(Object.keys(POWERUPS).map(key=>[key,0]));
-let state='ready',time=0,last=performance.now(),playerX=0,move=0,fireHeld=false,fireClock=0,waveIndex=0,score=0,lives=level.player.lives,deployClock=0,enemyFireClock=0,defeatCount=0;
+let state='ready',time=0,last=performance.now(),playerX=0,move=0,fireClock=0,waveIndex=0,score=0,lives=level.player.lives,deployClock=0,enemyFireClock=0,defeatCount=0;
 function say(){}
 function burst(pos,color='#efb63b',count=12){for(let i=0;i<count;i++){const s=mesh(new THREE.SphereGeometry(.055,6,5),new THREE.MeshBasicMaterial({color,transparent:true}));s.position.copy(pos);s.userData={v:new THREE.Vector3((Math.random()-.5)*7,(Math.random()-.5)*7,Math.random()-.5),life:.45};sparks.push(s)}}
 function laneLimit(padding=.75){return Math.max(2,camera.right-padding)}
@@ -63,7 +64,7 @@ function powerPart(geometry,material){const part=new THREE.Mesh(geometry,materia
 function powerLabel(text,color){const canvas=document.createElement('canvas'),context=canvas.getContext('2d');canvas.width=320;canvas.height=132;context.fillStyle=color;context.fillRect(0,0,canvas.width,canvas.height);context.strokeStyle='#fff8d8';context.lineWidth=8;context.strokeRect(5,5,310,122);context.fillStyle='#17231d';context.font='800 74px sans-serif';context.textAlign='center';context.textBaseline='middle';context.fillText(text,160,69);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(canvas),transparent:true,depthWrite:false}));sprite.scale.set(1.16,.48,1);return sprite}
 function powerModule(type){
   const module=new THREE.Group(),material=POWERUPS[type].material,glow=new THREE.MeshBasicMaterial({color:material.color,transparent:true,opacity:.76});
-  const halo=powerPart(new THREE.TorusGeometry(.45,.04,8,20),glow);halo.rotation.x=Math.PI/2;halo.position.z=-.04;module.add(halo);
+  const halo=powerPart(new THREE.TorusGeometry(.45,.04,8,20),glow);halo.position.z=-.04;module.add(halo);
   const tile=powerPart(new THREE.BoxGeometry(.94,.43,.1),material);module.add(tile);
   const label=powerLabel(POWERUPS[type].name,`#${material.color.getHexString()}`);label.position.z=.08;module.add(label);
   return module;
@@ -85,7 +86,7 @@ function loadLevel(index){levelIndex=THREE.MathUtils.clamp(index,0,LEVELS.length
 function clearPowerups(){powerups.splice(0).forEach(o=>o.removeFromParent());Object.keys(powerTimers).forEach(key=>powerTimers[key]=0)}
 function reset(){
   enemyLayer.clear();enemies.length=0;[...shots,...enemyShots,...sparks].forEach(o=>o.removeFromParent());shots.length=enemyShots.length=sparks.length=0;droppedCars.splice(0).forEach(o=>o.removeFromParent());clearPowerups();
-  time=0;playerX=0;move=0;fireHeld=false;fireClock=0;waveIndex=0;score=0;lives=level.player.lives;deployClock=0;enemyFireClock=0;defeatCount=0;state='playing';$('overlay').hidden=true;spawnWave(0);say('坦克自动开火 · 左右躲避投放与炮火',3);
+  time=0;playerX=0;move=0;fireClock=0;waveIndex=0;score=0;lives=level.player.lives;deployClock=0;enemyFireClock=0;defeatCount=0;state='playing';$('overlay').hidden=true;spawnWave(0);say('坦克自动开火 · 左右躲避投放与炮火',3);
 }
 function sync(){
   $('score').textContent=String(score).padStart(6,'0');$('lives').innerHTML=Array.from({length:level.player.lives},(_,i)=>`<span class="life${i<lives?' is-active':''}"></span>`).join('');$('lives').setAttribute('aria-label',`${lives} / ${level.player.lives} 格装甲`);
@@ -102,7 +103,7 @@ function deploy(enemy,wave){
 }
 function update(dt){
   if(state!=='playing')return;time+=dt;
-  Object.keys(powerTimers).forEach(key=>powerTimers[key]=Math.max(0,powerTimers[key]-dt));shieldVisual.visible=powerTimers.shield>0;shieldVisual.rotation.z+=dt*2.6;
+  Object.keys(powerTimers).forEach(key=>powerTimers[key]=Math.max(0,powerTimers[key]-dt));const shieldActive=powerTimers.shield>0,slowActive=powerTimers.slow>0;shieldVisual.visible=shieldActive;shieldVisual.rotation.z+=dt*1.3;shieldVisual.scale.setScalar(1+Math.sin(time*8)*.045);slowWash.visible=slowActive;slowWash.material.opacity=slowActive?.12+Math.sin(time*5)*.025:0;scene.background.set(slowActive?'#d8d4e5':level.palette.sky);scene.fog.color.set(slowActive?'#d8d4e5':level.palette.fog);
   const enemyDt=dt*(powerTimers.slow>0?.55:1),lane=laneLimit();playerX=THREE.MathUtils.clamp(playerX+move*level.player.speed*dt,-lane,lane);player.position.x=playerX;
   fireClock-=dt;if(fireClock<=0){shoot();fireClock=level.player.fireRate}
   const wave=level.waves[waveIndex],formationShift=Math.sin(time*1.15)*wave.drift;deployClock-=enemyDt;enemyFireClock-=enemyDt;
@@ -129,10 +130,10 @@ function update(dt){
 }
 function startGame(){if(state==='won'&&levelIndex<LEVELS.length-1)loadLevel(levelIndex+1);if(state==='ready'||state==='won'||state==='lost')reset()}
 $('start').onclick=startGame;$('start').addEventListener('touchend',e=>{e.preventDefault();startGame()},{passive:false});
-window.addEventListener('keydown',e=>{if(['ArrowLeft','KeyA'].includes(e.code)){move=-1;e.preventDefault()}if(['ArrowRight','KeyD'].includes(e.code)){move=1;e.preventDefault()}if(e.code==='Space'){fireHeld=true;e.preventDefault()}});
-window.addEventListener('keyup',e=>{if(['ArrowLeft','KeyA','ArrowRight','KeyD'].includes(e.code))move=0;if(e.code==='Space')fireHeld=false});
+window.addEventListener('keydown',e=>{if(['ArrowLeft','KeyA'].includes(e.code)){move=-1;e.preventDefault()}if(['ArrowRight','KeyD'].includes(e.code)){move=1;e.preventDefault()}});
+window.addEventListener('keyup',e=>{if(['ArrowLeft','KeyA','ArrowRight','KeyD'].includes(e.code))move=0});
 for(const b of document.querySelectorAll('[data-move]')){const dir=Number(b.dataset.move),startMove=e=>{e.preventDefault();move=dir},stopMove=()=>move=0;b.addEventListener('pointerdown',e=>{startMove(e);try{b.setPointerCapture(e.pointerId)}catch{}});b.addEventListener('touchstart',startMove,{passive:false});for(const ev of ['pointerup','pointercancel','lostpointercapture','touchend','touchcancel'])b.addEventListener(ev,stopMove)}
-const fire=$('fire'),startFire=e=>{e.preventDefault();fireHeld=true},stopFire=()=>fireHeld=false;fire.addEventListener('pointerdown',startFire);fire.addEventListener('touchstart',startFire,{passive:false});for(const ev of ['pointerup','pointercancel','lostpointercapture','touchend','touchcancel'])fire.addEventListener(ev,stopFire);
+host.addEventListener('contextmenu',event=>event.preventDefault());host.addEventListener('selectstart',event=>event.preventDefault());host.addEventListener('touchstart',event=>event.preventDefault(),{passive:false});
 function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);renderer.render(scene,camera);requestAnimationFrame(loop)}
 if(levelSelect.options.length===0)LEVELS.forEach((item,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=`关卡 ${String(index+1).padStart(2,'0')} · ${item.name}`;levelSelect.append(option)});
 levelSelect.addEventListener('change',()=>{loadLevel(Number(levelSelect.value));if(state==='playing')reset();else{state='ready';showLevelIntro();sync()}});
