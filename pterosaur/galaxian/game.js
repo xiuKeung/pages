@@ -32,7 +32,7 @@ const enemyLayer=new THREE.Group();scene.add(enemyLayer);
 const bulletGeo=new THREE.SphereGeometry(.14,10,8),enemyBulletGeo=new THREE.SphereGeometry(.18,10,8);
 const POWERUPS={double:{name:'双炮',duration:9,material:mats.gold},spread:{name:'散射',duration:8,material:mats.blue},shield:{name:'护盾',duration:7,material:mats.mint},slow:{name:'减速时间',duration:7,material:mats.violet}};
 const powerTimers=Object.fromEntries(Object.keys(POWERUPS).map(key=>[key,0]));
-let state='ready',time=0,last=performance.now(),playerX=0,move=0,fireHeld=false,fireClock=0,waveIndex=0,score=0,lives=level.player.lives,deployClock=0,defeatCount=0;
+let state='ready',time=0,last=performance.now(),playerX=0,move=0,fireHeld=false,fireClock=0,waveIndex=0,score=0,lives=level.player.lives,deployClock=0,enemyFireClock=0,defeatCount=0;
 function say(){}
 function burst(pos,color='#efb63b',count=12){for(let i=0;i<count;i++){const s=mesh(new THREE.SphereGeometry(.055,6,5),new THREE.MeshBasicMaterial({color,transparent:true}));s.position.copy(pos);s.userData={v:new THREE.Vector3((Math.random()-.5)*7,(Math.random()-.5)*7,Math.random()-.5),life:.45};sparks.push(s)}}
 function laneLimit(padding=.75){return Math.max(2,camera.right-padding)}
@@ -51,7 +51,7 @@ function spawnWave(index){
   enemyLayer.clear();enemies.length=0;droppedCars.splice(0).forEach(o=>o.removeFromParent());
   const wave=level.waves[index],lane=laneLimit(1),slots=formationSlots(wave.count,lane,wave.formation);
   slots.forEach(slot=>{const combined=topDownRig(combinedTemplate,.24);combined.position.set(slot.x,slot.y,0);combined.userData={homeX:slot.x,homeY:slot.y,row:slot.row,health:wave.health,phase:'combined',phaseTime:0};enemyLayer.add(combined);enemies.push(combined)});
-  waveIndex=index;deployClock=wave.deployEvery;say(`${wave.label} · 留意投放与俯冲`);sync();
+  waveIndex=index;deployClock=Math.min(wave.deployEvery,.85);enemyFireClock=1.15;say(`${wave.label} · 留意投放、俯冲与炮火`);sync();
 }
 function makeShot(xOffset=0,xVelocity=0){const b=mesh(bulletGeo,mats.gold);b.position.set(playerX+xOffset,player.position.y+.82,.3);b.userData={vx:xVelocity,vy:17};shots.push(b)}
 function shoot(){
@@ -60,7 +60,7 @@ function shoot(){
   barrels.forEach(barrel=>spread.forEach(vx=>makeShot(barrel,vx)));
 }
 function powerPart(geometry,material){const part=new THREE.Mesh(geometry,material);part.castShadow=part.receiveShadow=true;return part}
-function powerLabel(text,color){const canvas=document.createElement('canvas'),context=canvas.getContext('2d');canvas.width=256;canvas.height=112;context.fillStyle=color;context.fillRect(0,0,canvas.width,canvas.height);context.strokeStyle='#fff8d8';context.lineWidth=7;context.strokeRect(5,5,246,102);context.fillStyle='#fff8d8';context.font='700 52px sans-serif';context.textAlign='center';context.textBaseline='middle';context.fillText(text,128,58);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(canvas),transparent:true,depthWrite:false}));sprite.scale.set(.92,.4,1);return sprite}
+function powerLabel(text,color){const canvas=document.createElement('canvas'),context=canvas.getContext('2d');canvas.width=320;canvas.height=132;context.fillStyle=color;context.fillRect(0,0,canvas.width,canvas.height);context.strokeStyle='#fff8d8';context.lineWidth=8;context.strokeRect(5,5,310,122);context.fillStyle='#17231d';context.font='800 74px sans-serif';context.textAlign='center';context.textBaseline='middle';context.fillText(text,160,69);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(canvas),transparent:true,depthWrite:false}));sprite.scale.set(1.16,.48,1);return sprite}
 function powerModule(type){
   const module=new THREE.Group(),material=POWERUPS[type].material,glow=new THREE.MeshBasicMaterial({color:material.color,transparent:true,opacity:.76});
   const halo=powerPart(new THREE.TorusGeometry(.45,.04,8,20),glow);halo.rotation.x=Math.PI/2;halo.position.z=-.04;module.add(halo);
@@ -85,7 +85,7 @@ function loadLevel(index){levelIndex=THREE.MathUtils.clamp(index,0,LEVELS.length
 function clearPowerups(){powerups.splice(0).forEach(o=>o.removeFromParent());Object.keys(powerTimers).forEach(key=>powerTimers[key]=0)}
 function reset(){
   enemyLayer.clear();enemies.length=0;[...shots,...enemyShots,...sparks].forEach(o=>o.removeFromParent());shots.length=enemyShots.length=sparks.length=0;droppedCars.splice(0).forEach(o=>o.removeFromParent());clearPowerups();
-  time=0;playerX=0;move=0;fireHeld=false;fireClock=0;waveIndex=0;score=0;lives=level.player.lives;deployClock=0;defeatCount=0;state='playing';$('overlay').hidden=true;spawnWave(0);say('坦克自动开火 · 左右躲避投放',3);
+  time=0;playerX=0;move=0;fireHeld=false;fireClock=0;waveIndex=0;score=0;lives=level.player.lives;deployClock=0;enemyFireClock=0;defeatCount=0;state='playing';$('overlay').hidden=true;spawnWave(0);say('坦克自动开火 · 左右躲避投放与炮火',3);
 }
 function sync(){
   $('score').textContent=String(score).padStart(6,'0');$('lives').innerHTML=Array.from({length:level.player.lives},(_,i)=>`<span class="life${i<lives?' is-active':''}"></span>`).join('');$('lives').setAttribute('aria-label',`${lives} / ${level.player.lives} 格装甲`);
@@ -105,8 +105,9 @@ function update(dt){
   Object.keys(powerTimers).forEach(key=>powerTimers[key]=Math.max(0,powerTimers[key]-dt));shieldVisual.visible=powerTimers.shield>0;shieldVisual.rotation.z+=dt*2.6;
   const enemyDt=dt*(powerTimers.slow>0?.55:1),lane=laneLimit();playerX=THREE.MathUtils.clamp(playerX+move*level.player.speed*dt,-lane,lane);player.position.x=playerX;
   fireClock-=dt;if(fireClock<=0){shoot();fireClock=level.player.fireRate}
-  const wave=level.waves[waveIndex],formationShift=Math.sin(time*1.15)*wave.drift;deployClock-=enemyDt;
+  const wave=level.waves[waveIndex],formationShift=Math.sin(time*1.15)*wave.drift;deployClock-=enemyDt;enemyFireClock-=enemyDt;
   if(deployClock<=0){const target=enemies.filter(e=>e.parent&&e.userData.phase==='combined').sort((a,b)=>b.userData.row-a.userData.row)[0];if(target)deploy(target,wave);deployClock=wave.deployEvery;}
+  if(enemyFireClock<=0){const source=enemies.filter(e=>e.parent&&e.userData.phase==='combined').sort((a,b)=>b.userData.row-a.userData.row)[0];if(source)enemyShoot(source.position.x,source.position.y);enemyFireClock=Math.max(1.05,wave.deployEvery*.52);}
   enemies.forEach((e,i)=>{
     if(!e.parent)return;const d=e.userData;
     if(d.phase==='combined'){e.position.x=THREE.MathUtils.clamp(d.homeX+formationShift,-lane,lane);e.position.y=d.homeY+Math.sin(time*2+i)*.09;e.rotation.z=Math.PI/2+Math.sin(time*4+i)*.025;}
@@ -115,7 +116,7 @@ function update(dt){
     const wings=e.getObjectByName('Left small triangular wing');if(wings)wings.rotation.x=Math.sin(time*11+i)*.35;
   });
   droppedCars.forEach((car,i)=>{car.position.y-=car.userData.v*enemyDt;if(car.position.y<player.position.y-.25){const connects=Math.abs(car.position.x-playerX)<1.1;car.removeFromParent();droppedCars.splice(i,1);if(connects)damage('投放战车撞击坦克！');else burst(car.position,'#a9bbaa',8);}});
-  powerups.forEach((orb,i)=>{orb.position.y-=orb.userData.v*dt;orb.position.y+=Math.sin(time*3+orb.userData.phase)*.035;orb.rotation.z+=dt*.9;if(hit(orb,player,.98)){activatePower(orb.userData.type);burst(orb.position,'#fff8d8',10);orb.removeFromParent();powerups.splice(i,1)}else if(orb.position.y<-6){orb.removeFromParent();powerups.splice(i,1)}});
+  powerups.forEach((orb,i)=>{orb.position.y-=orb.userData.v*dt;orb.position.y+=Math.sin(time*3+orb.userData.phase)*.035;if(hit(orb,player,.98)){activatePower(orb.userData.type);burst(orb.position,'#fff8d8',10);orb.removeFromParent();powerups.splice(i,1)}else if(orb.position.y<-6){orb.removeFromParent();powerups.splice(i,1)}});
   shots.forEach((b,i)=>{
     b.position.x+=b.userData.vx*dt;b.position.y+=b.userData.vy*dt;b.rotation.y+=dt*9;
     if(b.position.y>12||Math.abs(b.position.x)>lane+1){b.removeFromParent();shots.splice(i,1);return}
