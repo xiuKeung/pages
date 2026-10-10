@@ -34,7 +34,7 @@ const enemyLayer=new THREE.Group();scene.add(enemyLayer);
 const bulletGeo=new THREE.SphereGeometry(.14,10,8),enemyBulletGeo=new THREE.SphereGeometry(.18,10,8);
 const POWERUPS={double:{name:'双炮',duration:9,material:mats.gold},spread:{name:'散射',duration:8,material:mats.blue},rapid:{name:'速射',duration:8,material:mats.orange},shield:{name:'护盾',duration:7,material:mats.mint},slow:{name:'减速时间',duration:7,material:mats.violet}};
 const powerTimers=Object.fromEntries(Object.keys(POWERUPS).map(key=>[key,0]));
-let state='ready',time=0,last=performance.now(),playerX=0,move=0,fireClock=0,waveIndex=0,score=0,lives=level.player.lives,deployClock=0,enemyFireClock=0,defeatCount=0,invulnerable=0,playerHitTimer=0,shieldImpactTimer=0,shakeTimer=0,lifeFlashTimer=0;
+let state='ready',time=0,last=performance.now(),playerX=0,move=0,fireClock=0,waveIndex=0,score=0,lives=level.player.lives,deployClock=0,enemyFireClock=0,waveDefeats=0,deployTurn=0,invulnerable=0,playerHitTimer=0,shieldImpactTimer=0,shakeTimer=0,lifeFlashTimer=0;
 function say(){}
 function burst(pos,color='#efb63b',count=12){for(let i=0;i<count;i++){const s=mesh(new THREE.SphereGeometry(.055,6,5),new THREE.MeshBasicMaterial({color,transparent:true}));s.position.copy(pos);s.userData={v:new THREE.Vector3((Math.random()-.5)*7,(Math.random()-.5)*7,Math.random()-.5),life:.45};sparks.push(s)}}
 function laneLimit(padding=.75){return Math.max(2,camera.right-padding)}
@@ -49,11 +49,26 @@ function formationSlots(count,lane,formation){
   }
   return slots;
 }
+function formationOffset(wave){
+  if(wave.driftPattern==='still')return 0;
+  const speed=wave.driftPattern==='sweep'?.72:wave.driftPattern==='pulse'?1.7:1.15;
+  const strength=wave.driftPattern==='pulse'?.68:1;
+  return Math.sin(time*speed)*wave.drift*strength;
+}
+function pickDeploymentTarget(wave){
+  const targets=enemies.filter(e=>e.parent&&e.userData.phase==='combined');
+  if(!targets.length)return null;
+  if(wave.deployPattern==='alternate'){
+    targets.sort((a,b)=>a.userData.homeX-b.userData.homeX);
+    const target=targets[deployTurn%2?targets.length-1:0];deployTurn++;return target;
+  }
+  return targets.sort((a,b)=>b.userData.row-a.userData.row)[0];
+}
 function spawnWave(index){
   enemyLayer.clear();enemies.length=0;droppedCars.splice(0).forEach(o=>o.removeFromParent());
   const wave=level.waves[index],lane=laneLimit(1),slots=formationSlots(wave.count,lane,wave.formation);
   slots.forEach(slot=>{const combined=topDownRig(combinedTemplate,.24),slowMarker=new THREE.Mesh(new THREE.RingGeometry(.76,.84,20),slowMarkerMaterial);slowMarker.position.z=.12;slowMarker.visible=false;combined.add(slowMarker);combined.position.set(slot.x,slot.y,0);combined.userData={homeX:slot.x,homeY:slot.y,row:slot.row,health:wave.health,phase:'combined',phaseTime:0,slowMarker};enemyLayer.add(combined);enemies.push(combined)});
-  waveIndex=index;deployClock=Math.min(wave.deployEvery,.85);enemyFireClock=1.15;say(`${wave.label} · 留意投放、俯冲与炮火`);sync();
+  waveIndex=index;waveDefeats=0;deployTurn=0;deployClock=wave.firstDeployAfter;enemyFireClock=wave.firstProjectileAfter;say(`${wave.label} · 留意投放、俯冲与炮火`);sync();
 }
 function makeShot(xOffset=0,xVelocity=0){const b=mesh(bulletGeo,mats.gold);b.position.set(playerX+xOffset,player.position.y+.82,.3);b.userData={vx:xVelocity,vy:17};shots.push(b)}
 function shoot(){
@@ -71,9 +86,11 @@ function powerModule(type){
   const label=powerLabel(POWERUPS[type].name,`#${material.color.getHexString()}`);label.position.z=.08;module.add(label);
   return module;
 }
-function spawnPowerup(pos){
-  const type=Object.keys(POWERUPS)[Math.floor(defeatCount/3)%4],orb=powerModule(type);
-  orb.scale.setScalar(1.2);orb.position.copy(pos);orb.userData={type,v:2.0,phase:Math.random()*Math.PI*2};scene.add(orb);powerups.push(orb);
+function spawnPowerup(pos,drop){
+  const orb=powerModule(drop.type),lane=laneLimit(1.25);let x=pos.x;
+  if(drop.landing==='safe')x=THREE.MathUtils.clamp(playerX+(waveDefeats%2?.9:-.9),-lane,lane);
+  if(drop.landing==='gap')x=THREE.MathUtils.clamp((waveDefeats%2?.55:-.55),-lane,lane);
+  orb.scale.setScalar(1.2);orb.position.set(x,pos.y,.05);orb.userData={type:drop.type,v:2.0,phase:Math.random()*Math.PI*2};scene.add(orb);powerups.push(orb);
 }
 function activatePower(type){if(type==='double')powerTimers.spread=0;if(type==='spread')powerTimers.double=0;powerTimers[type]=POWERUPS[type].duration;score+=40;burst(player.position,POWERUPS[type].material.color,16);sync()}
 function damage(text='坦克受击！'){
@@ -89,14 +106,14 @@ function updateFeedback(dt){
   const shieldFlash=shieldImpactTimer>0?shieldImpactTimer/.48:0;shieldVisual.visible=shieldFlash>0;shieldVisual.scale.setScalar(1+(1-shieldFlash)*.5);shieldFrameMaterial.opacity=.4+shieldFlash*.56;shieldGlowMaterial.opacity=.3+shieldFlash*.56;
   const shake=shakeTimer>0?(shakeTimer/.16)*.13:0;camera.position.set((Math.random()-.5)*shake,2+(Math.random()-.5)*shake,28);camera.lookAt(0,2,0);
 }
-function end(title,copy,label){state=title==='关卡完成'?'won':'lost';$('overlay').hidden=false;$('overlay').querySelector('.eyebrow').textContent=state==='won'?'首批关卡包 · 完成':'首批关卡包 · 失败';$('overlay').querySelector('h2').textContent=title;$('overlay').querySelector('p:not(.eyebrow)').textContent=copy;$('start').textContent=label}
-function advance(){if(waveIndex<level.waves.length-1)spawnWave(waveIndex+1);else{const hasNext=levelIndex<LEVELS.length-1;end('关卡完成',hasNext?`关卡 ${String(levelIndex+1).padStart(2,'0')} 完成，下一关会增加一项新的压力。`:'你已完成首批六个关卡。可重新挑战终端突袭。',hasNext?'下一关':'再玩一次')}}
-function showLevelIntro(){const overlay=$('overlay');overlay.hidden=false;overlay.querySelector('.eyebrow').textContent=`首批关卡包 · ${String(levelIndex+1).padStart(2,'0')} / ${String(LEVELS.length).padStart(2,'0')}`;overlay.querySelector('h2').textContent=`${level.name} · 编队接近`;overlay.querySelector('p:not(.eyebrow)').textContent='击败敌人会掉落强化模块。接住后可短时获得双炮、散射、速射、护盾或减速时间。';$('start').textContent='开始'}
+function end(title,copy,label){state=title==='关卡完成'?'won':'lost';$('overlay').hidden=false;$('overlay').querySelector('.eyebrow').textContent=state==='won'?'关卡包 · 完成':'关卡包 · 失败';$('overlay').querySelector('h2').textContent=title;$('overlay').querySelector('p:not(.eyebrow)').textContent=copy;$('start').textContent=label}
+function advance(){if(waveIndex<level.waves.length-1)spawnWave(waveIndex+1);else{const hasNext=levelIndex<LEVELS.length-1;end('关卡完成',hasNext?`关卡 ${String(levelIndex+1).padStart(2,'0')} 完成，下一关会带来新的编队压力。`:'你已完成 20 个关卡。可重新挑战铁翼终局。',hasNext?'下一关':'再玩一次')}}
+function showLevelIntro(){const overlay=$('overlay');overlay.hidden=false;overlay.querySelector('.eyebrow').textContent=`${level.chapter} · ${String(levelIndex+1).padStart(2,'0')} / ${String(LEVELS.length).padStart(2,'0')}`;overlay.querySelector('h2').textContent=`${level.name} · 编队接近`;overlay.querySelector('p:not(.eyebrow)').textContent='部分波次会在指定击破节点投放强化模块。接住后可短时获得双炮、散射、速射、护盾或减速时间。';$('start').textContent='开始'}
 function loadLevel(index){levelIndex=THREE.MathUtils.clamp(index,0,LEVELS.length-1);level=LEVELS[levelIndex];levelSelect.value=String(levelIndex);scene.background.set(level.palette.sky);scene.fog.color.set(level.palette.fog)}
 function clearPowerups(){powerups.splice(0).forEach(o=>o.removeFromParent());Object.keys(powerTimers).forEach(key=>powerTimers[key]=0)}
 function reset(){
   enemyLayer.clear();enemies.length=0;[...shots,...enemyShots,...sparks].forEach(o=>o.removeFromParent());shots.length=enemyShots.length=sparks.length=0;droppedCars.splice(0).forEach(o=>o.removeFromParent());clearPowerups();
-  time=0;playerX=0;move=0;fireClock=0;waveIndex=0;score=0;lives=level.player.lives;deployClock=0;enemyFireClock=0;defeatCount=0;invulnerable=playerHitTimer=shieldImpactTimer=shakeTimer=lifeFlashTimer=0;camera.position.set(0,2,28);state='playing';$('overlay').hidden=true;spawnWave(0);say('坦克自动开火 · 左右躲避投放与炮火',3);
+  time=0;playerX=0;move=0;fireClock=0;waveIndex=0;score=0;lives=level.player.lives;deployClock=0;enemyFireClock=0;waveDefeats=0;deployTurn=0;invulnerable=playerHitTimer=shieldImpactTimer=shakeTimer=lifeFlashTimer=0;camera.position.set(0,2,28);state='playing';$('overlay').hidden=true;spawnWave(0);say('坦克自动开火 · 左右躲避投放与炮火',3);
 }
 function sync(){
   $('score').textContent=String(score).padStart(6,'0');$('lives').innerHTML=Array.from({length:level.player.lives},(_,i)=>`<span class="life${i<lives?' is-active':i===lives&&lifeFlashTimer>0?' is-damaged':''}"></span>`).join('');$('lives').setAttribute('aria-label',`${lives} / ${level.player.lives} 格装甲`);
@@ -117,9 +134,9 @@ function update(dt){
   Object.keys(powerTimers).forEach(key=>powerTimers[key]=Math.max(0,powerTimers[key]-dt));const slowActive=powerTimers.slow>0;updateFeedback(dt);slowMarkerMaterial.opacity=slowActive?.52+Math.sin(time*5)*.16:.72;
   const enemyDt=dt*(powerTimers.slow>0?.55:1),lane=laneLimit();playerX=THREE.MathUtils.clamp(playerX+move*level.player.speed*dt,-lane,lane);player.position.x=playerX;
   fireClock-=dt;if(fireClock<=0){shoot();fireClock=level.player.fireRate*(powerTimers.rapid>0?.5:1)}
-  const wave=level.waves[waveIndex],formationShift=Math.sin(time*1.15)*wave.drift;deployClock-=enemyDt;enemyFireClock-=enemyDt;
-  if(deployClock<=0){const target=enemies.filter(e=>e.parent&&e.userData.phase==='combined').sort((a,b)=>b.userData.row-a.userData.row)[0];if(target)deploy(target,wave);deployClock=wave.deployEvery;}
-  if(enemyFireClock<=0){const source=enemies.filter(e=>e.parent&&e.userData.phase==='combined').sort((a,b)=>b.userData.row-a.userData.row)[0];if(source)enemyShoot(source.position.x,source.position.y);enemyFireClock=Math.max(1.05,wave.deployEvery*.52);}
+  const wave=level.waves[waveIndex],formationShift=formationOffset(wave);deployClock-=enemyDt;enemyFireClock-=enemyDt;
+  if(deployClock<=0){const target=pickDeploymentTarget(wave);if(target)deploy(target,wave);deployClock=wave.deployEvery;}
+  if(enemyFireClock<=0){const source=enemies.filter(e=>e.parent&&e.userData.phase==='combined').sort((a,b)=>b.userData.row-a.userData.row)[0];if(source)enemyShoot(source.position.x,source.position.y);enemyFireClock=wave.projectileEvery;}
   enemies.forEach((e,i)=>{
     if(!e.parent)return;const d=e.userData;
     if(d.phase==='combined'){e.position.x=THREE.MathUtils.clamp(d.homeX+formationShift,-lane,lane);e.position.y=d.homeY+Math.sin(time*2+i)*.09;e.rotation.z=Math.PI/2+Math.sin(time*4+i)*.025;}
@@ -133,7 +150,7 @@ function update(dt){
     b.position.x+=b.userData.vx*dt;b.position.y+=b.userData.vy*dt;b.rotation.y+=dt*9;
     if(b.position.y>12||Math.abs(b.position.x)>lane+1){b.removeFromParent();shots.splice(i,1);return}
     for(const car of droppedCars){if(car.parent&&hit(b,car,.9)){car.removeFromParent();droppedCars.splice(droppedCars.indexOf(car),1);score+=80;burst(car.position);b.removeFromParent();shots.splice(i,1);return}}
-    for(const e of enemies){if(e.parent&&hit(b,e,.92)){e.userData.health--;burst(b.position);b.removeFromParent();shots.splice(i,1);if(e.userData.health<=0){e.removeFromParent();score+=wave.score;defeatCount++;if(defeatCount%3===0)spawnPowerup(e.position);burst(e.position,'#f1c448',18)}break}}
+    for(const e of enemies){if(e.parent&&hit(b,e,.92)){e.userData.health--;burst(b.position);b.removeFromParent();shots.splice(i,1);if(e.userData.health<=0){e.removeFromParent();score+=wave.score;waveDefeats++;const drop=wave.powerDrops.find(item=>item.afterDefeat===waveDefeats);if(drop)spawnPowerup(e.position,drop);burst(e.position,'#f1c448',18)}break}}
   });
   enemyShots.forEach((b,i)=>{b.material=slowActive?mats.slowBullet:mats.red;b.scale.setScalar(slowActive?1.18:1);b.position.y+=b.userData.v*enemyDt;if(b.position.y<-7){b.removeFromParent();enemyShots.splice(i,1);return}if(Math.abs(b.position.x-playerX)<1.15&&b.position.y<-4){b.removeFromParent();enemyShots.splice(i,1);damage();}});
   sparks.forEach((s,i)=>{s.position.addScaledVector(s.userData.v,dt);s.userData.life-=dt;s.material.opacity=Math.max(0,s.userData.life*2);if(s.userData.life<=0){s.removeFromParent();sparks.splice(i,1)}});
@@ -147,6 +164,6 @@ window.addEventListener('keyup',e=>{if(['ArrowLeft','KeyA','ArrowRight','KeyD'].
 for(const b of document.querySelectorAll('[data-move]')){const dir=Number(b.dataset.move),startMove=e=>{e.preventDefault();move=dir;b.classList.add('is-pressed')},stopMove=()=>{move=0;b.classList.remove('is-pressed')};b.addEventListener('pointerdown',e=>{startMove(e);try{b.setPointerCapture(e.pointerId)}catch{}});b.addEventListener('touchstart',startMove,{passive:false});for(const ev of ['pointerup','pointercancel','lostpointercapture','touchend','touchcancel'])b.addEventListener(ev,stopMove)}
 host.addEventListener('contextmenu',event=>event.preventDefault());host.addEventListener('selectstart',event=>event.preventDefault());host.addEventListener('touchstart',event=>event.preventDefault(),{passive:false});
 function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);renderer.render(scene,camera);requestAnimationFrame(loop)}
-if(levelSelect.options.length===0)LEVELS.forEach((item,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=`关卡 ${String(index+1).padStart(2,'0')} · ${item.name}`;levelSelect.append(option)});
+levelSelect.replaceChildren(...LEVELS.map((item,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=`关卡 ${String(index+1).padStart(2,'0')} · ${item.name}`;return option;}));
 levelSelect.addEventListener('change',()=>{loadLevel(Number(levelSelect.value));if(state==='playing')reset();else{state='ready';showLevelIntro();sync()}});
 loadLevel(0);showLevelIntro();requestAnimationFrame(loop);sync();
