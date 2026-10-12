@@ -187,7 +187,7 @@
       "notes",
     ].forEach((id) => ($(id).value = r[id] ?? ""));
     updateUnit();
-    window.scrollTo({ top: $("editor").offsetTop - 12, behavior: "smooth" });
+    window.ViewingEditorOverlay?.open({ title: r.id ? "编辑房源" : "新增房源" });
   }
   function edit(id) {
     openEditor(records.find((r) => String(r.id) === id));
@@ -306,7 +306,7 @@
   }
   $("add").onclick = () => openEditor();
   $("cancel").onclick = () => {
-    $("editor").classList.add("hidden");
+    window.dispatchEvent(new Event("viewing:close-editor"));
   };
   $("copyRecord").onclick = copyRecord;
   $("totalPrice").oninput = updateUnit;
@@ -334,7 +334,7 @@
       toast('保存失败，请稍后重试。');
       return;
     }
-    $("editor").classList.add("hidden");
+    window.dispatchEvent(new Event("viewing:close-editor"));
     renderLimit = 20;
     render();
     toast("记录已保存。");
@@ -401,7 +401,6 @@ document.querySelector("[data-back]")?.addEventListener("click", (event) => {
     // 仍复用同一份保存、收起和列表重绘逻辑。
     if (community) form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     else {
-      editor.classList.add("hidden");
       window.dispatchEvent(new Event('viewing:close-editor'));
     }
     return;

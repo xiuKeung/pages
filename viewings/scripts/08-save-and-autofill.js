@@ -1,31 +1,6 @@
 /* 模块 27：由原 index.html 内联脚本迁移。 */
 (() => {
     const form = document.getElementById('recordForm');
-    const recordsNode = document.getElementById('records');
-    if (!form || !recordsNode) return;
-    form.addEventListener('submit', () => {
-      const idBeforeSave = document.getElementById('recordId')?.value;
-      const community = document.getElementById('community')?.value.trim();
-      setTimeout(() => {
-        let id = idBeforeSave;
-        if (!id) {
-          try {
-            const records = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]');
-            id = records
-              .filter(record => record.community === community)
-              .sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0))[0]?.id;
-          } catch (_) {}
-        }
-        const card = [...recordsNode.querySelectorAll('.record')]
-          .find(item => String(item.querySelector('[data-edit]')?.dataset.edit) === String(id));
-        card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 0);
-    });
-  })();
-
-/* 模块 28：由原 index.html 内联脚本迁移。 */
-(() => {
-    const form = document.getElementById('recordForm');
     const community = document.getElementById('community');
     const recordId = document.getElementById('recordId');
     if (!form || !community || !recordId) return;

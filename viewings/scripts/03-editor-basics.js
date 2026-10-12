@@ -98,23 +98,9 @@
     const community = document.getElementById('community');
     const form = document.getElementById('recordForm');
     const editor = document.getElementById('editor');
-    if (!community || !form || !editor) return;
-    const editorAnchor = document.createComment('看房记录编辑器原始位置');
-    editor.before(editorAnchor);
-    const restoreEditorPosition = () => {
-      const recordId = editor.dataset.returnRecordId;
-      editorAnchor.after(editor);
-      document.querySelectorAll('#records .record').forEach(record => {
-        record.classList.remove('is-editing', 'is-muted');
-      });
-      document.getElementById('records')?.classList.remove('is-editing-active');
-      if (recordId) {
-        const record = [...document.querySelectorAll('#records .record')]
-          .find(item => item.dataset.recordId === recordId);
-        record?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-      delete editor.dataset.returnRecordId;
-    };
+    if (!community || !form || !editor || !window.ViewingEditorOverlay) return;
+    const openOverlay = options => window.ViewingEditorOverlay.open(options);
+    const restoreEditorPosition = () => window.ViewingEditorOverlay.close();
 
     const communityLabel = community.closest('label');
     let previousField = communityLabel;
@@ -225,7 +211,10 @@
       });
     };
 
-    community.addEventListener('input', updateSchools);
+    community.addEventListener('input', () => {
+      updateSchools();
+      window.ViewingEditorOverlay.updateHeading();
+    });
     const restoreSavedSchools = () => {
       const id = document.getElementById('recordId')?.value;
       const saved = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]')
@@ -238,8 +227,6 @@
     document.addEventListener('click', event => {
       if (event.target.closest('#add')) {
         setTimeout(() => {
-          // 新增时编辑器仍回到列表前，但保留由下面编辑状态逻辑设置的灰显效果。
-          editorAnchor.after(editor);
           primaryInput.value = '';
           middleInput.value = '';
           delete editor.dataset.returnRecordId;
@@ -247,19 +234,19 @@
       }
       const editButton = event.target.closest('[data-edit]');
       if (editButton) {
-        const record = editButton.closest('.record');
         setTimeout(() => {
-          if (record) record.after(editor);
           restoreSavedSchools();
-          editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          openOverlay({ title: '编辑房源' });
         }, 0);
       }
-      if (event.target.closest('#cancel')) setTimeout(restoreEditorPosition, 0);
     });
-    form.addEventListener('submit', () => setTimeout(restoreEditorPosition, 0));
     window.addEventListener('viewing:close-editor', () => {
-      editor.classList.add('hidden');
       restoreEditorPosition();
+    });
+    document.getElementById('editorOverlayBack')?.addEventListener('click', () => {
+      const currentCommunity = community.value.trim();
+      if (currentCommunity) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      else window.dispatchEvent(new Event('viewing:close-editor'));
     });
     document.addEventListener('pointerdown', event => {
       if (event.target.closest('.community-suggestion')) setTimeout(updateSchools, 0);
@@ -461,6 +448,22 @@
           card.classList.remove('is-editing');
           card.classList.add('is-muted');
         });
+        // 新增按钮仍会继续触发核心表单初始化；在该初始化完成后强制走同一个
+        // 独立编辑层。这样即使旧的 onclick 初始化顺序受其他模块影响，也不会
+        // 退回成“列表置灰但编辑器留在列表里”的状态。
+        setTimeout(() => {
+          const overlay = window.ViewingEditorOverlay;
+          if (!overlay) return;
+          if (editor.classList.contains('hidden')) {
+            form.reset();
+            setValue('recordId', '');
+            setValue('priority', 'focus');
+            setValue('viewedAt', new Date().toISOString().slice(0, 10));
+            document.getElementById('editorTitle').textContent = '新增房源';
+            delete editor.dataset.returnRecordId;
+          }
+          overlay.open({ title: '新增房源' });
+        }, 0);
         return;
       }
       const button = event.target.closest('[data-edit]');
@@ -492,8 +495,9 @@
         card.classList.toggle('is-editing', card === recordCard);
         card.classList.toggle('is-muted', card !== recordCard);
       });
-      recordCard?.after(editor);
-      editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // 这里是捕获阶段的点击处理，会阻止后续普通点击处理器；必须直接打开
+      // 独立编辑层，不能再把编辑器插回列表卡片下方。
+      window.ViewingEditorOverlay?.open({ title: '编辑房源' });
       // 学区关联和月供预览需要遍历较多数据；先让详情框完成一次绘制，
       // 避免 Android WebView 在点击“查看”时主线程卡顿。
       requestAnimationFrame(() => requestAnimationFrame(() => {
