@@ -228,7 +228,10 @@
       if (event.target.closest('#cancel')) setTimeout(restoreEditorPosition, 0);
     });
     form.addEventListener('submit', () => setTimeout(restoreEditorPosition, 0));
-    window.addEventListener('viewing:close-editor', restoreEditorPosition);
+    window.addEventListener('viewing:close-editor', () => {
+      editor.classList.add('hidden');
+      restoreEditorPosition();
+    });
     document.addEventListener('pointerdown', event => {
       if (event.target.closest('.community-suggestion')) setTimeout(updateSchools, 0);
     });

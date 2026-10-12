@@ -61,6 +61,10 @@
     console.warn('看房记录读取失败：', error);
   }
   async function reloadRecords(options = {}) {
+    // 编辑器会临时插入某条记录内部。编辑中重绘列表会把编辑器一起移出 DOM，
+    // 却可能遗留列表的“编辑中”禁用状态；此时先等待用户结束编辑。
+    if (!options.closeEditor && !$("editor")?.classList.contains("hidden")) return true;
+    if (options.closeEditor) window.dispatchEvent(new Event("viewing:close-editor"));
     const loaded = await load(options);
     if (loaded) render();
     return loaded;
@@ -356,11 +360,19 @@
   await reloadRecords({ force: true });
   window.addEventListener("pageshow", (event) => {
     // Android WebView 返回到入口后再进入时，页面可能来自历史缓存。
-    // 无论是否标记 persisted，都强制从 SQLite 刷新一次。
-    void reloadRecords({ force: true });
+    // 从缓存恢复时先结束查看状态，避免编辑器随着旧记录 DOM 一起被重绘移除。
+    void reloadRecords({ force: true, closeEditor: event.persisted });
   });
+  let wasHidden = document.hidden;
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) void reloadRecords({ force: true });
+    if (document.hidden) {
+      wasHidden = true;
+      return;
+    }
+    if (!wasHidden) return;
+    wasHidden = false;
+    // Android WebView 从后台恢复时统一收起详情，再刷新 SQLite 数据。
+    void reloadRecords({ force: true, closeEditor: true });
   });
   window.addEventListener("focus", () => void reloadRecords({ force: true }));
   window.addEventListener("viewing:load-more", () => {
