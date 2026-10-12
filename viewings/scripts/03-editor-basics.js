@@ -126,7 +126,21 @@
       input.id = id;
       input.name = id;
       input.placeholder = '未匹配';
-      label.append(input);
+      const inputWrap = document.createElement('span');
+      inputWrap.className = 'school-input-wrap';
+      const clear = document.createElement('button');
+      clear.className = 'school-input-clear';
+      clear.type = 'button';
+      clear.setAttribute('aria-label', `清空${title.replace(/（.*$/, '')}`);
+      clear.textContent = '×';
+      clear.addEventListener('click', () => {
+        input.value = '';
+        input.title = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.focus();
+      });
+      inputWrap.append(input, clear);
+      label.append(inputWrap);
       previousField.after(label);
       previousField = label;
       return input;
@@ -176,6 +190,15 @@
       };
     };
     const updateSchools = () => {
+      // 已有完整学校信息时，修改小区名称不覆盖当前记录的结果或手动填写内容。
+      if (primaryInput.value.trim() && middleInput.value.trim()) {
+        primaryInput.title = primaryInput.value;
+        middleInput.title = middleInput.value;
+        return {
+          primary: primaryInput.value.split('、').filter(Boolean),
+          middle: middleInput.value.split('、').filter(Boolean)
+        };
+      }
       const result = schoolNames(community.value);
       primaryInput.value = result.primary.join('、');
       middleInput.value = result.middle.join('、');
@@ -184,10 +207,16 @@
       return result;
     };
     const updateRecordCards = () => {
+      const savedRecords = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]');
       document.querySelectorAll('#records .record').forEach(card => {
         const name = card.querySelector('h2')?.textContent;
         const block = card.querySelector('.schools');
         if (!name || !block) return;
+        const saved = savedRecords.find(record => String(record.id) === String(card.dataset.recordId));
+        if (saved?.primarySchools || saved?.middleSchools) {
+          block.textContent = `小学：${saved.primarySchools || '无数据'}\n中学：${saved.middleSchools || '无数据'}`;
+          return;
+        }
         const result = schoolNames(name);
         block.textContent = [
           result.primary.length ? `小学：${result.primary.join('、')}` : '',

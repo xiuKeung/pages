@@ -5,15 +5,23 @@
     const format = value => Number(value || 0).toLocaleString('zh-CN', {
       maximumFractionDigits: 2
     });
-    const collapse = (card, selector, title) => {
-      const content = card.querySelector(selector);
-      if (!content || content.closest('details')) return;
+    const collapseExtras = (card, paymentMeta, timestampMeta) => {
+      if (card.querySelector('.record-information')) return;
+      const contents = [
+        card.querySelector('.schools'),
+        card.querySelector('.notes'),
+        timestampMeta
+      ].filter(Boolean);
+      if (!contents.length) return;
       const details = document.createElement('details');
-      details.className = 'record-extra';
+      details.className = 'record-extra record-information';
       const summary = document.createElement('summary');
-      summary.textContent = title;
-      content.before(details);
+      summary.textContent = '更多信息';
+      const content = document.createElement('div');
+      content.className = 'record-information-content';
       details.append(summary, content);
+      contents.forEach(item => content.append(item));
+      paymentMeta?.after(details);
     };
     const updateCards = () => {
       const records = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]');
@@ -63,11 +71,11 @@
           paymentMeta.hidden = true;
         }
         if (editedMeta) {
+          editedMeta.classList.add('record-timestamps');
           const editedText = editedMeta.textContent.replace(/ · 看房：.*$/, '');
           editedMeta.textContent = `${editedText}${record.viewedAt ? ` · 看房：${record.viewedAt}` : ''}`;
         }
-        collapse(card, '.schools', '学校信息');
-        collapse(card, '.notes', '优点、缺点、地标与备注');
+        collapseExtras(card, paymentMeta, editedMeta);
       });
     };
     new MutationObserver(updateCards).observe(recordsNode, { childList: true });
