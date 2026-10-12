@@ -274,7 +274,7 @@
       return input;
     };
     const downPaymentRate = addInputField('downPaymentRate', '首付比例（%）', {
-      type: 'number', inputmode: 'decimal', min: '0', max: '100', step: '0.1', value: '20'
+      type: 'number', inputmode: 'decimal', min: '0', max: '100', step: '0.1', value: '30'
     });
     const commercialRate = addInputField('commercialRate', '商贷年利率（%）', {
       type: 'number', inputmode: 'decimal', min: '0', max: '30', step: '0.01', value: '3.05'
@@ -321,7 +321,7 @@
       preview.innerHTML = `预计首付 <strong>${format(plan.downPaymentAmount)} 元</strong>；预计贷款 <strong>${format(plan.loan)} 元</strong><br>等额本息：月供 <strong>${format(plan.equalPayment)} 元</strong><br>等额本金：首月月供 <strong>${format(plan.firstPrincipalPayment)} 元</strong>，末月约 ${format(plan.lastPrincipalPayment)} 元（逐月递减）`;
     };
     const setPlan = plan => {
-      downPaymentRate.value = plan?.downPaymentRate || '20';
+      downPaymentRate.value = plan?.downPaymentRate || '30';
       commercialRate.value = plan?.commercialRate || '3.05';
       loanYears.value = plan?.loanYears || '30';
       calculate();

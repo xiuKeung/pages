@@ -21,7 +21,7 @@
       const data = Object.fromEntries(new FormData(form));
       const plan = window.calculateViewingLoan?.({
         targetPrice: data.targetPrice,
-        downPaymentRate: data.downPaymentRate || 20,
+        downPaymentRate: data.downPaymentRate || 30,
         commercialRate: data.commercialRate || 3.05,
         loanYears: data.loanYears || 30
       });

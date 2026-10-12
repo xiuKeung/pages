@@ -52,7 +52,7 @@
         }
         const plan = window.calculateViewingLoan({
           targetPrice: record.targetPrice,
-          downPaymentRate: record.downPaymentRate || 20,
+          downPaymentRate: record.downPaymentRate || 30,
           commercialRate: record.commercialRate || 3.05,
           loanYears: record.loanYears || 30
         });
@@ -105,7 +105,7 @@
     const recordText = record => {
       const plan = window.calculateViewingLoan({
         targetPrice: record.targetPrice,
-        downPaymentRate: record.downPaymentRate || 20,
+        downPaymentRate: record.downPaymentRate || 30,
         commercialRate: record.commercialRate || 3.05,
         loanYears: record.loanYears || 30
       });

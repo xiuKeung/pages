@@ -3951,7 +3951,7 @@
         zip.file(thumbnailPath, thumbnail.data, { base64: true });
       } else {
         zip.file(originalPath, photo.blob);
-        zip.file(thumbnailPath, photo.blob);
+        zip.file(thumbnailPath, await makeBackupThumbnail(photo.blob));
       }
       portablePhotos.push({
         ...photo,
@@ -3988,11 +3988,38 @@
       });
     }
   }
+  async function makeBackupThumbnail(blob) {
+    const sourceUrl = URL.createObjectURL(blob);
+    try {
+      const image = await new Promise((resolve2, reject) => {
+        const element = new Image();
+        element.onload = () => resolve2(element);
+        element.onerror = () => reject(new Error("\u65E0\u6CD5\u751F\u6210\u5907\u4EFD\u7F29\u7565\u56FE"));
+        element.src = sourceUrl;
+      });
+      const longestEdge = Math.max(image.naturalWidth, image.naturalHeight) || 1;
+      const scale = Math.min(1, 480 / longestEdge);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+      canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+      const thumbnail = await new Promise((resolve2) => canvas.toBlob(resolve2, "image/jpeg", 0.78));
+      if (!thumbnail) throw new Error("\u65E0\u6CD5\u751F\u6210\u5907\u4EFD\u7F29\u7565\u56FE");
+      return thumbnail;
+    } finally {
+      URL.revokeObjectURL(sourceUrl);
+    }
+  }
   function viewingsOnlyBackup(data) {
     return { ...data, checklist: {}, mortgage: [], school: [] };
   }
   async function chooseBackup() {
     if (window.NativeStore.isNative()) {
+      if (Capacitor.getPlatform() === "android") {
+        const result2 = await BackupFile.chooseBackup();
+        if (!result2?.sessionId || !result2.manifest || !result2.data) throw new Error("\u6CA1\u6709\u8BFB\u53D6\u5230\u5907\u4EFD\u6587\u4EF6");
+        return { nativeSession: result2.sessionId, manifest: result2.manifest, data: result2.data };
+      }
       const result = await FilePicker.pickFiles({
         types: ["application/zip", "application/x-zip-compressed"],
         limit: 1,
@@ -4192,14 +4219,14 @@
     try {
       progress = showImportProgress();
       progress.update(4, "\u6B63\u5728\u8BFB\u53D6\u5907\u4EFD", "\u6B63\u5728\u6253\u5F00\u5907\u4EFD\u6587\u4EF6");
-      const zip = await import_jszip.default.loadAsync(selected.base64, { base64: true });
+      const zip = selected.nativeSession ? null : await import_jszip.default.loadAsync(selected.base64, { base64: true });
       progress.update(9, "\u6B63\u5728\u6821\u9A8C\u5907\u4EFD", "\u6B63\u5728\u68C0\u67E5\u5907\u4EFD\u5185\u5BB9");
-      const manifestEntry = zip.file("manifest.json");
-      const dataEntry = zip.file("data/data.json");
-      if (!manifestEntry || !dataEntry) throw new Error("\u5907\u4EFD\u6587\u4EF6\u7F3A\u5C11\u5FC5\u8981\u6570\u636E");
-      const manifest = JSON.parse(await manifestEntry.async("text"));
+      const manifestEntry = zip?.file("manifest.json");
+      const dataEntry = zip?.file("data/data.json");
+      if (!selected.nativeSession && (!manifestEntry || !dataEntry)) throw new Error("\u5907\u4EFD\u6587\u4EF6\u7F3A\u5C11\u5FC5\u8981\u6570\u636E");
+      const manifest = selected.nativeSession ? JSON.parse(selected.manifest) : JSON.parse(await manifestEntry.async("text"));
       if (manifest.format !== FORMAT || manifest.version !== VERSION) throw new Error("\u4E0D\u662F\u53EF\u8BC6\u522B\u7684\u5B8C\u6574\u5907\u4EFD\u6587\u4EF6");
-      let data = JSON.parse(await dataEntry.async("text"));
+      let data = selected.nativeSession ? JSON.parse(selected.data) : JSON.parse(await dataEntry.async("text"));
       if (!Array.isArray(data.records) || !Array.isArray(data.photos)) throw new Error("\u5907\u4EFD\u6570\u636E\u683C\u5F0F\u4E0D\u6B63\u786E");
       progress.update(12, "\u6B63\u5728\u51C6\u5907\u5BFC\u5165", `\u5171 ${data.records.length} \u6761\u8BB0\u5F55\u3001${data.photos.length} \u5F20\u56FE\u7247`);
       if (mode === "merge" || !window.NativeStore.isNative() && mode === "replace") {
@@ -4219,20 +4246,29 @@
         if (!photo?.id || !photo?.recordId || !validPath(photo.archiveOriginalPath) || !validPath(photo.archiveThumbnailPath)) {
           throw new Error("\u5907\u4EFD\u56FE\u7247\u7D22\u5F15\u4E0D\u6B63\u786E");
         }
-        const originalEntry = zip.file(photo.archiveOriginalPath);
-        const thumbnailEntry = zip.file(photo.archiveThumbnailPath);
-        if (!originalEntry || !thumbnailEntry) throw new Error("\u5907\u4EFD\u56FE\u7247\u6587\u4EF6\u7F3A\u5931");
+        const originalEntry = zip?.file(photo.archiveOriginalPath);
+        const thumbnailEntry = zip?.file(photo.archiveThumbnailPath);
+        if (!selected.nativeSession && (!originalEntry || !thumbnailEntry)) throw new Error("\u5907\u4EFD\u56FE\u7247\u6587\u4EF6\u7F3A\u5931");
         const base = `${prefix}/${photo.recordId}/${photo.id}`;
         photo.filePath = `${base}.original`;
         photo.thumbnailPath = `${base}.thumb.jpg`;
         written.push({ filePath: photo.filePath, thumbnailPath: photo.thumbnailPath });
-        await window.NativeStore.writePrivateFile(photo.filePath, await originalEntry.async("base64"));
+        if (selected.nativeSession) {
+          await BackupFile.extractBackupImage({
+            sessionId: selected.nativeSession,
+            originalArchivePath: photo.archiveOriginalPath,
+            thumbnailArchivePath: photo.archiveThumbnailPath,
+            originalPath: photo.filePath,
+            thumbnailPath: photo.thumbnailPath
+          });
+        } else {
+          await window.NativeStore.writePrivateFile(photo.filePath, await originalEntry.async("base64"));
+          await window.NativeStore.writePrivateFile(photo.thumbnailPath, await thumbnailEntry.async("base64"));
+        }
         completedWrites += 1;
         progress.update(14 + completedWrites / totalWrites * 74, "\u6B63\u5728\u4FDD\u5B58\u56FE\u7247", `\u5DF2\u4FDD\u5B58 ${Math.ceil(completedWrites / 2)} / ${data.photos.length} \u5F20\u56FE\u7247`);
-        await window.NativeStore.writePrivateFile(photo.thumbnailPath, await thumbnailEntry.async("base64"));
         completedWrites += 1;
         progress.update(14 + completedWrites / totalWrites * 74, "\u6B63\u5728\u4FDD\u5B58\u56FE\u7247", `\u5DF2\u4FDD\u5B58 ${Math.ceil(completedWrites / 2)} / ${data.photos.length} \u5F20\u56FE\u7247`);
-        written.push(photo.filePath, photo.thumbnailPath);
       }
       progress.update(90, "\u6B63\u5728\u4FDD\u5B58\u770B\u623F\u8BB0\u5F55", `\u6B63\u5728\u5199\u5165 ${data.records.length} \u6761\u8BB0\u5F55`);
       const result = mode === "merge" ? await window.NativeStore.mergeBackupData(data) : await window.NativeStore.restoreBackupData(data);
@@ -4242,6 +4278,9 @@
       })));
       progress?.close();
       throw error;
+    } finally {
+      if (selected.nativeSession) await BackupFile.discardBackup({ sessionId: selected.nativeSession }).catch(() => {
+      });
     }
     setTimeout(() => location.reload(), 700);
   }

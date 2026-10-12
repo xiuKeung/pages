@@ -175,7 +175,7 @@ async function createBackup(dataOverride = null) {
       zip.file(thumbnailPath, thumbnail.data, { base64: true });
     } else {
       zip.file(originalPath, photo.blob);
-      zip.file(thumbnailPath, photo.blob);
+      zip.file(thumbnailPath, await makeBackupThumbnail(photo.blob));
     }
     portablePhotos.push({
       ...photo,
@@ -212,12 +212,40 @@ async function createBackup(dataOverride = null) {
   }
 }
 
+async function makeBackupThumbnail(blob) {
+  const sourceUrl = URL.createObjectURL(blob);
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error('无法生成备份缩略图'));
+      element.src = sourceUrl;
+    });
+    const longestEdge = Math.max(image.naturalWidth, image.naturalHeight) || 1;
+    const scale = Math.min(1, 480 / longestEdge);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+    const thumbnail = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.78));
+    if (!thumbnail) throw new Error('无法生成备份缩略图');
+    return thumbnail;
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
 function viewingsOnlyBackup(data) {
   return { ...data, checklist: {}, mortgage: [], school: [] };
 }
 
 async function chooseBackup() {
   if (window.NativeStore.isNative()) {
+    if (Capacitor.getPlatform() === 'android') {
+      const result = await BackupFile.chooseBackup();
+      if (!result?.sessionId || !result.manifest || !result.data) throw new Error('没有读取到备份文件');
+      return { nativeSession: result.sessionId, manifest: result.manifest, data: result.data };
+    }
     const result = await FilePicker.pickFiles({
       types: ['application/zip', 'application/x-zip-compressed'], limit: 1, readData: true
     });
@@ -400,14 +428,18 @@ async function restoreBackup(mode) {
   try {
     progress = showImportProgress();
     progress.update(4, '正在读取备份', '正在打开备份文件');
-    const zip = await JSZip.loadAsync(selected.base64, { base64: true });
+    const zip = selected.nativeSession ? null : await JSZip.loadAsync(selected.base64, { base64: true });
     progress.update(9, '正在校验备份', '正在检查备份内容');
-    const manifestEntry = zip.file('manifest.json');
-    const dataEntry = zip.file('data/data.json');
-    if (!manifestEntry || !dataEntry) throw new Error('备份文件缺少必要数据');
-    const manifest = JSON.parse(await manifestEntry.async('text'));
+    const manifestEntry = zip?.file('manifest.json');
+    const dataEntry = zip?.file('data/data.json');
+    if (!selected.nativeSession && (!manifestEntry || !dataEntry)) throw new Error('备份文件缺少必要数据');
+    const manifest = selected.nativeSession
+      ? JSON.parse(selected.manifest)
+      : JSON.parse(await manifestEntry.async('text'));
     if (manifest.format !== FORMAT || manifest.version !== VERSION) throw new Error('不是可识别的完整备份文件');
-    let data = JSON.parse(await dataEntry.async('text'));
+    let data = selected.nativeSession
+      ? JSON.parse(selected.data)
+      : JSON.parse(await dataEntry.async('text'));
     if (!Array.isArray(data.records) || !Array.isArray(data.photos)) throw new Error('备份数据格式不正确');
     progress.update(12, '正在准备导入', `共 ${data.records.length} 条记录、${data.photos.length} 张图片`);
     if (mode === 'merge' || (!window.NativeStore.isNative() && mode === 'replace')) {
@@ -429,20 +461,29 @@ async function restoreBackup(mode) {
       if (!photo?.id || !photo?.recordId || !validPath(photo.archiveOriginalPath) || !validPath(photo.archiveThumbnailPath)) {
         throw new Error('备份图片索引不正确');
       }
-      const originalEntry = zip.file(photo.archiveOriginalPath);
-      const thumbnailEntry = zip.file(photo.archiveThumbnailPath);
-      if (!originalEntry || !thumbnailEntry) throw new Error('备份图片文件缺失');
+      const originalEntry = zip?.file(photo.archiveOriginalPath);
+      const thumbnailEntry = zip?.file(photo.archiveThumbnailPath);
+      if (!selected.nativeSession && (!originalEntry || !thumbnailEntry)) throw new Error('备份图片文件缺失');
       const base = `${prefix}/${photo.recordId}/${photo.id}`;
       photo.filePath = `${base}.original`;
       photo.thumbnailPath = `${base}.thumb.jpg`;
       written.push({ filePath: photo.filePath, thumbnailPath: photo.thumbnailPath });
-      await window.NativeStore.writePrivateFile(photo.filePath, await originalEntry.async('base64'));
+      if (selected.nativeSession) {
+        await BackupFile.extractBackupImage({
+          sessionId: selected.nativeSession,
+          originalArchivePath: photo.archiveOriginalPath,
+          thumbnailArchivePath: photo.archiveThumbnailPath,
+          originalPath: photo.filePath,
+          thumbnailPath: photo.thumbnailPath
+        });
+      } else {
+        await window.NativeStore.writePrivateFile(photo.filePath, await originalEntry.async('base64'));
+        await window.NativeStore.writePrivateFile(photo.thumbnailPath, await thumbnailEntry.async('base64'));
+      }
       completedWrites += 1;
       progress.update(14 + (completedWrites / totalWrites) * 74, '正在保存图片', `已保存 ${Math.ceil(completedWrites / 2)} / ${data.photos.length} 张图片`);
-      await window.NativeStore.writePrivateFile(photo.thumbnailPath, await thumbnailEntry.async('base64'));
       completedWrites += 1;
       progress.update(14 + (completedWrites / totalWrites) * 74, '正在保存图片', `已保存 ${Math.ceil(completedWrites / 2)} / ${data.photos.length} 张图片`);
-      written.push(photo.filePath, photo.thumbnailPath);
     }
     progress.update(90, '正在保存看房记录', `正在写入 ${data.records.length} 条记录`);
     const result = mode === 'merge'
@@ -453,6 +494,8 @@ async function restoreBackup(mode) {
     await Promise.all(written.map(image => window.NativeStore.deleteViewingImage(image).catch(() => {})));
     progress?.close();
     throw error;
+  } finally {
+    if (selected.nativeSession) await BackupFile.discardBackup({ sessionId: selected.nativeSession }).catch(() => {});
   }
   setTimeout(() => location.reload(), 700);
 }
