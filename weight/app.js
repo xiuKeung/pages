@@ -80,14 +80,30 @@ function setSelection(start, end) {
 }
 
 function bindChartDetails(chartSelector, makeDetail, items, detailSelector) {
-  const show = index => { $(detailSelector).innerHTML = makeDetail(items[index]); };
-  $(chartSelector).querySelectorAll('.data-point').forEach(point => {
-    point.addEventListener('click', () => show(Number(point.dataset.index)));
-    point.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); show(Number(point.dataset.index)); } });
+  const points = [...$(chartSelector).querySelectorAll('.data-point')];
+  const show = (index, selectedPoint) => {
+    $(detailSelector).innerHTML = makeDetail(items[index]);
+    points.forEach(point => point.classList.toggle('is-selected', point === selectedPoint));
+  };
+  points.forEach(point => {
+    point.addEventListener('click', () => show(Number(point.dataset.index), point));
+    point.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); show(Number(point.dataset.index), point); } });
   });
 }
 
-writeSummary(); renderRecords(); render();
+function bindTrendLegend() {
+  const chart = $('#trendChart');
+  document.querySelectorAll('[data-highlight]').forEach(item => {
+    const setHighlight = () => { chart.dataset.highlight = item.dataset.highlight; };
+    const clearHighlight = () => { delete chart.dataset.highlight; };
+    item.addEventListener('pointerenter', setHighlight);
+    item.addEventListener('pointerleave', clearHighlight);
+    item.addEventListener('focus', setHighlight);
+    item.addEventListener('blur', clearHighlight);
+  });
+}
+
+writeSummary(); renderRecords(); render(); bindTrendLegend();
 document.querySelectorAll('[data-range]').forEach(button => button.addEventListener('click', () => {
   const visible = filterByRange(records, button.dataset.range);
   startIndex = records.indexOf(visible[0]); endIndex = records.indexOf(visible.at(-1));
