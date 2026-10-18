@@ -81,11 +81,9 @@
     const chooseImages = document.createElement('button');
     chooseImages.type = 'button';
     chooseImages.textContent = '选择图片';
-    chooseImages.addEventListener('click', () => picker.click());
     const takePhoto = document.createElement('button');
     takePhoto.type = 'button';
     takePhoto.textContent = '拍照';
-    takePhoto.addEventListener('click', () => camera.click());
     const refsInput = document.createElement('input');
     refsInput.id = 'imageRefs';
     refsInput.name = 'imageRefs';
@@ -98,6 +96,31 @@
     field.append(imageTitle, picker, camera, refsInput);
     imageSection.append(field, imageActions, preview);
     prosLabel.before(imageSection);
+
+    let waitingForImagePicker = false;
+    let pickerFocusTimer;
+    const beginImagePicker = input => {
+      waitingForImagePicker = true;
+      clearTimeout(pickerFocusTimer);
+      window.dispatchEvent(new Event('viewing:image-picker-open'));
+      input.click();
+    };
+    const settleImagePicker = () => {
+      waitingForImagePicker = false;
+      clearTimeout(pickerFocusTimer);
+      window.dispatchEvent(new Event('viewing:image-picker-settled'));
+    };
+    chooseImages.addEventListener('click', () => beginImagePicker(picker));
+    takePhoto.addEventListener('click', () => beginImagePicker(camera));
+    // 取消系统相机时不一定触发 change；回到页面获得焦点后延迟解除标记，
+    // 避免下次正常切后台被长期误判为图片选择中。
+    window.addEventListener('focus', () => {
+      if (!waitingForImagePicker) return;
+      clearTimeout(pickerFocusTimer);
+      pickerFocusTimer = setTimeout(() => {
+        if (waitingForImagePicker) settleImagePicker();
+      }, 500);
+    });
 
     const lightbox = document.createElement('div');
     lightbox.className = 'image-lightbox';
@@ -334,8 +357,17 @@
       sync();
       await renderEditor();
     };
-    picker.addEventListener('change', () => addFiles(picker));
-    camera.addEventListener('change', () => addFiles(camera));
+    const handleSelectedFiles = async input => {
+      try {
+        await addFiles(input);
+      } catch (error) {
+        console.error('添加房源图片失败：', error);
+      } finally {
+        settleImagePicker();
+      }
+    };
+    picker.addEventListener('change', () => { void handleSelectedFiles(picker); });
+    camera.addEventListener('change', () => { void handleSelectedFiles(camera); });
     let editorImageLoadToken = 0;
     new MutationObserver(() => {
       if (editor.classList.contains('hidden')) return;
