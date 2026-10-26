@@ -32,6 +32,35 @@
   let records = [];
   const selectedIds = new URLSearchParams(location.search).get('ids')?.split(',').filter(Boolean) || [];
   const same = values => new Set(values.map(value => text(value))).size <= 1;
+  const createColumnGroup = () => {
+    const group = document.createElement('colgroup');
+    const label = document.createElement('col');
+    label.className = 'comparison-label-column';
+    group.append(label);
+    records.forEach(() => group.append(document.createElement('col')));
+    return group;
+  };
+  const createColumnHeader = () => {
+    const thead = document.createElement('thead');
+    const header = document.createElement('tr');
+    const labelHeader = document.createElement('th');
+    labelHeader.scope = 'col';
+    labelHeader.textContent = '项目';
+    header.append(labelHeader);
+    records.forEach(record => {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.append(document.createTextNode(text(record.community)));
+      if (record.building) {
+        const building = document.createElement('small');
+        building.textContent = text(record.building);
+        th.append(document.createElement('br'), building);
+      }
+      header.append(th);
+    });
+    thead.append(header);
+    return thead;
+  };
   const render = () => {
     if (records.length < 2) {
       root.innerHTML = '<div class="empty">请从看房记录中选择至少 2 条房源进行对比。</div>';
@@ -40,8 +69,15 @@
       return;
     }
     count.textContent = `已对比 ${records.length} 条`;
-    let addedHeader = false;
-    root.replaceChildren(...rows.map(([title, items]) => {
+    const columns = document.createElement('section');
+    columns.className = 'comparison-columns';
+    const columnWrap = document.createElement('div');
+    columnWrap.className = 'table-wrap';
+    const columnTable = document.createElement('table');
+    columnTable.append(createColumnGroup(), createColumnHeader());
+    columnWrap.append(columnTable);
+    columns.append(columnWrap);
+    root.replaceChildren(columns, ...rows.map(([title, items]) => {
       const visible = onlyDifferences.checked ? items.filter(([, get]) => !same(records.map(get))) : items;
       if (!visible.length) return null;
       const section = document.createElement('section');
@@ -49,24 +85,6 @@
       const heading = document.createElement('h2'); heading.textContent = title;
       const wrap = document.createElement('div'); wrap.className = 'table-wrap';
       const table = document.createElement('table');
-      const thead = document.createElement('thead');
-      const header = document.createElement('tr');
-      const labelHeader = document.createElement('th');
-      labelHeader.scope = 'col';
-      labelHeader.textContent = '项目';
-      header.append(labelHeader);
-      records.forEach(record => {
-        const th = document.createElement('th');
-        th.scope = 'col';
-        th.append(document.createTextNode(text(record.community)));
-        if (record.building) {
-          const building = document.createElement('small');
-          building.textContent = text(record.building);
-          th.append(document.createElement('br'), building);
-        }
-        header.append(th);
-      });
-      thead.append(header);
       const tbody = document.createElement('tbody');
       visible.forEach(([label, get]) => {
         const values = records.map(get);
@@ -76,16 +94,12 @@
         values.forEach(value => { const td = document.createElement('td'); td.textContent = text(value); td.classList.toggle('is-different', different); tr.append(td); });
         tbody.append(tr);
       });
-      if (!addedHeader) {
-        table.append(thead);
-        addedHeader = true;
-      }
-      table.append(tbody); wrap.append(table); section.append(heading, wrap); return section;
+      table.append(createColumnGroup(), tbody); wrap.append(table); section.append(heading, wrap); return section;
     }).filter(Boolean));
     syncStickyHeader();
   };
   const syncStickyHeader = () => {
-    const sourceTable = root.querySelector('.comparison-group table');
+    const sourceTable = root.querySelector('.comparison-columns table');
     const sourceHeader = sourceTable?.tHead;
     if (!sourceHeader) {
       stickyHeader.hidden = true;
@@ -106,7 +120,7 @@
     const clone = document.createElement('table');
     clone.style.width = `${sourceTable.getBoundingClientRect().width}px`;
     clone.style.minWidth = `${sourceTable.getBoundingClientRect().width}px`;
-    clone.append(sourceHeader.cloneNode(true));
+    clone.append(sourceTable.querySelector('colgroup').cloneNode(true), sourceHeader.cloneNode(true));
     stickyHeader.replaceChildren(clone);
     stickyHeader.style.left = `${wrapRect.left}px`;
     stickyHeader.style.width = `${wrapRect.width}px`;
