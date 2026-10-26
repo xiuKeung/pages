@@ -4,6 +4,10 @@
   const count = document.getElementById('compareCount');
   const landscapeButton = document.getElementById('landscapeToggle');
   const orientationHint = document.getElementById('orientationHint');
+  const stickyHeader = document.createElement('div');
+  stickyHeader.className = 'comparison-sticky-header';
+  stickyHeader.hidden = true;
+  document.body.append(stickyHeader);
   const format = value => Number(value || 0).toLocaleString('zh-CN', { maximumFractionDigits:2 });
   const text = value => String(value || '').trim() || '—';
   const priority = value => value === 'focus' ? '重点关注' : value === 'excluded' ? '已排除' : '普通';
@@ -32,9 +36,11 @@
     if (records.length < 2) {
       root.innerHTML = '<div class="empty">请从看房记录中选择至少 2 条房源进行对比。</div>';
       count.textContent = records.length ? '已选择 1 条' : '未选择记录';
+      syncStickyHeader();
       return;
     }
     count.textContent = `已对比 ${records.length} 条`;
+    let addedHeader = false;
     root.replaceChildren(...rows.map(([title, items]) => {
       const visible = onlyDifferences.checked ? items.filter(([, get]) => !same(records.map(get))) : items;
       if (!visible.length) return null;
@@ -70,8 +76,42 @@
         values.forEach(value => { const td = document.createElement('td'); td.textContent = text(value); td.classList.toggle('is-different', different); tr.append(td); });
         tbody.append(tr);
       });
-      table.append(thead, tbody); wrap.append(table); section.append(heading, wrap); return section;
+      if (!addedHeader) {
+        table.append(thead);
+        addedHeader = true;
+      }
+      table.append(tbody); wrap.append(table); section.append(heading, wrap); return section;
     }).filter(Boolean));
+    syncStickyHeader();
+  };
+  const syncStickyHeader = () => {
+    const sourceTable = root.querySelector('.comparison-group table');
+    const sourceHeader = sourceTable?.tHead;
+    if (!sourceHeader) {
+      stickyHeader.hidden = true;
+      return;
+    }
+    // 先显式布局，才能读取含安全区的固定位置。
+    stickyHeader.hidden = false;
+    stickyHeader.style.visibility = 'hidden';
+    const top = stickyHeader.getBoundingClientRect().top;
+    const pageBounds = root.getBoundingClientRect();
+    const headerBounds = sourceHeader.getBoundingClientRect();
+    if (headerBounds.bottom > top || pageBounds.bottom <= top + headerBounds.height) {
+      stickyHeader.hidden = true;
+      return;
+    }
+    const wrap = sourceTable.closest('.table-wrap');
+    const wrapRect = wrap.getBoundingClientRect();
+    const clone = document.createElement('table');
+    clone.style.width = `${sourceTable.getBoundingClientRect().width}px`;
+    clone.style.minWidth = `${sourceTable.getBoundingClientRect().width}px`;
+    clone.append(sourceHeader.cloneNode(true));
+    stickyHeader.replaceChildren(clone);
+    stickyHeader.style.left = `${wrapRect.left}px`;
+    stickyHeader.style.width = `${wrapRect.width}px`;
+    stickyHeader.style.setProperty('--comparison-scroll-x', `${-wrap.scrollLeft}px`);
+    stickyHeader.style.visibility = '';
   };
   const setNativeOrientation = async orientation => {
     const nativeBridge = window.Capacitor?.Plugins?.OrientationBridge;
@@ -102,6 +142,9 @@
   };
   onlyDifferences.addEventListener('change', render);
   landscapeButton.addEventListener('click', () => { void toggleLandscape(); });
+  window.addEventListener('scroll', syncStickyHeader, { passive:true });
+  window.addEventListener('resize', syncStickyHeader);
+  root.addEventListener('scroll', syncStickyHeader, true);
   document.querySelector('[data-back]')?.addEventListener('click', event => { if (history.length > 1) { event.preventDefault(); history.back(); } });
   (async () => {
     const all = await window.NativeStore.getViewingRecords({ force:true });
