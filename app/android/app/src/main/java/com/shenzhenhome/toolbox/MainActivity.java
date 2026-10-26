@@ -21,6 +21,7 @@ public class MainActivity extends BridgeActivity {
         SplashScreen.installSplashScreen(this);
         registerPlugin(BackupFilePlugin.class);
         registerPlugin(ThemeBridgePlugin.class);
+        registerPlugin(OrientationBridgePlugin.class);
         super.onCreate(savedInstanceState);
         applyNativeTheme(readNativeTheme());
         refreshWebAssetsAfterUpgrade();

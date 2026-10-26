@@ -84,6 +84,33 @@ class ThemeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
+@objc(OrientationBridgePlugin)
+class OrientationBridgePlugin: CAPPlugin, CAPBridgedPlugin {
+    let identifier = "OrientationBridgePlugin"
+    let jsName = "OrientationBridge"
+    let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "setOrientation", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func setOrientation(_ call: CAPPluginCall) {
+        let orientation = call.getString("orientation") == "landscape"
+            ? UIInterfaceOrientation.landscapeRight
+            : UIInterfaceOrientation.portrait
+        DispatchQueue.main.async { [weak self] in
+            guard let controller = self?.bridge?.viewController else {
+                call.reject("无法切换屏幕方向")
+                return
+            }
+            if #available(iOS 16.0, *) {
+                controller.setNeedsUpdateOfSupportedInterfaceOrientations()
+            }
+            UIDevice.current.setValue(orientation.rawValue, forKey: "orientation")
+            UIViewController.attemptRotationToDeviceOrientation()
+            call.resolve()
+        }
+    }
+}
+
 class MainViewController: CAPBridgeViewController {
     private let themePreferenceKey = "anjia_theme_preference"
 
@@ -126,6 +153,7 @@ class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(PhotoLibraryPlugin())
         bridge?.registerPluginInstance(ThemeBridgePlugin())
+        bridge?.registerPluginInstance(OrientationBridgePlugin())
         // 与 Safari 保持一致：有页面历史时允许从屏幕左边缘右滑返回。
         bridge?.webView?.allowsBackForwardNavigationGestures = true
         bridge?.webView?.isOpaque = false

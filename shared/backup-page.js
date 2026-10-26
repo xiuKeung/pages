@@ -4063,6 +4063,23 @@
       openDialog(dialog);
     });
   }
+  function chooseBackupAction() {
+    return new Promise((resolve2) => {
+      const dialog = document.createElement("div");
+      dialog.className = "backup-mode-dialog";
+      dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="\u5907\u4EFD\u7BA1\u7406"><h3>\u5907\u4EFD\u7BA1\u7406</h3><p>\u5BFC\u51FA\u5F53\u524D\u770B\u623F\u8BB0\u5F55\u548C\u56FE\u7247\uFF0C\u6216\u4ECE\u5DF2\u6709\u5907\u4EFD\u6062\u590D\u770B\u623F\u8BB0\u5F55\u3002</p><div><button type="button" data-action="export">\u5BFC\u51FA\u5907\u4EFD</button><button type="button" data-action="import">\u5BFC\u5165\u5907\u4EFD</button></div><button type="button" class="cancel" data-action="cancel">\u53D6\u6D88</button></div>';
+      const finish = (action) => {
+        closeDialog(dialog);
+        resolve2(action === "cancel" ? null : action);
+      };
+      dialog.addEventListener("click", (event) => {
+        if (event.target === dialog) return finish("cancel");
+        const button = event.target.closest("[data-action]");
+        if (button) finish(button.dataset.action);
+      });
+      openDialog(dialog);
+    });
+  }
   function confirmReplaceImport() {
     return new Promise((resolve2) => {
       const dialog = document.createElement("div");
@@ -4284,10 +4301,7 @@
     }
     setTimeout(() => location.reload(), 700);
   }
-  document.getElementById("export")?.addEventListener("click", async (event) => {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    event.currentTarget?.blur?.();
+  async function exportBackup() {
     try {
       const mode = await chooseExportMode();
       if (!mode) return;
@@ -4312,11 +4326,8 @@
       console.error(error);
       toast(`\u5BFC\u51FA\u5931\u8D25\uFF1A${error.message || "\u8BF7\u91CD\u8BD5"}`);
     }
-  }, true);
-  document.getElementById("importButton")?.addEventListener("click", async (event) => {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    event.currentTarget?.blur?.();
+  }
+  async function importBackup() {
     try {
       const mode = await chooseImportMode();
       if (!mode) return;
@@ -4325,6 +4336,14 @@
       console.error(error);
       toast(`\u5BFC\u5165\u5931\u8D25\uFF1A${error.message || "\u8BF7\u9009\u62E9\u6B63\u786E\u7684 ZIP \u5907\u4EFD"}`);
     }
+  }
+  document.getElementById("backup")?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    event.currentTarget?.blur?.();
+    const action = await chooseBackupAction();
+    if (action === "export") await exportBackup();
+    if (action === "import") await importBackup();
   }, true);
 })();
 /*! Bundled license information:

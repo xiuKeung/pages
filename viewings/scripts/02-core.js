@@ -98,12 +98,13 @@
       .join("");
   }
   function render() {
-    const choice = $("filter").value;
+    const choices = [...document.querySelectorAll('#filter input:checked')]
+      .map(input => input.value);
     const query = ($("recordSearch")?.value || "").trim().toLocaleLowerCase();
     const list = records
       .filter(
         (r) =>
-          (choice === "all" || r.priority === choice) &&
+          (!choices.length || choices.includes(r.priority)) &&
           (!query || JSON.stringify(r).toLocaleLowerCase().includes(query)),
       )
       .sort(
@@ -311,10 +312,12 @@
   $("copyRecord").onclick = copyRecord;
   $("totalPrice").oninput = updateUnit;
   $("area").oninput = updateUnit;
-  $("filter").onchange = () => {
-    renderLimit = 20;
-    render();
-  };
+  document.querySelectorAll('#filter input').forEach(input => {
+    input.onchange = () => {
+      renderLimit = 20;
+      render();
+    };
+  });
   $("recordForm").onsubmit = async (e) => {
     e.preventDefault();
     const r = Object.fromEntries(new FormData(e.target)),
@@ -338,26 +341,6 @@
     renderLimit = 20;
     render();
     toast("记录已保存。");
-  };
-  $("export").onclick = () => {
-    download(JSON.stringify(records, null, 2), "shenzhen-viewing-records.json");
-    toast("备份文件已导出。");
-  };
-  $("importButton").onclick = () => $("importFile").click();
-  $("importFile").onchange = async (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
-    try {
-      const data = JSON.parse(await f.text());
-      if (!Array.isArray(data)) throw Error();
-      records = data.filter((x) => x && x.community);
-      save();
-      render();
-      toast(`已导入 ${records.length} 条记录。`);
-    } catch (_) {
-      toast("导入失败：请选择本工具导出的 JSON 文件。");
-    }
-    e.target.value = "";
   };
   populateBuiltYears();
   populateFloors();

@@ -232,10 +232,10 @@
     const suggestions = document.createElement('datalist');
     suggestions.id = 'recordSearchSuggestions';
     input.after(suggestions);
-    toolbar.querySelector('.filter')?.after(input);
+    toolbar.querySelector('#filter')?.after(input);
     const count = document.createElement('span');
     count.className = 'record-count';
-    toolbar.querySelector('.filter')?.after(count);
+    toolbar.querySelector('#filter')?.after(count);
 
     const empty = document.createElement('p');
     empty.className = 'search-empty';
@@ -252,7 +252,7 @@
         .sort((a, b) => a.localeCompare(b, 'zh-CN'));
       suggestions.innerHTML = names.map(name => `<option value="${name}"></option>`).join('');
       const query = input.value.trim().toLocaleLowerCase();
-      const hasStatusFilter = document.getElementById('filter')?.value !== 'all';
+      const hasStatusFilter = document.querySelectorAll('#filter input:checked').length > 0;
       let visible = 0;
       recordsNode.querySelectorAll('.record').forEach(card => {
         const id = card.querySelector('[data-edit]')?.dataset.edit;

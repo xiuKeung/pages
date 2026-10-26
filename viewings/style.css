@@ -267,6 +267,30 @@
       font-size: 13px;
       white-space: nowrap;
     }
+    .record-filter {
+      display: inline-flex;
+      min-height: 36px;
+      gap: 9px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      background: var(--theme-surface, #fff);
+      font-size: 13px;
+    }
+    .record-filter > span { color: var(--ink); font-weight: 650; }
+    .record-filter label {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+      color: var(--ink);
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .record-filter input { width: 16px; height: 16px; margin: 0; accent-color: var(--blue); }
     .records-more {
       display: flex;
       justify-content: center;
@@ -617,8 +641,7 @@
     html[data-theme="dark"] .import-progress-ring.is-complete span { color: #32d583; }
 
     /* 备份弹窗打开时，iOS 不应把触摸高亮透过遮罩显示在触发按钮上。 */
-    .toolbar-actions #export,
-    .toolbar-actions #importButton,
+    .toolbar-actions #backup,
     .backup-mode-dialog { -webkit-tap-highlight-color: transparent; }
     .backup-mode-dialog { isolation:isolate; touch-action:none; }
     .backup-mode-panel,.backup-record-picker .backup-record-list { touch-action:manipulation; }

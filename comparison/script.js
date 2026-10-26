@@ -73,23 +73,40 @@
       table.append(thead, tbody); wrap.append(table); section.append(heading, wrap); return section;
     }).filter(Boolean));
   };
+  const setNativeOrientation = async orientation => {
+    const nativeBridge = window.Capacitor?.Plugins?.OrientationBridge;
+    try {
+      if (nativeBridge?.setOrientation) {
+        await nativeBridge.setOrientation({ orientation });
+        return true;
+      }
+      if (orientation === 'landscape' && screen.orientation?.lock) {
+        await screen.orientation.lock('landscape');
+        return true;
+      }
+      if (orientation === 'portrait' && screen.orientation?.unlock) {
+        screen.orientation.unlock();
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  };
   const toggleLandscape = async () => {
     const enabled = document.body.classList.toggle('manual-landscape');
     landscapeButton.textContent = enabled ? '退出横屏' : '横屏查看';
-    orientationHint.hidden = !enabled;
-    try {
-      if (enabled) await screen.orientation?.lock?.('landscape');
-      else screen.orientation?.unlock?.();
-    } catch (_) {
-      // 浏览器和 iOS 通常不允许脚本锁定方向；用户仍可手动横置查看。
-    }
+    const rotated = await setNativeOrientation(enabled ? 'landscape' : 'portrait');
+    orientationHint.hidden = !enabled || rotated;
+    if (enabled && !rotated) orientationHint.textContent = '当前浏览器不允许页面主动旋转，请手动横置手机查看';
   };
   onlyDifferences.addEventListener('change', render);
   landscapeButton.addEventListener('click', () => { void toggleLandscape(); });
   document.querySelector('[data-back]')?.addEventListener('click', event => { if (history.length > 1) { event.preventDefault(); history.back(); } });
   (async () => {
     const all = await window.NativeStore.getViewingRecords({ force:true });
-    records = selectedIds.map(id => all.find(record => String(record.id) === id)).filter(Boolean).slice(0, 4);
+    records = selectedIds.map(id => all.find(record => String(record.id) === id)).filter(Boolean);
     render();
   })().catch(() => { root.innerHTML = '<div class="empty">读取看房记录失败，请返回后重试。</div>'; });
+  window.addEventListener('pagehide', () => { void setNativeOrientation('portrait'); });
 })();

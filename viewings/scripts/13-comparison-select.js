@@ -1,4 +1,4 @@
-/* 房源对比选择：最多四条，跳转到独立对比页。 */
+/* 房源对比选择：支持多条，跳转到独立对比页。 */
 (() => {
   const recordsNode = document.getElementById('records');
   const selectButton = document.getElementById('compareSelect');
@@ -55,10 +55,7 @@
     if (!button) return;
     const id = button.dataset.compareChoice;
     if (selected.has(id)) selected.delete(id);
-    else if (selected.size >= 4) {
-      showToast('一次最多对比 4 条房源。');
-      return;
-    } else selected.add(id);
+    else selected.add(id);
     update();
   });
   new MutationObserver(update).observe(recordsNode, { childList: true });

@@ -286,6 +286,21 @@ function chooseImportMode() {
   });
 }
 
+function chooseBackupAction() {
+  return new Promise(resolve => {
+    const dialog = document.createElement('div');
+    dialog.className = 'backup-mode-dialog';
+    dialog.innerHTML = '<div class="backup-mode-panel" role="dialog" aria-modal="true" aria-label="备份管理"><h3>备份管理</h3><p>导出当前看房记录和图片，或从已有备份恢复看房记录。</p><div><button type="button" data-action="export">导出备份</button><button type="button" data-action="import">导入备份</button></div><button type="button" class="cancel" data-action="cancel">取消</button></div>';
+    const finish = action => { closeDialog(dialog); resolve(action === 'cancel' ? null : action); };
+    dialog.addEventListener('click', event => {
+      if (event.target === dialog) return finish('cancel');
+      const button = event.target.closest('[data-action]');
+      if (button) finish(button.dataset.action);
+    });
+    openDialog(dialog);
+  });
+}
+
 function confirmReplaceImport() {
   return new Promise(resolve => {
     const dialog = document.createElement('div');
@@ -500,10 +515,7 @@ async function restoreBackup(mode) {
   setTimeout(() => location.reload(), 700);
 }
 
-document.getElementById('export')?.addEventListener('click', async event => {
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  event.currentTarget?.blur?.();
+async function exportBackup() {
   try {
     const mode = await chooseExportMode();
     if (!mode) return;
@@ -528,12 +540,9 @@ document.getElementById('export')?.addEventListener('click', async event => {
     console.error(error);
     toast(`导出失败：${error.message || '请重试'}`);
   }
-}, true);
+}
 
-document.getElementById('importButton')?.addEventListener('click', async event => {
-  event.preventDefault();
-  event.stopImmediatePropagation();
-  event.currentTarget?.blur?.();
+async function importBackup() {
   try {
     const mode = await chooseImportMode();
     if (!mode) return;
@@ -542,4 +551,13 @@ document.getElementById('importButton')?.addEventListener('click', async event =
     console.error(error);
     toast(`导入失败：${error.message || '请选择正确的 ZIP 备份'}`);
   }
+}
+
+document.getElementById('backup')?.addEventListener('click', async event => {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  event.currentTarget?.blur?.();
+  const action = await chooseBackupAction();
+  if (action === 'export') await exportBackup();
+  if (action === 'import') await importBackup();
 }, true);
