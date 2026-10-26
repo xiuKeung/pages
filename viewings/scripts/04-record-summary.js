@@ -37,7 +37,8 @@
           ? `${format(Number(record.targetPrice) / Number(record.area))} 万/㎡`
           : '';
         const detail = [
-          buildingFloor, record.area && `${format(record.area)}㎡`, record.layout, record.orientation,
+          buildingFloor, record.area && `${format(record.area)}㎡`, record.layout,
+          record.builtYear && `${record.builtYear}年`, record.orientation,
           record.targetPrice && `报价 ${format(record.targetPrice)}万`, unit
         ].filter(Boolean);
         const meta = card.querySelector('.record-top .meta');

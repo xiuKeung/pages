@@ -282,6 +282,35 @@
 
     let refs = [];
     const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
+    const showImageImportProgress = total => {
+      if (total < 2) return null;
+      const dialog = document.createElement('div');
+      dialog.className = 'import-progress-dialog image-import-progress';
+      dialog.innerHTML = '<div class="import-progress-panel" role="status" aria-live="polite" aria-label="正在添加房源图片"><div class="import-progress-ring"><span>0%</span></div><h3>正在添加图片</h3><p class="import-progress-status">正在准备图片…</p><p class="import-progress-detail">请勿关闭页面或切换应用</p></div>';
+      const ring = dialog.querySelector('.import-progress-ring');
+      const percent = ring.querySelector('span');
+      const status = dialog.querySelector('.import-progress-status');
+      const detail = dialog.querySelector('.import-progress-detail');
+      document.body.append(dialog);
+      const update = (completed, text = '正在保存图片') => {
+        const value = Math.round(Math.min(100, Math.max(0, completed / total * 100)));
+        ring.style.setProperty('--progress', `${value * 3.6}deg`);
+        percent.textContent = `${value}%`;
+        status.textContent = text;
+        detail.textContent = `已添加 ${completed} / ${total} 张图片`;
+      };
+      return {
+        update,
+        complete: (added, failed) => {
+          ring.classList.add('is-complete');
+          percent.textContent = '✓';
+          status.textContent = failed ? `已添加 ${added} 张图片，${failed} 张失败` : `已添加 ${added} 张图片`;
+          detail.textContent = failed ? '失败图片可重新选择添加' : '图片已保存到当前记录';
+          setTimeout(() => dialog.remove(), 700);
+        },
+        close: () => dialog.remove()
+      };
+    };
     const sync = () => {
       refsInput.value = JSON.stringify(refs);
       form.dispatchEvent(new Event('input', { bubbles: true }));
@@ -343,19 +372,42 @@
     };
     const addFiles = async input => {
       const files = [...input.files || []].filter(file => file.type.startsWith('image/'));
+      if (!files.length) return;
       let recordId = document.getElementById('recordId')?.value;
       if (nativeImages && !recordId) {
         recordId = createId();
         document.getElementById('recordId').value = recordId;
       }
-      for (const file of files) {
-        const id = createId();
-        const stored = await putImage(recordId, id, file);
-        refs.push(nativeImages ? stored : { id, name: file.name, type: file.type, size: file.size, createdAt: Date.now() });
+      const progress = showImageImportProgress(files.length);
+      let added = 0;
+      let failed = 0;
+      // 先让进度层完成一次绘制；大图压缩和缩略图生成会占用主线程。
+      await nextFrame();
+      for (const [index, file] of files.entries()) {
+        try {
+          progress?.update(index, '正在保存图片');
+          const id = createId();
+          const stored = await putImage(recordId, id, file);
+          const ref = nativeImages
+            ? stored
+            : { id, name: file.name, type: file.type, size: file.size, createdAt: Date.now() };
+          refs.push(ref);
+          // 不等待全部图片完成，每张保存后立即显示缩略图。
+          await thumbnail(ref, true, preview, refs);
+          added += 1;
+          progress?.update(index + 1, '正在添加图片');
+        } catch (error) {
+          failed += 1;
+          console.error('保存房源图片失败：', error);
+          progress?.update(index + 1, '部分图片添加失败');
+        }
+        await nextFrame();
       }
       input.value = '';
       sync();
-      await renderEditor();
+      if (refs.length) imageTitle.textContent = `房源图片（${refs.length} 张 · 共 ${formatBytes(await totalImageSize(refs))}）`;
+      else imageTitle.textContent = '房源图片（可多选）';
+      progress?.complete(added, failed);
     };
     const handleSelectedFiles = async input => {
       try {

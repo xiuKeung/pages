@@ -301,6 +301,18 @@
       min-height: 36px;
       line-height: 20px;
     }
+    #compareSelect.is-active {
+      color: #fff;
+      border-color: var(--blue);
+      background: var(--blue);
+    }
+    .record.is-comparison-selected {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px rgba(23, 105, 224, .14);
+    }
+    .is-comparison-selecting .record-actions [data-compare-choice] {
+      order: -1;
+    }
     .image-preview {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
@@ -560,6 +572,8 @@
       padding: 20px;
       background: rgba(20, 32, 52, .5);
     }
+    /* 多图添加也复用进度层，但必须位于编辑覆盖层和图片预览层之上。 */
+    .image-import-progress { z-index: 1400; }
     .import-progress-panel {
       width: min(100%, 320px);
       padding: 28px 22px 24px;

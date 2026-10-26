@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1769e0">
+  <title>房源对比</title>
+  <link rel="icon" href="../viewings/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="../shared/theme.css">
+  <script src="../shared/theme.js"></script>
+</head>
+<body>
+  <main>
+    <a class="back" data-back href="../viewings/index.html">← 返回</a>
+    <div class="page-head">
+      <div><h1>房源对比</h1><p>最多同时比较 4 条看房记录</p></div>
+      <button id="landscapeToggle" type="button">横屏查看</button>
+    </div>
+    <div class="comparison-options"><label><input id="onlyDifferences" type="checkbox"> 只显示不同项</label><span id="compareCount"></span></div>
+    <p class="hint" id="orientationHint" hidden>已启用横屏布局；如设备未自动旋转，请手动横置手机查看</p>
+    <section id="comparison" aria-live="polite"></section>
+  </main>
+  <script src="../shared/native-store.js"></script>
+  <script src="../viewings/scripts/01-loan.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
