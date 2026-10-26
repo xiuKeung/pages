@@ -18,6 +18,7 @@
     selectButton.classList.toggle('is-active', selecting);
     openButton.hidden = !selecting;
     openButton.disabled = selected.size < 2;
+    openButton.setAttribute('aria-disabled', String(selected.size < 2));
     openButton.textContent = `查看对比（${selected.size}）`;
     recordsNode.classList.toggle('is-comparison-selecting', selecting);
     recordsNode.querySelectorAll('.record').forEach(card => {

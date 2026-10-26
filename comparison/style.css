@@ -17,7 +17,7 @@ th,td { padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:t
 tr:last-child th,tr:last-child td { border-bottom:0; } thead th { color:var(--ink); background:var(--surface); font-size:15px; }
 tbody th { width:118px; color:var(--muted); font-weight:650; background:var(--soft); } td { white-space:pre-wrap; } td.is-different { color:var(--ink); font-weight:650; background:#f5f9ff; }
 .comparison-label-column { width:118px; }
-.comparison-sticky-header { position:fixed; z-index:25; top:calc(env(safe-area-inset-top, 0px) + 66px); overflow:hidden; border:1px solid var(--line); border-radius:10px; background:var(--surface); box-shadow:0 5px 12px rgba(25,59,110,.13); pointer-events:none; }
+.comparison-sticky-header { position:fixed; z-index:25; top:calc(env(safe-area-inset-top, 0px) + 8px); overflow:hidden; border:1px solid var(--line); border-radius:10px; background:var(--surface); box-shadow:0 5px 12px rgba(25,59,110,.13); pointer-events:none; }
 .comparison-sticky-header table { margin:0; transform:translateX(var(--comparison-scroll-x, 0px)); }
 .comparison-sticky-header th { padding:11px 13px; border:0; color:var(--ink); background:var(--surface); font-size:15px; }
 .empty { margin-top:18px; padding:38px 16px; border:1px solid var(--line); border-radius:15px; color:var(--muted); background:var(--surface); text-align:center; }

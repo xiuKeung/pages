@@ -30,6 +30,8 @@
     ]]
   ];
   let records = [];
+  let horizontalScrollLeft = 0;
+  let syncingHorizontalScroll = false;
   const selectedIds = new URLSearchParams(location.search).get('ids')?.split(',').filter(Boolean) || [];
   const same = values => new Set(values.map(value => text(value))).size <= 1;
   const createColumnGroup = () => {
@@ -96,7 +98,18 @@
       });
       table.append(createColumnGroup(), tbody); wrap.append(table); section.append(heading, wrap); return section;
     }).filter(Boolean));
+    root.querySelectorAll('.table-wrap').forEach(wrap => { wrap.scrollLeft = horizontalScrollLeft; });
     syncStickyHeader();
+  };
+  const syncHorizontalScroll = source => {
+    if (syncingHorizontalScroll || !source?.classList?.contains('table-wrap')) return;
+    horizontalScrollLeft = source.scrollLeft;
+    syncingHorizontalScroll = true;
+    root.querySelectorAll('.table-wrap').forEach(wrap => {
+      if (wrap !== source) wrap.scrollLeft = horizontalScrollLeft;
+    });
+    syncStickyHeader();
+    requestAnimationFrame(() => { syncingHorizontalScroll = false; });
   };
   const syncStickyHeader = () => {
     const sourceTable = root.querySelector('.comparison-columns table');
@@ -158,7 +171,7 @@
   landscapeButton.addEventListener('click', () => { void toggleLandscape(); });
   window.addEventListener('scroll', syncStickyHeader, { passive:true });
   window.addEventListener('resize', syncStickyHeader);
-  root.addEventListener('scroll', syncStickyHeader, true);
+  root.addEventListener('scroll', event => syncHorizontalScroll(event.target), true);
   document.querySelector('[data-back]')?.addEventListener('click', event => { if (history.length > 1) { event.preventDefault(); history.back(); } });
   (async () => {
     const all = await window.NativeStore.getViewingRecords({ force:true });
