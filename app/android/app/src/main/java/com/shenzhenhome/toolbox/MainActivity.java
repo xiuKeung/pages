@@ -22,6 +22,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(BackupFilePlugin.class);
         registerPlugin(ThemeBridgePlugin.class);
         registerPlugin(OrientationBridgePlugin.class);
+        registerPlugin(MapLauncherPlugin.class);
         super.onCreate(savedInstanceState);
         applyNativeTheme(readNativeTheme());
         refreshWebAssetsAfterUpgrade();

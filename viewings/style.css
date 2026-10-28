@@ -553,6 +553,15 @@
     .lightbox-actions { position:absolute; right:16px; bottom:18px; left:16px; display:flex; justify-content:center; gap:10px; }.lightbox-actions button { min-height:38px; padding:8px 12px; border:1px solid rgba(255,255,255,.45); border-radius:9px; color:#fff; background:rgba(27,41,66,.72); font:inherit; font-size:13px; font-weight:650; }.lightbox-actions button:disabled { opacity:.55; }.lightbox-message { position:absolute; right:20px; bottom:66px; left:20px; min-height:18px; color:#fff; font-size:13px; text-align:center; text-shadow:0 1px 3px rgba(0,0,0,.45); }
     .image-item img { cursor: zoom-in; }
 
+    /* 小区名称快捷操作：放在名称旁，避免占用记录操作栏。 */
+    /* 详情编辑层的层级为 950，toast 必须位于其上方才能显示复制结果。 */
+    .toast { z-index: 1100; }
+    .community-actions { display:inline-flex; gap:6px; margin-left:8px; vertical-align:middle; }
+    .community-actions button,.community-field-actions button,.school-field-actions button { min-height:25px; padding:2px 7px; border-radius:7px; font-size:11px; font-weight:650; vertical-align:middle; }
+    .community-field,.auto-school-field { display:flex !important; flex-direction:column; }
+    .community-field-heading,.school-field-heading { display:flex; order:-1; align-items:center; justify-content:space-between; gap:8px; }
+    .community-field-actions,.school-field-actions { display:inline-flex; gap:6px; }
+
     /* 返回入口始终保留在视口顶部。 */
     main { padding-top: 70px; }
     .back {

@@ -107,7 +107,6 @@
     const addSchoolField = (id, title) => {
       const label = document.createElement('label');
       label.className = 'auto-school-field';
-      label.textContent = title;
       const input = document.createElement('input');
       input.id = id;
       input.name = id;
@@ -127,6 +126,33 @@
       });
       inputWrap.append(input, clear);
       label.append(inputWrap);
+      const heading = document.createElement('span');
+      heading.className = 'school-field-heading';
+      const fieldTitle = document.createElement('span');
+      fieldTitle.textContent = title;
+      const actions = document.createElement('span');
+      actions.className = 'school-field-actions';
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.textContent = '复制';
+      const map = document.createElement('button');
+      map.type = 'button';
+      map.textContent = '地图';
+      const shortTitle = title.replace(/（.*$/, '');
+      copy.addEventListener('click', async () => {
+        const value = input.value.trim();
+        if (!value) return;
+        await window.ViewingPlaceActions?.copy(value);
+        window.ViewingPlaceActions?.notify(`${shortTitle}已复制`);
+      });
+      map.addEventListener('click', () => {
+        const value = input.value.trim();
+        if (value) void window.ViewingPlaceActions?.openMap(value);
+      });
+      actions.append(copy, map);
+      heading.append(fieldTitle, actions);
+      // input 保持在 DOM 中第一个，避免点击标题误触发复制按钮。
+      label.append(heading);
       previousField.after(label);
       previousField = label;
       return input;

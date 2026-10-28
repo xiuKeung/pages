@@ -111,6 +111,34 @@ class OrientationBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
+@objc(MapLauncherPlugin)
+class MapLauncherPlugin: CAPPlugin, CAPBridgedPlugin {
+    let identifier = "MapLauncherPlugin"
+    let jsName = "MapLauncher"
+    let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "open", returnType: CAPPluginReturnPromise)
+    ]
+
+    @objc func open(_ call: CAPPluginCall) {
+        let query = (call.getString("query") ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else {
+            call.reject("缺少地点名称")
+            return
+        }
+        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "https://maps.apple.com/?q=\(encoded)") else {
+            call.reject("无法生成地图链接")
+            return
+        }
+        DispatchQueue.main.async {
+            UIApplication.shared.open(url, options: [:]) { success in
+                if success { call.resolve() }
+                else { call.reject("无法打开系统地图") }
+            }
+        }
+    }
+}
+
 class MainViewController: CAPBridgeViewController {
     private let themePreferenceKey = "anjia_theme_preference"
 
@@ -154,6 +182,7 @@ class MainViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(PhotoLibraryPlugin())
         bridge?.registerPluginInstance(ThemeBridgePlugin())
         bridge?.registerPluginInstance(OrientationBridgePlugin())
+        bridge?.registerPluginInstance(MapLauncherPlugin())
         // 与 Safari 保持一致：有页面历史时允许从屏幕左边缘右滑返回。
         bridge?.webView?.allowsBackForwardNavigationGestures = true
         bridge?.webView?.isOpaque = false
