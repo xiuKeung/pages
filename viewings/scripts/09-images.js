@@ -156,10 +156,15 @@
     lightboxActions.append(saveCurrent, saveAll);
     const lightboxMessage = document.createElement('p');
     lightboxMessage.className = 'lightbox-message';
+    const lightboxLoading = document.createElement('span');
+    lightboxLoading.className = 'lightbox-loading';
+    lightboxLoading.textContent = '正在加载高清图片';
     viewport.append(lightboxImage);
-    lightbox.append(viewport, closeLightbox, previousImage, nextImage, imageCounter, lightboxMessage, lightboxActions);
+    lightbox.append(viewport, closeLightbox, previousImage, nextImage, imageCounter, lightboxLoading, lightboxMessage, lightboxActions);
     document.body.append(lightbox);
-    let lightboxUrl = '', lightboxBlob = null, lightboxRef = null, lightboxRefs = [], scale = 1, offsetX = 0, offsetY = 0;
+    let lightboxUrl = '', lightboxBlob = null, lightboxRef = null, lightboxRefs = [], lightboxIsFull = false, lightboxLoadToken = 0, scale = 1, offsetX = 0, offsetY = 0;
+    const fullImageCache = new Map();
+    const maxCachedFullImages = 4;
     const renderTransform = () => { lightboxImage.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`; };
     const resetTransform = () => { scale = 1; offsetX = 0; offsetY = 0; renderTransform(); };
     const showLightboxMessage = message => {
@@ -177,36 +182,80 @@
       nextImage.disabled = !multiple || index < 0 || index >= lightboxRefs.length - 1;
       imageCounter.textContent = multiple && index >= 0 ? `${index + 1} / ${lightboxRefs.length}` : '';
     };
-    const setLightboxImage = (blob, name, ref) => {
+    const cacheFullImage = async ref => {
+      const key = String(ref?.id || '');
+      if (!key) return null;
+      if (fullImageCache.has(key)) {
+        const cached = fullImageCache.get(key);
+        fullImageCache.delete(key);
+        fullImageCache.set(key, cached);
+        return cached;
+      }
+      const blob = await getFullImage(ref);
+      if (!blob) return null;
+      fullImageCache.set(key, blob);
+      while (fullImageCache.size > maxCachedFullImages) fullImageCache.delete(fullImageCache.keys().next().value);
+      return blob;
+    };
+    const warmAdjacentFullImages = ref => {
+      const index = lightboxRefs.findIndex(item => String(item.id) === String(ref?.id));
+      const neighbours = [lightboxRefs[index + 1], lightboxRefs[index - 1]].filter(Boolean);
+      void (async () => {
+        for (const item of neighbours) await cacheFullImage(item);
+      })();
+    };
+    const setLightboxImage = (blob, name, ref, isFull = false, shouldReset = true) => {
       if (lightboxUrl) URL.revokeObjectURL(lightboxUrl);
       lightboxUrl = URL.createObjectURL(blob);
       lightboxImage.src = lightboxUrl;
       lightboxImage.alt = name || '房源图片';
       lightboxBlob = blob;
       lightboxRef = ref;
-      resetTransform();
+      lightboxIsFull = isFull;
+      lightbox.classList.toggle('is-loading', !isFull);
+      saveCurrent.disabled = !isFull;
+      if (shouldReset) resetTransform();
       updateNavigation();
     };
     const hideLightbox = () => {
+      lightboxLoadToken += 1;
       lightbox.hidden = true;
       if (lightboxUrl) URL.revokeObjectURL(lightboxUrl);
-      lightboxUrl = ''; lightboxBlob = null; lightboxRef = null; lightboxRefs = []; lightboxMessage.textContent = ''; imageCounter.textContent = '';
+      lightboxUrl = ''; lightboxBlob = null; lightboxRef = null; lightboxRefs = []; lightboxIsFull = false; fullImageCache.clear(); lightboxMessage.textContent = ''; imageCounter.textContent = '';
+      lightbox.classList.remove('is-loading');
       lightboxImage.removeAttribute('src');
       resetTransform();
+    };
+    const loadFullImage = async (ref, previewBlob, token) => {
+      try {
+        const fullBlob = nativeImages ? await cacheFullImage(ref) : previewBlob;
+        if (!fullBlob || token !== lightboxLoadToken || String(lightboxRef?.id) !== String(ref.id)) return;
+        setLightboxImage(fullBlob, ref.name, ref, true, false);
+        warmAdjacentFullImages(ref);
+      } catch (_) {
+        if (token === lightboxLoadToken) lightbox.classList.remove('is-loading');
+      }
+    };
+    const showImage = async (ref, previewBlob = null) => {
+      const token = ++lightboxLoadToken;
+      const thumbnailBlob = previewBlob || await getImage(ref);
+      if (!thumbnailBlob || token !== lightboxLoadToken) return;
+      setLightboxImage(thumbnailBlob, ref.name, ref, !nativeImages);
+      if (nativeImages) void loadFullImage(ref, thumbnailBlob, token);
+      else warmAdjacentFullImages(ref);
     };
     const showLightbox = (blob, name, ref, allRefs = []) => {
       hideLightbox();
       lightboxRefs = allRefs;
-      setLightboxImage(blob, name, ref);
       saveAll.disabled = allRefs.length < 2;
       lightbox.hidden = false;
+      void showImage(ref, blob);
     };
     const switchImage = async direction => {
       const index = currentImageIndex();
       const target = lightboxRefs[index + direction];
       if (!target) return;
-      const blob = await getFullImage(target);
-      if (blob) setLightboxImage(blob, target.name, target);
+      await showImage(target);
     };
     const safeName = (name, index = 0) => {
       const extension = /\.[a-z0-9]{2,5}$/i.test(name || '') ? '' : '.jpg';
@@ -325,9 +374,7 @@
       image.src = url;
       image.alt = ref.name || '房源图片';
       image.onload = () => URL.revokeObjectURL(url);
-      image.addEventListener('click', async () => {
-        showLightbox(await getFullImage(ref) || blob, ref.name, ref, allRefs);
-      });
+      image.addEventListener('click', () => showLightbox(blob, ref.name, ref, allRefs));
       item.append(image);
       const caption = document.createElement('span');
       caption.className = 'image-caption';

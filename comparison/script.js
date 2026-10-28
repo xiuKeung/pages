@@ -30,8 +30,6 @@
     ]]
   ];
   let records = [];
-  let horizontalScrollLeft = 0;
-  let syncingHorizontalScroll = false;
   const selectedIds = new URLSearchParams(location.search).get('ids')?.split(',').filter(Boolean) || [];
   const same = values => new Set(values.map(value => text(value))).size <= 1;
   const createColumnGroup = () => {
@@ -71,23 +69,26 @@
       return;
     }
     count.textContent = `已对比 ${records.length} 条`;
-    const columns = document.createElement('section');
-    columns.className = 'comparison-columns';
-    const columnWrap = document.createElement('div');
-    columnWrap.className = 'table-wrap';
-    const columnTable = document.createElement('table');
-    columnTable.append(createColumnGroup(), createColumnHeader());
-    columnWrap.append(columnTable);
-    columns.append(columnWrap);
-    root.replaceChildren(columns, ...rows.map(([title, items]) => {
+    // 所有模块共用同一张表和同一个横向滚动容器，避免多张表同步滚动造成掉帧。
+    const board = document.createElement('section');
+    board.className = 'comparison-board';
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    const table = document.createElement('table');
+    table.append(createColumnGroup(), createColumnHeader());
+    rows.forEach(([title, items]) => {
       const visible = onlyDifferences.checked ? items.filter(([, get]) => !same(records.map(get))) : items;
-      if (!visible.length) return null;
-      const section = document.createElement('section');
-      section.className = 'comparison-group';
-      const heading = document.createElement('h2'); heading.textContent = title;
-      const wrap = document.createElement('div'); wrap.className = 'table-wrap';
-      const table = document.createElement('table');
+      if (!visible.length) return;
       const tbody = document.createElement('tbody');
+      tbody.className = 'comparison-group';
+      const groupHeading = document.createElement('tr');
+      groupHeading.className = 'comparison-group-heading';
+      const groupHeadingCell = document.createElement('th');
+      groupHeadingCell.scope = 'rowgroup';
+      groupHeadingCell.colSpan = records.length + 1;
+      groupHeadingCell.textContent = title;
+      groupHeading.append(groupHeadingCell);
+      tbody.append(groupHeading);
       visible.forEach(([label, get]) => {
         const values = records.map(get);
         const different = !same(values);
@@ -96,23 +97,15 @@
         values.forEach(value => { const td = document.createElement('td'); td.textContent = text(value); td.classList.toggle('is-different', different); tr.append(td); });
         tbody.append(tr);
       });
-      table.append(createColumnGroup(), tbody); wrap.append(table); section.append(heading, wrap); return section;
-    }).filter(Boolean));
-    root.querySelectorAll('.table-wrap').forEach(wrap => { wrap.scrollLeft = horizontalScrollLeft; });
-    syncStickyHeader();
-  };
-  const syncHorizontalScroll = source => {
-    if (syncingHorizontalScroll || !source?.classList?.contains('table-wrap')) return;
-    horizontalScrollLeft = source.scrollLeft;
-    syncingHorizontalScroll = true;
-    root.querySelectorAll('.table-wrap').forEach(wrap => {
-      if (wrap !== source) wrap.scrollLeft = horizontalScrollLeft;
+      table.append(tbody);
     });
+    wrap.append(table);
+    board.append(wrap);
+    root.replaceChildren(board);
     syncStickyHeader();
-    requestAnimationFrame(() => { syncingHorizontalScroll = false; });
   };
   const syncStickyHeader = () => {
-    const sourceTable = root.querySelector('.comparison-columns table');
+    const sourceTable = root.querySelector('.comparison-board table');
     const sourceHeader = sourceTable?.tHead;
     if (!sourceHeader) {
       stickyHeader.hidden = true;
@@ -171,7 +164,9 @@
   landscapeButton.addEventListener('click', () => { void toggleLandscape(); });
   window.addEventListener('scroll', syncStickyHeader, { passive:true });
   window.addEventListener('resize', syncStickyHeader);
-  root.addEventListener('scroll', event => syncHorizontalScroll(event.target), true);
+  root.addEventListener('scroll', event => {
+    if (event.target?.classList?.contains('table-wrap')) syncStickyHeader();
+  }, true);
   document.querySelector('[data-back]')?.addEventListener('click', event => { if (history.length > 1) { event.preventDefault(); history.back(); } });
   (async () => {
     const all = await window.NativeStore.getViewingRecords({ force:true });

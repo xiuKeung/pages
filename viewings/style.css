@@ -392,12 +392,15 @@
       min-height: auto;
       width: 24px;
       height: 24px;
-      padding: 0;
+      display: grid;
+      place-items: center;
+      padding: 0 0 2px;
       border: 0;
       border-radius: 50%;
       color: #fff;
       background: rgba(27, 41, 66, .72);
-      line-height: 22px;
+      font-size: 19px;
+      line-height: 1;
     }
     .record-images summary { cursor: pointer; }
     .record-images .image-preview { margin-top: 10px; }
@@ -487,30 +490,32 @@
       min-height: auto;
       width: 38px;
       height: 38px;
-      padding: 0;
+      display: grid;
+      place-items: center;
+      padding: 0 0 2px;
       border: 0;
       border-radius: 50%;
       color: #fff;
       background: rgba(255, 255, 255, .2);
-      font-size: 26px;
-      line-height: 36px;
+      font-size: 25px;
+      line-height: 1;
     }
     .image-lightbox .lightbox-nav {
       position: absolute;
       top: 50%;
       z-index: 1;
-      width: 40px;
-      height: 54px;
+      width: 44px;
+      height: 44px;
       min-height: 0;
       padding: 0;
       display: flex;
       align-items: center;
       justify-content: center;
       border: 1px solid rgba(255, 255, 255, .48);
-      border-radius: 50%;
+      border-radius: 14px;
       color: #fff;
-      background: rgba(12, 20, 36, .78);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, .42);
+      background: rgba(22, 34, 54, .84);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .38);
       font-size: 0;
       line-height: 1;
       transform: translateY(-50%);
@@ -531,6 +536,8 @@
     .image-lightbox .lightbox-nav:disabled { opacity: .28; }
     .image-lightbox .lightbox-previous { left: 16px; }
     .image-lightbox .lightbox-next { right: 16px; }
+    .lightbox-loading { position:absolute; top:50%; left:50%; z-index:2; display:none; padding:7px 11px; border-radius:999px; color:#fff; background:rgba(16,27,45,.72); font-size:12px; transform:translate(-50%,-50%); pointer-events:none; }
+    .image-lightbox.is-loading .lightbox-loading { display:block; }
     .lightbox-counter {
       position: absolute;
       top: 20px;

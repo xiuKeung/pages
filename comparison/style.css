@@ -9,13 +9,15 @@ button { min-height:38px; padding:7px 11px; border:1px solid #bfd3f6; border-rad
 .comparison-options { display:flex; min-height:45px; margin:20px 0 12px; padding:0 13px; align-items:center; justify-content:space-between; border:1px solid var(--line); border-radius:11px; background:var(--surface); color:var(--muted); font-size:14px; }
 .comparison-options label { display:flex; gap:8px; align-items:center; color:var(--ink); cursor:pointer; } .comparison-options input { width:17px; height:17px; margin:0; }
 .hint { margin:0 0 12px; color:var(--muted); font-size:13px; }
-.comparison-columns,.comparison-group { margin:16px 0; border:1px solid var(--line); border-radius:15px; overflow:hidden; background:var(--surface); box-shadow:0 6px 20px rgba(25,59,110,.05); }
-.comparison-group h2 { margin:0; padding:10px 13px; border-bottom:1px solid var(--line); font-size:15px; line-height:1.5; }
+.comparison-board { margin:16px 0; border:1px solid var(--line); border-radius:15px; overflow:hidden; background:var(--surface); box-shadow:0 6px 20px rgba(25,59,110,.05); }
 .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
 table { width:100%; min-width:680px; border-collapse:collapse; table-layout:fixed; }
 th,td { padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top; text-align:left; font-size:14px; word-break:break-word; }
-tr:last-child th,tr:last-child td { border-bottom:0; } thead th { color:var(--ink); background:var(--surface); font-size:15px; }
+thead th { color:var(--ink); background:var(--surface); font-size:15px; }
 tbody th { width:118px; color:var(--muted); font-weight:650; background:var(--soft); } td { white-space:pre-wrap; } td.is-different { color:var(--ink); font-weight:650; background:#f5f9ff; }
+.comparison-group:not(:last-child) tr:last-child th,.comparison-group:not(:last-child) tr:last-child td { border-bottom:0; }
+.comparison-group-heading th { width:auto; padding:10px 13px; color:var(--ink); background:var(--surface); border-top:1px solid var(--line); border-bottom:1px solid var(--line); font-size:15px; line-height:1.5; }
+.comparison-group:first-of-type .comparison-group-heading th { border-top:0; }
 .comparison-label-column { width:118px; }
 .comparison-sticky-header { position:fixed; z-index:25; top:calc(env(safe-area-inset-top, 0px) + 8px); overflow:hidden; border:1px solid var(--line); border-radius:10px; background:var(--surface); box-shadow:0 5px 12px rgba(25,59,110,.13); pointer-events:none; }
 .comparison-sticky-header table { margin:0; transform:translateX(var(--comparison-scroll-x, 0px)); }
