@@ -61,7 +61,9 @@
       button.type = 'button'; button.textContent = '再记一套';
       button.title = '同小区再记一套';
       button.dataset.another = remove.dataset.delete;
-      remove.before(button);
+      const view = remove.parentElement.querySelector('[data-edit]');
+      if (view) view.after(button);
+      else remove.before(button);
     });
   };
   new MutationObserver(addListActions).observe(recordsList, { childList: true });
