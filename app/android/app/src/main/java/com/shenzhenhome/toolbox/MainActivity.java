@@ -23,7 +23,6 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(ThemeBridgePlugin.class);
         registerPlugin(OrientationBridgePlugin.class);
         registerPlugin(MapLauncherPlugin.class);
-        registerPlugin(CompassPlugin.class);
         super.onCreate(savedInstanceState);
         applyNativeTheme(readNativeTheme());
         refreshWebAssetsAfterUpgrade();

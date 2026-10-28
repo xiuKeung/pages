@@ -94,7 +94,46 @@
         const different = !same(values);
         const tr = document.createElement('tr');
         const th = document.createElement('th'); th.scope = 'row'; th.textContent = label; tr.append(th);
-        values.forEach(value => { const td = document.createElement('td'); td.textContent = text(value); td.classList.toggle('is-different', different); tr.append(td); });
+        values.forEach(value => {
+          const td = document.createElement('td');
+          td.textContent = text(value);
+          if (label === '阳台朝向') {
+            const angle = window.ViewingCompass.parseAngle(String(value || ''));
+            if (angle !== null) {
+              const compass = document.createElement('button');
+              compass.type = 'button';
+              compass.className = 'comparison-compass';
+              compass.setAttribute('aria-label', `放大朝向图：${text(value)}`);
+              compass.innerHTML = window.ViewingCompass.dial(angle);
+              compass.addEventListener('click', () => {
+                const dialog = document.createElement('dialog');
+                dialog.className = 'compass-enlarged';
+                const heading = document.createElement('h2');
+                heading.textContent = text(value);
+                const graphic = document.createElement('div');
+                graphic.className = 'compass-enlarged-graphic';
+                graphic.innerHTML = window.ViewingCompass.dial(angle);
+                const close = document.createElement('button');
+                close.type = 'button'; close.textContent = '关闭';
+                close.onclick = () => dialog.close();
+                dialog.append(heading, graphic, close);
+                document.body.append(dialog);
+                const overflow = [document.body.style.overflow, document.documentElement.style.overflow];
+                document.body.style.overflow = document.documentElement.style.overflow = 'hidden';
+                dialog.addEventListener('close', () => {
+                  document.body.style.overflow = overflow[0];
+                  document.documentElement.style.overflow = overflow[1];
+                  dialog.remove();
+                  compass.focus({ preventScroll: true });
+                }, { once: true });
+                dialog.showModal();
+              });
+              td.append(compass);
+            }
+          }
+          td.classList.toggle('is-different', different);
+          tr.append(td);
+        });
         tbody.append(tr);
       });
       table.append(tbody);

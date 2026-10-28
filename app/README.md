@@ -82,7 +82,6 @@ Pages/安家笔记-debug.apk
 | --- | --- |
 | `android/app/src/main/java/com/shenzhenhome/toolbox/MainActivity.java` | Android 返回键逻辑、Android 12+ 启动屏初始化、原生插件注册。 |
 | `android/app/src/main/java/com/shenzhenhome/toolbox/BackupFilePlugin.java` | 将 ZIP 备份交给 Android 系统文件选择器保存。 |
-| `android/app/src/main/java/com/shenzhenhome/toolbox/CompassPlugin.java` | 阳台朝向磁北实测；使用旋转向量传感器，切后台停止监听。 |
 | `android/app/src/main/AndroidManifest.xml` | App 名称、图标、返回手势等 Android 配置。 |
 | `android/app/src/main/res/mipmap-*` | 桌面图标的各分辨率资源。Android 8+ 使用自适应图标。 |
 | `android/app/src/main/res/drawable*/splash.png` | 横竖屏启动页背景图。 |
@@ -93,7 +92,6 @@ Pages/安家笔记-debug.apk
 
 ## 本地数据与备份
 
-阳台罗盘的 iOS 实现位于 `ios/App/App/AppDelegate.swift` 的 `CompassPlugin`，通过 Core Location 读取磁北航向，不获取位置坐标。网页共用 `viewings/scripts/15-quick-entry.js` 界面；原生 App 调用插件，浏览器使用方向事件，缺少传感器或权限时可手动选择。新增原生插件需重新构建安装 App，仅更新网页资源不能让旧安装包获得原生能力。
 
 - 原生 App 的业务数据保存于 SQLite；看房照片保存于 App 私有目录，SQLite 只保存照片元数据和文件路径。
 - 卸载 App 会删除这些私有数据。
