@@ -345,13 +345,9 @@
   populateBuiltYears();
   populateFloors();
   await reloadRecords({ force: true });
-  window.addEventListener("pageshow", (event) => {
-    // Android WebView 返回到入口后再进入时，页面可能来自历史缓存。
-    // 从缓存恢复时先结束查看状态，避免编辑器随着旧记录 DOM 一起被重绘移除。
-    void reloadRecords({ force: true, closeEditor: event.persisted });
-  });
   // 从系统地图、相机或后台返回时，若 WebView 仍存活，保留现有详情、滚动位置和
-  // 已渲染列表。以前这里会强制重读 SQLite 并关闭详情，导致外部应用返回时被打断。
+  // 已渲染列表。以前这里和 pageshow 都会强制重读 SQLite 并重绘，导致后台恢复时
+  // 列表滚动位置丢失，详情也会被打断。
   // 若 Android 因内存回收销毁了 WebView，页面会重新创建并走上方的初始读取流程。
   window.addEventListener("viewing:load-more", () => {
     renderLimit += 20;
