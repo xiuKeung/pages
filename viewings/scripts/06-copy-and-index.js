@@ -41,7 +41,7 @@
         ['总楼层', data.totalFloor && '总' + data.totalFloor + '层'],
         ['面积', data.area && data.area + ' ㎡'],
         ['户型', data.layout],
-        ['客厅朝向', data.orientation],
+        ['阳台朝向', data.orientation],
         ['梯户比', data.elevatorRatio],
         ['报价', data.targetPrice && data.targetPrice + ' 万元'],
         ['贷款年限', data.loanYears && data.loanYears + ' 年'],

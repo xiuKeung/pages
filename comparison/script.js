@@ -17,7 +17,7 @@
       ['小区', r => r.community], ['楼栋 / 单元', r => r.building], ['看房日期', r => r.viewedAt], ['关注等级', r => priority(r.priority)], ['房源链接', r => r.sourceLink]
     ]],
     ['房屋信息', [
-      ['报价', r => r.targetPrice && `${format(r.targetPrice)} 万`], ['面积', r => r.area && `${format(r.area)} ㎡`], ['单价', r => r.targetPrice && r.area && `${format(Number(r.targetPrice) / Number(r.area))} 万/㎡`], ['户型', r => r.layout], ['客厅朝向', r => r.orientation], ['总楼层', r => r.totalFloor && `${r.totalFloor} 层`], ['建成年份', r => r.builtYear && `${r.builtYear} 年`], ['梯户比', r => r.elevatorRatio]
+      ['报价', r => r.targetPrice && `${format(r.targetPrice)} 万`], ['面积', r => r.area && `${format(r.area)} ㎡`], ['单价', r => r.targetPrice && r.area && `${format(Number(r.targetPrice) / Number(r.area))} 万/㎡`], ['户型', r => r.layout], ['阳台朝向', r => r.orientation], ['总楼层', r => r.totalFloor && `${r.totalFloor} 层`], ['建成年份', r => r.builtYear && `${r.builtYear} 年`], ['梯户比', r => r.elevatorRatio]
     ]],
     ['配套与成本', [
       ['物业公司', r => r.propertyCompany], ['物业费', r => r.propertyFee && `${r.propertyFee} 元/㎡·月`], ['车位情况', r => r.parkingStatus], ['车位费用', r => r.parkingFee], ['附近地标', r => r.nearbyLandmark]

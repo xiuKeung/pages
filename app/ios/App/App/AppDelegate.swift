@@ -1,6 +1,40 @@
 import UIKit
 import Capacitor
 import Photos
+import CoreLocation
+
+@objc(CompassPlugin)
+class CompassPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelegate {
+    let identifier = "CompassPlugin"
+    let jsName = "Compass"
+    let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "read", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stop", returnType: CAPPluginReturnPromise)
+    ]
+    private var manager: CLLocationManager?
+    private var reading: CLHeading?
+    @objc func start(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            guard CLLocationManager.headingAvailable() else { call.reject("此设备不支持罗盘，请手动选择"); return }
+            if self.manager == nil { self.manager = CLLocationManager(); self.manager?.delegate = self }
+            self.reading = nil
+            self.manager?.headingOrientation = .portrait
+            self.manager?.startUpdatingHeading()
+            call.resolve()
+        }
+    }
+    @objc func read(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            guard let value = self.reading, value.headingAccuracy >= 0 else { call.resolve(["reliable": false]); return }
+            call.resolve(["heading": value.magneticHeading, "reliable": value.headingAccuracy <= 20])
+        }
+    }
+    @objc func stop(_ call: CAPPluginCall) {
+        DispatchQueue.main.async { self.manager?.stopUpdatingHeading(); self.reading = nil; call.resolve() }
+    }
+    func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) { reading = newHeading }
+}
 
 @objc(PhotoLibraryPlugin)
 class PhotoLibraryPlugin: CAPPlugin, CAPBridgedPlugin {
@@ -183,6 +217,7 @@ class MainViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(ThemeBridgePlugin())
         bridge?.registerPluginInstance(OrientationBridgePlugin())
         bridge?.registerPluginInstance(MapLauncherPlugin())
+        bridge?.registerPluginInstance(CompassPlugin())
         // 与 Safari 保持一致：有页面历史时允许从屏幕左边缘右滑返回。
         bridge?.webView?.allowsBackForwardNavigationGestures = true
         bridge?.webView?.isOpaque = false

@@ -2,7 +2,7 @@
 (() => {
     const orientationLabel = document.getElementById('orientation')?.closest('label');
     if (orientationLabel?.firstChild?.nodeType === Node.TEXT_NODE) {
-      orientationLabel.firstChild.nodeValue = '客厅朝向';
+      orientationLabel.firstChild.nodeValue = '阳台朝向';
     }
     [
       ['pros', '优点（采光、楼层、户型、交通等）'],
@@ -401,7 +401,8 @@
     const formatTime = value => new Date(value).toLocaleTimeString('zh-CN', {
       hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
     });
-    const saveDraft = async (revision = ++saveRevision) => {
+    const activeSaves = new Set();
+    const performSave = async (revision) => {
       clearTimeout(timer);
       timer = undefined;
       if (editor.classList.contains('hidden')) return;
@@ -425,8 +426,24 @@
         await window.NativeStore.saveViewingRecords(records);
         document.getElementById('recordId').value = record.id;
         if (revision === saveRevision) status.textContent = `已自动保存 · ${formatTime(now)}`;
+        return true;
       } catch (_) {
         if (revision === saveRevision) status.textContent = '自动保存失败，请继续编辑或稍后重试';
+        return false;
+      }
+    };
+    const saveDraft = (revision = ++saveRevision) => {
+      const task = performSave(revision);
+      activeSaves.add(task);
+      void task.finally(() => activeSaves.delete(task));
+      return task;
+    };
+    window.ViewingAutosave = {
+      async flush() {
+        clearTimeout(timer);
+        timer = undefined;
+        await Promise.all([...activeSaves]);
+        return saveDraft();
       }
     };
     const scheduleSave = () => {

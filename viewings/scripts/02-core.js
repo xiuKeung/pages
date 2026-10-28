@@ -157,6 +157,8 @@
       .forEach((b) => (b.onclick = () => remove(b.dataset.delete)));
   }
   function updateUnit() {
+    // 旧单价提示已由后续字段模块移除，不应阻断打开编辑器。
+    if (!$("unitPrice")) return;
     const price = +$("totalPrice").value,
       area = +$("area").value;
     $("unitPrice").textContent =

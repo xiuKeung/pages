@@ -138,7 +138,7 @@
         ['总楼层', record.totalFloor && `总${record.totalFloor}层`],
         ['面积', record.area && `${record.area} ㎡`],
         ['户型', record.layout],
-        ['客厅朝向', record.orientation],
+        ['阳台朝向', record.orientation],
         ['梯户比', record.elevatorRatio],
         ['报价', record.targetPrice && `${record.targetPrice} 万元`],
         ['贷款年限', record.loanYears && `${record.loanYears} 年`],
