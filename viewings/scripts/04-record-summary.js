@@ -21,7 +21,10 @@
       content.className = 'record-information-content';
       details.append(summary, content);
       contents.forEach(item => content.append(item));
-      paymentMeta?.after(details);
+      // paymentMeta 位于 .record-top 的左侧文本列内，会让折叠横幅只有半宽。
+      // 作为卡片直接子元素插在学校信息之后，与“房源图片”使用相同的整行宽度。
+      const anchor = card.querySelector('.schools') || paymentMeta?.closest('.record-top');
+      anchor?.after(details);
     };
     const updateCards = () => {
       const records = JSON.parse(window.NativeStore.viewingRecordsJson() || '[]');
