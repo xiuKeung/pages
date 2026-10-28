@@ -350,31 +350,9 @@
     // 从缓存恢复时先结束查看状态，避免编辑器随着旧记录 DOM 一起被重绘移除。
     void reloadRecords({ force: true, closeEditor: event.persisted });
   });
-  // 调用系统相机 / 文件选择器也会让 WebView 短暂进入后台。这个标记由图片模块
-  // 在真正打开系统选择器前设置，防止恢复时把仍在处理图片的编辑器误当成后台遗留状态。
-  let externalImagePickerActive = false;
-  window.addEventListener('viewing:image-picker-open', () => {
-    externalImagePickerActive = true;
-  });
-  window.addEventListener('viewing:image-picker-settled', () => {
-    externalImagePickerActive = false;
-  });
-  let wasHidden = document.hidden;
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-      wasHidden = true;
-      return;
-    }
-    if (!wasHidden) return;
-    wasHidden = false;
-    if (externalImagePickerActive && !$("editor")?.classList.contains("hidden")) {
-      // 图片的 change 回调会在这里之后运行；保留表单和图片引用，等待其完成写入。
-      return;
-    }
-    // Android WebView 从后台恢复时统一收起详情，再刷新 SQLite 数据。
-    void reloadRecords({ force: true, closeEditor: true });
-  });
-  window.addEventListener("focus", () => void reloadRecords({ force: true }));
+  // 从系统地图、相机或后台返回时，若 WebView 仍存活，保留现有详情、滚动位置和
+  // 已渲染列表。以前这里会强制重读 SQLite 并关闭详情，导致外部应用返回时被打断。
+  // 若 Android 因内存回收销毁了 WebView，页面会重新创建并走上方的初始读取流程。
   window.addEventListener("viewing:load-more", () => {
     renderLimit += 20;
     render();
