@@ -228,6 +228,8 @@ Pages/安家笔记-debug.apk
 
 桌面图标和启动图是两套资源：桌面图标要考虑 Android 系统遮罩的安全边距；启动图使用独立资源，避免被桌面图标规则裁切或放大。
 
+新增图标遵循 [ICON_STYLE.md](assets/ICON_STYLE.md)：以原 App 图标为参照，统一暖色黏土材质、配色、光照和构图。[ICON_PROMPTS.md](assets/ICON_PROMPTS.md)保存本次四个入口图标的完整生成提示词；首页已采用这套图标，网页与 App 共用；[预览页](../entrance/icon-preview.html)可并排查看。高分辨率原图保存在 `assets/entry-icons-clay-v1/`，页面使用 `../entrance/icons/clay-v1/` 中的 256px PNG。
+
 ## 本地数据与备份
 
 - 原生 App 的看房记录保存于 SQLite；看房照片保存于 App 私有目录，SQLite 保存照片元数据和文件路径。新增房源的贷款默认值作为偏好保存在 WebView 的 localStorage。

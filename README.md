@@ -65,6 +65,8 @@
 
 ## 目录结构
 
+图标设计统一参考 [安家笔记图标风格规范](app/assets/ICON_STYLE.md)，生成提示词见 [ICON_PROMPTS.md](app/assets/ICON_PROMPTS.md)。首页已使用这套黏土风格入口图标，网页与 App 共用资源；可在 [预览页](entrance/icon-preview.html) 并排查看。
+
 ```text
 Pages/
 ├── entrance/      工具首页
