@@ -1,3 +1,14 @@
+// 日期查询只匹配看房日期，不将创建/编辑时间误认为看房日期。
+window.matchesViewingRecord = (record, value) => {
+  const query = String(value || '').trim().toLocaleLowerCase();
+  if (!query) return true;
+  const dateQuery = query.match(/^(?:(\d{4})[-/.年])?(\d{1,2})[-/.月](\d{1,2})日?$/);
+  const monthQuery = query.match(/^(\d{4})[-/.年](\d{1,2})月?$/);
+  const date = String(record?.viewedAt || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateQuery) return !!date && (!dateQuery[1] || +dateQuery[1] === +date[1]) && +dateQuery[2] === +date[2] && +dateQuery[3] === +date[3];
+  if (monthQuery) return !!date && +monthQuery[1] === +date[1] && +monthQuery[2] === +date[2];
+  return JSON.stringify(record || {}).toLocaleLowerCase().includes(query);
+};
 /* 模块 2：由原 index.html 内联脚本迁移。 */
 (async () => {
   const $ = (id) => document.getElementById(id),
@@ -106,7 +117,7 @@
       .filter(
         (r) =>
           (!choices.length || choices.includes(r.priority)) &&
-          (!query || JSON.stringify(r).toLocaleLowerCase().includes(query)),
+          window.matchesViewingRecord(r, query),
       )
       .sort(
         (a, b) =>

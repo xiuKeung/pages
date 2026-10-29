@@ -229,13 +229,14 @@
     input.id = 'recordSearch';
     input.className = 'record-search';
     input.type = 'search';
-    input.placeholder = '搜索小区、学校、备注…';
+    input.placeholder = '搜索：小区 · 看房日期 · 学校 · 备注';
     input.autocomplete = 'off';
     input.setAttribute('list', 'recordSearchSuggestions');
     const suggestions = document.createElement('datalist');
     suggestions.id = 'recordSearchSuggestions';
-    input.after(suggestions);
+
     toolbar.querySelector('#filter')?.after(input);
+    input.after(suggestions);
     const count = document.createElement('span');
     count.className = 'record-count';
     toolbar.querySelector('#filter')?.after(count);
@@ -253,18 +254,19 @@
       const records = loadRecords();
       const names = [...new Set(records.map(record => String(record.community || '').trim()).filter(Boolean))]
         .sort((a, b) => a.localeCompare(b, 'zh-CN'));
-      suggestions.innerHTML = names.map(name => `<option value="${name}"></option>`).join('');
+      const dates = [...new Set(records.map(record => record.viewedAt).filter(Boolean))].sort().reverse();
+      suggestions.replaceChildren(...[...dates, ...names].map(value => new Option(value, value)));
       const query = input.value.trim().toLocaleLowerCase();
       const hasStatusFilter = document.querySelectorAll('#filter input:checked').length > 0;
       let visible = 0;
       recordsNode.querySelectorAll('.record').forEach(card => {
         const id = card.querySelector('[data-edit]')?.dataset.edit;
         const record = records.find(item => String(item.id) === String(id));
-        const match = !query || JSON.stringify(record || {}).toLocaleLowerCase().includes(query);
+        const match = window.matchesViewingRecord(record, query);
         card.hidden = !match;
         if (match) visible += 1;
       });
-      const total = Number(recordsNode.dataset.total || records.length);
+      const total = Number(recordsNode.dataset.total ?? records.length);
       count.textContent = !query && !hasStatusFilter
         ? `共 ${total} 条记录`
         : `当前 ${total} 条 / 共 ${records.length} 条`;
