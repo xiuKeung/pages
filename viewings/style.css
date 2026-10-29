@@ -750,3 +750,7 @@
       html[data-theme="system"] .import-progress-ring { background: conic-gradient(#84adff var(--progress), #344054 0); }
       html[data-theme="system"] .import-progress-ring::before { background: #1d2939; }
     }
+
+.records-more { color: var(--muted, #718096); padding: 12px 0 20px; }
+.records-more.is-loading button::before { content: ''; display: inline-block; width: 12px; height: 12px; margin-right: 8px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; vertical-align: -2px; animation: records-loading .8s linear infinite; }
+@keyframes records-loading { to { transform: rotate(360deg); } }

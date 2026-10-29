@@ -3,7 +3,8 @@
   const $ = (id) => document.getElementById(id),
     key = "shenzhen-viewing-records-v1";
   let records = [];
-  let renderLimit = 20;
+  const pageSize = 10;
+  let renderLimit = pageSize;
   const esc = (v) =>
     String(v ?? "").replace(
       /[&<>'"]/g,
@@ -97,7 +98,7 @@
       .map((name) => `<option value="${esc(name)}"></option>`)
       .join("");
   }
-  function render() {
+  function render({ append = false } = {}) {
     const choices = [...document.querySelectorAll('#filter input:checked')]
       .map(input => input.value);
     const query = ($("recordSearch")?.value || "").trim().toLocaleLowerCase();
@@ -112,9 +113,10 @@
           (b.createdAt || b.updatedAt || 0) - (a.createdAt || a.updatedAt || 0),
       );
     const recordsNode = $("records");
-    const displayed = list.slice(0, renderLimit);
+    const offset = append ? recordsNode.querySelectorAll('.record').length : 0;
+    const displayed = list.slice(offset, renderLimit);
     recordsNode.dataset.total = String(list.length);
-    recordsNode.innerHTML = list.length
+    const markup = list.length
       ? displayed
           .map((r, index) => {
             const [name, kind] = priority(r.priority),
@@ -141,10 +143,13 @@
             const schoolInfo = hasSchoolInfo
               ? `小学：${esc(r.primarySchools || "无数据")}\n中学：${esc(r.middleSchools || "无数据")}`
               : "";
-            return `<article class="record" data-record-id="${esc(r.id)}" data-record-order="${list.length - index}"><div class="record-top"><div><h2><span class="community-name">${esc(r.community)}</span><span class="community-actions"><button data-copy-community="${esc(r.id)}" type="button">复制</button><button data-open-map="${esc(r.id)}" type="button">地图</button></span></h2><p class="meta">${esc(detail || "暂未填写价格与面积")} ${r.viewedAt ? `· 看房：${esc(r.viewedAt)}` : ""}</p><p class="meta">最后编辑：${time(r.updatedAt || r.createdAt)}</p></div><span class="badge ${kind}">${name}</span></div><p class="schools">${schoolInfo || "学区：请点击下方“查学区”获取当前官方匹配结果。"}</p>${r.pros || r.cons || r.notes || r.nearbyLandmark ? `<p class="notes">${r.pros ? `优点：${esc(r.pros)}\n` : ""}${r.cons ? `缺点 / 风险：${esc(r.cons)}\n` : ""}${r.nearbyLandmark ? `附近地标：${esc(r.nearbyLandmark)}\n` : ""}${r.notes ? `备注：${esc(r.notes)}` : ""}</p>` : ""}<div class="record-actions"><a class="button" href="../school/index.html?mode=community&q=${encodeURIComponent(r.community)}">查学区</a><a class="button" href="../calculator/index.html?c=${encodeURIComponent(btoa(JSON.stringify({ type: "commercial", amountMode: "auto", housePrice: r.totalPrice || "", downPaymentRate: "15" })))}">算月供</a><button data-copy="${r.id}" type="button">复制信息</button><button data-edit="${r.id}" type="button">查看</button><button data-delete="${r.id}" type="button">删除</button></div></article>`;
+            return `<article class="record" data-record-id="${esc(r.id)}" data-record-order="${list.length - offset - index}"><div class="record-top"><div><h2><span class="community-name">${esc(r.community)}</span><span class="community-actions"><button data-copy-community="${esc(r.id)}" type="button">复制</button><button data-open-map="${esc(r.id)}" type="button">地图</button></span></h2><p class="meta">${esc(detail || "暂未填写价格与面积")} ${r.viewedAt ? `· 看房：${esc(r.viewedAt)}` : ""}</p><p class="meta">最后编辑：${time(r.updatedAt || r.createdAt)}</p></div><span class="badge ${kind}">${name}</span></div><p class="schools">${schoolInfo || "学区：请点击下方“查学区”获取当前官方匹配结果。"}</p>${r.pros || r.cons || r.notes || r.nearbyLandmark ? `<p class="notes">${r.pros ? `优点：${esc(r.pros)}\n` : ""}${r.cons ? `缺点 / 风险：${esc(r.cons)}\n` : ""}${r.nearbyLandmark ? `附近地标：${esc(r.nearbyLandmark)}\n` : ""}${r.notes ? `备注：${esc(r.notes)}` : ""}</p>` : ""}<div class="record-actions"><a class="button" href="../school/index.html?mode=community&q=${encodeURIComponent(r.community)}">查学区</a><a class="button" href="../calculator/index.html?c=${encodeURIComponent(btoa(JSON.stringify({ type: "commercial", amountMode: "auto", housePrice: r.totalPrice || "", downPaymentRate: "15" })))}">算月供</a><button data-copy="${r.id}" type="button">复制信息</button><button data-edit="${r.id}" type="button">查看</button><button data-delete="${r.id}" type="button">删除</button></div></article>`;
           })
           .join("")
-      : '<div class="card empty">还没有看房记录。点击“新增房源”开始记录。</div>';
+      : `<div class="card empty">${query || choices.length ? '没有符合条件的记录' : '还没有看房记录。点击“新增房源”开始记录。'}</div>`;
+    if (append) recordsNode.insertAdjacentHTML('beforeend', markup);
+    else recordsNode.innerHTML = markup;
+    window.dispatchEvent(new Event('viewing:list-rendered'));
     renderHistory();
     document
       .querySelectorAll("[data-copy]")
@@ -316,7 +321,7 @@
   $("area").oninput = updateUnit;
   document.querySelectorAll('#filter input').forEach(input => {
     input.onchange = () => {
-      renderLimit = 20;
+      renderLimit = pageSize;
       render();
     };
   });
@@ -340,7 +345,6 @@
       return;
     }
     window.dispatchEvent(new Event("viewing:close-editor"));
-    renderLimit = 20;
     render();
     toast("记录已保存。");
   };
@@ -352,11 +356,12 @@
   // 列表滚动位置丢失，详情也会被打断。
   // 若 Android 因内存回收销毁了 WebView，页面会重新创建并走上方的初始读取流程。
   window.addEventListener("viewing:load-more", () => {
-    renderLimit += 20;
-    render();
+    if (!$("editor").classList.contains("hidden")) return;
+    renderLimit += pageSize;
+    render({ append: true });
   });
   window.addEventListener("viewing:query-change", () => {
-    renderLimit = 20;
+    renderLimit = pageSize;
     render();
   });
 })();

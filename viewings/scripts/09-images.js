@@ -520,7 +520,12 @@
         const list = document.createElement('div');
         list.className = 'image-preview';
         details.replaceChildren(summary, list);
-        for (const ref of imageRefs) await thumbnail(ref, false, list, imageRefs);
+        let loaded = false;
+        details.addEventListener('toggle', async () => {
+          if (!details.open || loaded) return;
+          loaded = true;
+          for (const ref of imageRefs) await thumbnail(ref, false, list, imageRefs);
+        });
       }
     };
     new MutationObserver(renderRecordImages).observe(recordsNode, { childList: true });
