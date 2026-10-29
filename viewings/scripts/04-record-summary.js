@@ -229,7 +229,7 @@
     input.id = 'recordSearch';
     input.className = 'record-search';
     input.type = 'search';
-    input.placeholder = '搜索：小区 · 看房日期 · 学校 · 备注';
+    input.placeholder = '小区，看房日期…';
     input.autocomplete = 'off';
     input.setAttribute('list', 'recordSearchSuggestions');
     const suggestions = document.createElement('datalist');
