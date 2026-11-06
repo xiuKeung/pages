@@ -261,10 +261,10 @@
       const extension = /\.[a-z0-9]{2,5}$/i.test(name || '') ? '' : '.jpg';
       return String(name || `房源图片-${index + 1}`).replace(/[\\/:*?"<>|]/g, '_') + extension;
     };
-    const saveImages = async images => {
+    const saveImages = async (images, { quiet = false } = {}) => {
       try {
         if (nativeImages && await window.NativeStore.saveViewingImagesToDevice(images)) {
-          showLightboxMessage(images.length === 1 ? '图片已保存到系统相册。' : `${images.length} 张图片已保存到系统相册。`);
+          if (!quiet) showLightboxMessage(images.length === 1 ? '图片已保存到系统相册。' : `${images.length} 张图片已保存到系统相册。`);
           return;
         }
         images.forEach((item, index) => {
@@ -273,22 +273,44 @@
           document.body.append(link); link.click();
           setTimeout(() => { URL.revokeObjectURL(link.href); link.remove(); }, 1000);
         });
-        showLightboxMessage(images.length === 1 ? '图片下载已开始。' : '图片下载已开始。');
+        if (!quiet) showLightboxMessage(images.length === 1 ? '图片下载已开始。' : '图片下载已开始。');
       } catch (error) {
+        if (quiet) throw error;
         showLightboxMessage(`保存图片失败：${error.message || '请重试'}`);
       }
     };
     saveCurrent.addEventListener('click', () => lightboxBlob && saveImages([{ blob: lightboxBlob, name: lightboxRef?.name || lightboxImage.alt, type: lightboxRef?.type || lightboxBlob.type }]));
+    let savingAll = false;
     saveAll.addEventListener('click', async () => {
-      saveAll.disabled = true;
+      if (savingAll) return;
+      const batch = [...lightboxRefs];
+      if (!batch.length) return;
+      savingAll = true;
+      saveAll.disabled = saveCurrent.disabled = true;
+      const progress = showImageImportProgress(batch.length, true);
+      let completed = 0;
       try {
-        const images = [];
-        for (const ref of lightboxRefs) {
+        await nextFrame();
+        for (const ref of batch) {
+          progress?.update(completed, `正在读取第 ${completed + 1} 张图片…`);
           const blob = await getFullImage(ref);
-          if (blob) images.push({ blob, name: ref.name, type: ref.type || blob.type });
+          if (!blob) throw new Error(`第 ${completed + 1} 张图片无法读取`);
+          progress?.update(completed, `正在${nativeImages ? '保存' : '下载'}第 ${completed + 1} 张图片…`);
+          await saveImages([{ blob, name: ref.name, type: ref.type || blob.type }], { quiet: true });
+          completed += 1;
+          progress?.update(completed);
+          await nextFrame();
         }
-        if (images.length) await saveImages(images);
-      } finally { saveAll.disabled = lightboxRefs.length < 2; }
+        progress?.complete(completed, 0);
+        showLightboxMessage(nativeImages ? `${completed} 张图片已保存到系统相册。` : `已发起 ${completed} 张图片下载，请在浏览器下载列表查看。`);
+      } catch (error) {
+        progress?.close();
+        showLightboxMessage(`${nativeImages ? '已保存' : '已发起下载'} ${completed} / ${batch.length} 张；${error.message || '保存失败，请重试'}`);
+      } finally {
+        savingAll = false;
+        saveCurrent.disabled = false;
+        saveAll.disabled = lightboxRefs.length < 2;
+      }
     });
     closeLightbox.addEventListener('click', hideLightbox);
     previousImage.addEventListener('click', () => switchImage(-1));
@@ -331,11 +353,16 @@
 
     let refs = [];
     const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
-    const showImageImportProgress = total => {
+    const showImageImportProgress = (total, exporting = false) => {
       if (total < 2) return null;
       const dialog = document.createElement('div');
       dialog.className = 'import-progress-dialog image-import-progress';
       dialog.innerHTML = '<div class="import-progress-panel" role="status" aria-live="polite" aria-label="正在添加房源图片"><div class="import-progress-ring"><span>0%</span></div><h3>正在添加图片</h3><p class="import-progress-status">正在准备图片…</p><p class="import-progress-detail">请勿关闭页面或切换应用</p></div>';
+      if (exporting) {
+        dialog.querySelector('h3').textContent = '正在保存图片';
+        dialog.querySelector('[role=status]').setAttribute('aria-label', '正在保存房源图片');
+        dialog.querySelector('.import-progress-status').textContent = '正在准备图片…';
+      }
       const ring = dialog.querySelector('.import-progress-ring');
       const percent = ring.querySelector('span');
       const status = dialog.querySelector('.import-progress-status');
@@ -346,7 +373,7 @@
         ring.style.setProperty('--progress', `${value * 3.6}deg`);
         percent.textContent = `${value}%`;
         status.textContent = text;
-        detail.textContent = `已添加 ${completed} / ${total} 张图片`;
+        detail.textContent = `${exporting ? (nativeImages ? '已保存' : '已发起下载') : '已添加'} ${completed} / ${total} 张图片`;
       };
       return {
         update,
@@ -355,6 +382,10 @@
           percent.textContent = '✓';
           status.textContent = failed ? `已添加 ${added} 张图片，${failed} 张失败` : `已添加 ${added} 张图片`;
           detail.textContent = failed ? '失败图片可重新选择添加' : '图片已保存到当前记录';
+          if (exporting) {
+            status.textContent = nativeImages ? `已保存 ${added} 张图片` : `已发起 ${added} 张图片下载`;
+            detail.textContent = nativeImages ? '图片已保存到系统相册' : '请在浏览器下载列表查看';
+          }
           setTimeout(() => dialog.remove(), 700);
         },
         close: () => dialog.remove()
