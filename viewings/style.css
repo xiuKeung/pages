@@ -226,9 +226,9 @@
       user-select: none;
     }
     .record-search {
-      min-width: 210px;
+      width: 100%;
       min-height: 36px;
-      padding: 7px 10px;
+      padding: 7px 34px 7px 10px;
       border: 1px solid var(--line);
       border-radius: 8px;
       color: var(--ink);
@@ -236,6 +236,52 @@
       font: inherit;
       font-size: 13px;
     }
+    .record-search-wrap {
+      position: relative;
+      min-width: 210px;
+    }
+    .record-search-toggle {
+      position: absolute;
+      top: 1px;
+      right: 1px;
+      min-width: 34px;
+      min-height: 34px;
+      padding: 0;
+      border: 0;
+      color: var(--muted);
+      background: transparent;
+      font-size: 17px;
+      line-height: 1;
+    }
+    .record-search-toggle:active { background: transparent; }
+    .record-search-suggestions {
+      position: absolute;
+      z-index: 300;
+      top: calc(100% + 4px);
+      right: 0;
+      left: 0;
+      max-height: min(300px, 55vh);
+      overflow: auto;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--theme-surface, #fff);
+      box-shadow: 0 10px 24px rgba(25,59,110,.15);
+    }
+    .record-search-suggestions button {
+      display: block;
+      width: 100%;
+      min-height: 34px;
+      padding: 6px 9px;
+      border: 0;
+      border-radius: 5px;
+      color: var(--ink);
+      background: transparent;
+      text-align: left;
+      font-weight: 500;
+    }
+    .record-search-suggestions button:hover,
+    .record-search-suggestions button:focus-visible { background: var(--soft); }
     #copyRecord,
     #cancel { display: none; }
     #cancel.is-visible { display: inline-flex; }

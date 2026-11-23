@@ -231,15 +231,27 @@
     input.type = 'search';
     input.placeholder = '小区，看房日期…';
     input.autocomplete = 'off';
-    input.setAttribute('list', 'recordSearchSuggestions');
-    const suggestions = document.createElement('datalist');
+    input.setAttribute('aria-expanded', 'false');
+    input.setAttribute('aria-controls', 'recordSearchSuggestions');
+    const searchWrap = document.createElement('div');
+    searchWrap.className = 'record-search-wrap';
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'record-search-toggle';
+    toggle.setAttribute('aria-label', '展开搜索联想');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.textContent = '⌄';
+    const suggestions = document.createElement('div');
     suggestions.id = 'recordSearchSuggestions';
+    suggestions.className = 'record-search-suggestions';
+    suggestions.setAttribute('role', 'listbox');
+    suggestions.hidden = true;
+    searchWrap.append(input, toggle, suggestions);
 
-    toolbar.querySelector('#filter')?.after(input);
-    input.after(suggestions);
+    toolbar.querySelector('#filter')?.after(searchWrap);
     const count = document.createElement('span');
     count.className = 'record-count';
-    toolbar.querySelector('#filter')?.after(count);
+    searchWrap.after(count);
 
     const empty = document.createElement('p');
     empty.className = 'search-empty';
@@ -250,12 +262,41 @@
       try { return JSON.parse(window.NativeStore.viewingRecordsJson() || '[]'); }
       catch (_) { return []; }
     };
+    let suggestionValues = [];
+    const setSuggestionsOpen = open => {
+      const visible = Boolean(open && suggestionValues.length);
+      suggestions.hidden = !visible;
+      input.setAttribute('aria-expanded', String(visible));
+      toggle.setAttribute('aria-expanded', String(visible));
+      toggle.textContent = visible ? '⌃' : '⌄';
+    };
+    const renderSuggestions = () => {
+      const query = input.value.trim().toLocaleLowerCase();
+      const values = (query
+        ? suggestionValues.filter(value => value.toLocaleLowerCase().includes(query))
+        : suggestionValues
+      ).slice(0, 30);
+      suggestions.replaceChildren(...values.map(value => {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.setAttribute('role', 'option');
+        option.textContent = value;
+        option.addEventListener('click', () => {
+          input.value = value;
+          setSuggestionsOpen(false);
+          window.dispatchEvent(new Event('viewing:query-change'));
+        });
+        return option;
+      }));
+      if (!values.length) setSuggestionsOpen(false);
+    };
     const refresh = () => {
       const records = loadRecords();
       const names = [...new Set(records.map(record => String(record.community || '').trim()).filter(Boolean))]
         .sort((a, b) => a.localeCompare(b, 'zh-CN'));
       const dates = [...new Set(records.map(record => record.viewedAt).filter(Boolean))].sort().reverse();
-      suggestions.replaceChildren(...[...dates, ...names].map(value => new Option(value, value)));
+      suggestionValues = [...dates, ...names];
+      renderSuggestions();
       const query = input.value.trim().toLocaleLowerCase();
       const hasStatusFilter = document.querySelectorAll('#filter input:checked').length > 0;
       let visible = 0;
@@ -272,7 +313,34 @@
         : `当前 ${total} 条 / 共 ${records.length} 条`;
       empty.hidden = !query || total > 0;
     };
-    input.addEventListener('input', () => window.dispatchEvent(new Event('viewing:query-change')));
+    input.addEventListener('focus', () => {
+      renderSuggestions();
+      setSuggestionsOpen(true);
+    });
+    input.addEventListener('click', () => {
+      renderSuggestions();
+      setSuggestionsOpen(true);
+    });
+    input.addEventListener('input', () => {
+      renderSuggestions();
+      setSuggestionsOpen(true);
+      window.dispatchEvent(new Event('viewing:query-change'));
+    });
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Escape') setSuggestionsOpen(false);
+    });
+    toggle.addEventListener('mousedown', event => event.preventDefault());
+    toggle.addEventListener('click', () => {
+      if (suggestions.hidden) {
+        renderSuggestions();
+        setSuggestionsOpen(true);
+      } else {
+        setSuggestionsOpen(false);
+      }
+    });
+    document.addEventListener('pointerdown', event => {
+      if (!searchWrap.contains(event.target)) setSuggestionsOpen(false);
+    });
     new MutationObserver(refresh).observe(recordsNode, { childList: true });
     refresh();
   })();
