@@ -240,20 +240,25 @@
       position: relative;
       min-width: 210px;
     }
-    .record-search-toggle {
+    .record-search-wrap .record-search-toggle:not(.primary):not(.calculate) {
       position: absolute;
-      top: 1px;
-      right: 1px;
-      min-width: 34px;
-      min-height: 34px;
+      top: 50%;
+      right: 6px;
+      min-width: 26px;
+      min-height: 26px;
       padding: 0;
       border: 0;
       color: var(--muted);
       background: transparent;
-      font-size: 17px;
+      font-size: 15px;
       line-height: 1;
+      transform: translateY(-50%);
     }
-    .record-search-toggle:active { background: transparent; }
+    .record-search-wrap .record-search-toggle:not(.primary):not(.calculate):hover,
+    .record-search-wrap .record-search-toggle:not(.primary):not(.calculate):active {
+      color: var(--blue);
+      background: transparent;
+    }
     .record-search-suggestions {
       position: absolute;
       z-index: 300;
